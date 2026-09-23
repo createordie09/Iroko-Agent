@@ -159,3 +159,37 @@ Fin du rapport.`
     }
   }
 });
+
+test('Mission Lot 4 - 5. Défilement stick-to-bottom et respect du mouvement réduit (Point 4)', async () => {
+  const hookPath = path.join(rootDir, 'src', 'hooks', 'useStickToBottom.ts');
+  assert.ok(fs.existsSync(hookPath), 'src/hooks/useStickToBottom.ts doit exister');
+
+  const hookContent = fs.readFileSync(hookPath, 'utf-8');
+  assert.ok(hookContent.includes('export function useStickToBottom'), 'Doit exporter useStickToBottom');
+  assert.ok(hookContent.includes('export function getScrollBehavior'), 'Doit exporter getScrollBehavior');
+  assert.ok(hookContent.includes('threshold = 48'), 'Doit utiliser un seuil strict de 48 px pour la détection du bas de page');
+  assert.ok(hookContent.includes('{ passive: true }'), 'Les écouteurs d\'événements de défilement doivent être passifs');
+  assert.ok(hookContent.includes('requestAnimationFrame'), 'Le défilement en streaming doit être cadencé par rAF');
+
+  // Test unitaire de getScrollBehavior
+  const { getScrollBehavior } = await import('../src/hooks/useStickToBottom.ts');
+  assert.strictEqual(getScrollBehavior('reduced', false), 'auto', 'Mouvement réduit désactive le smooth scroll automatique');
+  assert.strictEqual(getScrollBehavior('reduced', true), 'auto', 'Mouvement réduit désactive aussi le smooth scroll déclenché par l\'utilisateur');
+  assert.strictEqual(getScrollBehavior('system', false), 'auto', 'Le streaming ou contenu sans trigger utilisateur est toujours auto');
+  assert.strictEqual(getScrollBehavior('system', true), 'smooth', 'L\'action utilisateur explicite utilise smooth si animations non réduites');
+
+  // Vérification de l'intégration dans ClaudeChat.tsx
+  const chatPath = path.join(rootDir, 'src', 'features', 'chat', 'ClaudeChat.tsx');
+  const chatContent = fs.readFileSync(chatPath, 'utf-8');
+  assert.ok(chatContent.includes('useStickToBottom('), 'ClaudeChat.tsx doit appeler useStickToBottom');
+  assert.ok(chatContent.includes('animations'), 'ClaudeChat.tsx doit transmettre animations à useStickToBottom');
+  assert.ok(chatContent.includes('showScrollButton'), 'ClaudeChat.tsx doit conditionner l\'affichage au retour de useStickToBottom');
+  assert.ok(chatContent.includes('Revenir en bas'), 'Le bouton doit porter le libellé "Revenir en bas"');
+  assert.ok(chatContent.includes('aria-label="Revenir en bas de la discussion"'), 'Le bouton doit avoir un aria-label accessible');
+
+  // Règle 3 des interdits : aucune ombre
+  const buttonMatch = chatContent.match(/showScrollButton[\s\S]*?<\/button>/);
+  assert.ok(buttonMatch, 'Le bouton Revenir en bas doit être présent dans le composant');
+  assert.ok(!buttonMatch[0].includes('shadow-'), 'Le bouton Revenir en bas ne doit comporter aucune ombre (interdit strict Règle 3)');
+});
+

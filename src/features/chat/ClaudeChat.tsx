@@ -21,6 +21,7 @@ import { parseMarkdownBlocks, ParsedBlock } from './markdownParser';
 import { ArtifactCard } from './ArtifactCard';
 import { ArtifactInspector } from './ArtifactInspector';
 import { useStreamBuffer } from '../../hooks/useStreamBuffer';
+import { useStickToBottom, getScrollBehavior } from '../../hooks/useStickToBottom';
 
 interface MemoizedBlockProps {
   block: ParsedBlock;
@@ -266,7 +267,8 @@ export function ClaudeChat() {
     activeModel,
     history,
     notificationsEnabled,
-    composerMode
+    composerMode,
+    animations
   } = useApp();
 
   const [thinkingLogs, setThinkingLogs] = useState<string[]>([]);
@@ -376,7 +378,11 @@ export function ClaudeChat() {
   }, [availableTabs, inspectorTab]);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const [isAtBottom, setIsAtBottom] = useState(true);
+  const { isAtBottom, scrollToBottom, showScrollButton } = useStickToBottom(scrollContainerRef, {
+    contentDependencies: [messages, currentAssistantStream],
+    isStreaming: chatStatus === 'loading',
+    animations
+  });
 
   const conversationId = history[0]?.id || 'default_conversation';
 
@@ -434,16 +440,6 @@ export function ClaudeChat() {
       .catch(() => {});
   }, []);
 
-  // Auto-scroll when streaming
-  useEffect(() => {
-    if (isAtBottom && scrollContainerRef.current) {
-      scrollContainerRef.current.scrollTo({
-        top: scrollContainerRef.current.scrollHeight,
-        behavior: 'smooth'
-      });
-    }
-  }, [messages, currentAssistantStream, isAtBottom]);
-
   // Accessibilité live cadencée par phrase (Mission M8.2)
   useEffect(() => {
     if (!currentAssistantStream) {
@@ -461,23 +457,6 @@ export function ClaudeChat() {
       announcedIndexRef.current += match[0].length;
     }
   }, [currentAssistantStream]);
-
-  const handleScroll = () => {
-    if (!scrollContainerRef.current) return;
-    const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
-    const atBottom = scrollHeight - scrollTop - clientHeight < 40;
-    setIsAtBottom(atBottom);
-  };
-
-  const scrollToBottom = () => {
-    if (scrollContainerRef.current) {
-      scrollContainerRef.current.scrollTo({
-        top: scrollContainerRef.current.scrollHeight,
-        behavior: 'smooth'
-      });
-      setIsAtBottom(true);
-    }
-  };
 
   useEffect(() => {
     const unsubEvents = agentClient.onEvent((event: AgentEvent) => {
@@ -952,7 +931,6 @@ export function ClaudeChat() {
         {/* Messages défilants */}
         <div
           ref={scrollContainerRef}
-          onScroll={handleScroll}
           className="flex-1 min-h-0 overflow-y-auto claude-scrollbar px-4 sm:px-6 py-4"
         >
           <div className="max-w-[720px] mx-auto space-y-6 pb-28 pt-2">
@@ -1274,16 +1252,19 @@ export function ClaudeChat() {
           </div>
         </div>
 
-        {/* ── Flèche de défilement vers le bas si l'utilisateur est remonté ── */}
-        {!isAtBottom && (
-          <button
-            type="button"
-            onClick={scrollToBottom}
-            className="absolute bottom-28 left-1/2 -translate-x-1/2 w-7 h-7 rounded-full bg-[var(--bg-user-bubble)] border border-[var(--border-composer)] text-[var(--text-primary)] flex items-center justify-center shadow-lg hover:bg-[var(--bg-active)] transition-all z-30"
-            title="Défiler vers le bas"
-          >
-            <ChevronDown className="w-4 h-4" />
-          </button>
+        {/* ── Bouton Revenir en bas accessible [À VALIDER] (Règle UX U7, seuil 48px, 0 ombre) ── */}
+        {showScrollButton && (
+          <div className="absolute bottom-28 left-1/2 -translate-x-1/2 z-30 pointer-events-auto">
+            <button
+              type="button"
+              onClick={() => scrollToBottom(true)}
+              aria-label="Revenir en bas de la discussion"
+              className="tap-target-24 flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-button)] bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-hover)] border border-[var(--border-subtle)] text-[12px] text-[var(--text-primary)] transition-colors select-none cursor-pointer"
+            >
+              <ChevronDown className="w-3.5 h-3.5 text-[var(--text-secondary)]" />
+              <span>Revenir en bas</span>
+            </button>
+          </div>
         )}
 
         {/* ── Composer collé en bas avec safe-area et note de bas de page (Capture 4) ── */}
