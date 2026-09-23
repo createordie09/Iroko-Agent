@@ -4,6 +4,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { tokenService } from '../../services/security/TokenService';
+import { agentClient } from '../../lib/agent-client';
 
 const HISTORY_PAGE_SIZE = 10;
 
@@ -71,22 +72,59 @@ export function ClaudeSidebar({ onOpenPersonalize }: ClaudeSidebarProps) {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // Tâches actives en arrière-plan (Mission M8.3 P6) [À VALIDER]
+  // Tâches actives en arrière-plan (Mission M8.3 P6, Optimisation Réseau Lot 6 Fiche 22) [À VALIDER]
   const [activeTaskConvIds, setActiveTaskConvIds] = useState<string[]>([]);
 
   useEffect(() => {
+    let isMounted = true;
+
+    // 1. Récupération sobre initiale (un seul appel HTTP au montage)
     const fetchActive = async () => {
       try {
         const res = await tokenService.fetch('/api/agent/active-tasks');
-        if (res.ok) {
+        if (res.ok && isMounted) {
           const data = await res.json();
           setActiveTaskConvIds(data.activeConversationIds || []);
         }
       } catch {}
     };
+
     fetchActive();
-    const interval = setInterval(fetchActive, 3000);
-    return () => clearInterval(interval);
+
+    // 2. Écoute réactive des événements WebSocket en direct (zéro polling tant que le WS est actif)
+    const unsubscribeWs = agentClient.onEvent((event: any) => {
+      if (event.type === 'agent_status_changed' && Array.isArray(event.activeConversationIds)) {
+        if (isMounted) {
+          setActiveTaskConvIds(event.activeConversationIds);
+        }
+      } else if (event.type === 'video_job_updated') {
+        fetchActive();
+      }
+    });
+
+    // 3. Sondage de repli : activé uniquement si le WebSocket est déconnecté (cadence lente 30s)
+    let fallbackInterval: NodeJS.Timeout | null = null;
+    const unsubscribeConn = agentClient.onConnectionChange((connected) => {
+      if (connected) {
+        if (fallbackInterval) {
+          clearInterval(fallbackInterval);
+          fallbackInterval = null;
+        }
+      } else {
+        if (!fallbackInterval && isMounted) {
+          fallbackInterval = setInterval(fetchActive, 30000);
+        }
+      }
+    });
+
+    return () => {
+      isMounted = false;
+      unsubscribeWs();
+      unsubscribeConn();
+      if (fallbackInterval) {
+        clearInterval(fallbackInterval);
+      }
+    };
   }, []);
 
   const filteredHistory = useMemo(() => {

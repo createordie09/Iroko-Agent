@@ -53,3 +53,25 @@ test('Mission Lot 6 - 2. Terminologie "Discussion" et Glossaire UX (Point 2)', a
   assert.ok(uxStandards.includes("**Artéfact**"), 'Le glossaire doit définir "Artéfact"');
 });
 
+test('Mission Lot 6 - 3. Remplacement du sondage actif par événement WebSocket (Point 3)', async () => {
+  // 3.1 Déclaration de l'événement agent_status_changed dans les types serveur
+  const eventsTypes = fs.readFileSync(path.join(rootDir, 'server', 'types', 'events.ts'), 'utf-8');
+  assert.ok(eventsTypes.includes("type: 'agent_status_changed'"), 'server/types/events.ts doit déclarer agent_status_changed');
+
+  // 3.2 Implémentation et diffusion dans server/index.ts
+  const serverIndex = fs.readFileSync(path.join(rootDir, 'server', 'index.ts'), 'utf-8');
+  assert.ok(serverIndex.includes('function broadcastActiveTasksStatus('), 'server/index.ts doit comporter broadcastActiveTasksStatus');
+  assert.ok(serverIndex.includes("type: 'agent_status_changed'"), 'broadcastActiveTasksStatus doit diffuser l\'événement');
+
+  // 3.3 IrokoAgentClient fournit isConnected()
+  const agentClientCode = fs.readFileSync(path.join(rootDir, 'src', 'lib', 'agent-client.ts'), 'utf-8');
+  assert.ok(agentClientCode.includes('public isConnected(): boolean'), 'IrokoAgentClient doit exposer la méthode isConnected()');
+
+  // 3.4 ClaudeSidebar écoute agent_status_changed et ne fait plus de polling actif régulier
+  const sidebarCode = fs.readFileSync(path.join(rootDir, 'src', 'components', 'layout', 'ClaudeSidebar.tsx'), 'utf-8');
+  assert.ok(sidebarCode.includes("event.type === 'agent_status_changed'"), 'ClaudeSidebar doit écouter agent_status_changed');
+  assert.ok(!sidebarCode.includes('setInterval(fetchActive, 3000)'), 'ClaudeSidebar ne doit plus poller active-tasks toutes les 3s');
+  assert.ok(!sidebarCode.includes('setInterval(fetchActive, 2500)'), 'ClaudeSidebar ne doit plus poller active-tasks toutes les 2.5s');
+});
+
+

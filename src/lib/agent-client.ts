@@ -80,6 +80,10 @@ export class IrokoAgentClient {
     this.notifyConnection(false);
   }
 
+  public isConnected(): boolean {
+    return this.ws !== null && this.ws.readyState === WebSocket.OPEN;
+  }
+
   public send(msg: ClientMessage): boolean {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify(msg));

@@ -76,6 +76,31 @@ export function broadcastWsEvent(event: any): void {
   }
 }
 
+export function broadcastActiveTasksStatus(extra?: { conversationId?: string; status?: string }): void {
+  const activeConvIds = new Set<string>();
+  for (const sess of sessions.values()) {
+    if ((sess.status === 'running' || sess.runtime?.isRunning()) && sess.activeConvId) {
+      activeConvIds.add(sess.activeConvId);
+    }
+  }
+  try {
+    const pendingJobs = runtimeDatabase.listPendingVideoJobs();
+    for (const job of pendingJobs) {
+      if (job.conversationId) {
+        activeConvIds.add(job.conversationId);
+      }
+    }
+  } catch {}
+
+  broadcastWsEvent({
+    type: 'agent_status_changed',
+    activeConversationIds: Array.from(activeConvIds),
+    runningCount: activeConvIds.size,
+    timestamp: new Date().toISOString(),
+    ...extra
+  });
+}
+
 
 // Origines et Hosts autorisés configurables via environnement (pas codé en dur sur 5173)
 const allowedOrigins = (process.env.ALLOWED_ORIGINS || `http://127.0.0.1:5173,http://localhost:5173,http://127.0.0.1:${PORT},http://localhost:${PORT}`)
@@ -2268,6 +2293,7 @@ videoGateway.setEventEmitter((event: any) => {
       session.ws.send(payload);
     }
   }
+  broadcastActiveTasksStatus();
 });
 
 wss.on('connection', (ws: WebSocket) => {
@@ -2358,6 +2384,8 @@ wss.on('connection', (ws: WebSocket) => {
     message: 'Iroko Code Agent prêt sur ' + path.basename(session.workspacePath)
   });
 
+  broadcastActiveTasksStatus();
+
   ws.on('message', (rawData: string) => {
     try {
       const message = JSON.parse(rawData.toString()) as ClientMessage;
@@ -2401,6 +2429,7 @@ wss.on('connection', (ws: WebSocket) => {
           session.activeTaskId = activeTaskId;
           session.activeConvId = activeConvId;
           session.status = 'running';
+          broadcastActiveTasksStatus({ conversationId: activeConvId, status: 'running' });
           logger.info(`Lancement de la tâche : "${message.prompt}"`, { sessionId, taskId: activeTaskId });
 
           // Résolution du niveau de réflexion configuré (§22, §37)
@@ -2497,11 +2526,13 @@ wss.on('connection', (ws: WebSocket) => {
               });
             })
             .finally(() => {
+              const finishedConvId = activeConvId;
               activeTaskId = undefined;
               activeConvId = undefined;
               session.activeTaskId = undefined;
               session.activeConvId = undefined;
               session.status = 'idle';
+              broadcastActiveTasksStatus({ conversationId: finishedConvId, status: 'idle' });
             });
           break;
         }
@@ -2518,6 +2549,7 @@ wss.on('connection', (ws: WebSocket) => {
             runtimeDatabase.updateTaskStatus(activeTaskId, 'cancelled');
           }
           session.runtime.cancelTask();
+          broadcastActiveTasksStatus({ conversationId: activeConvId, status: 'cancelled' });
           break;
         }
       }
@@ -2534,6 +2566,7 @@ wss.on('connection', (ws: WebSocket) => {
   ws.on('close', () => {
     logger.info('Session WebSocket fermée', { sessionId });
     sessions.delete(sessionId);
+    broadcastActiveTasksStatus();
   });
 
   ws.on('error', (err) => {

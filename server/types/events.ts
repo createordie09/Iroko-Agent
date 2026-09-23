@@ -61,6 +61,7 @@ export type AgentEvent = BaseEvent & (
   | { type: 'error'; message: string; fatal: boolean }
   | { type: 'providers_changed'; providers?: any[]; timestamp?: string }
   | { type: 'catalog_updated'; total?: number; byProvider?: Record<string, number>; timestamp?: string }
+  | { type: 'agent_status_changed'; activeConversationIds: string[]; runningCount: number; timestamp?: string; conversationId?: string; status?: string }
 );
 
 export type ClientMessage =

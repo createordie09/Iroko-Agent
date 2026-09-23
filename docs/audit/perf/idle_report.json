@@ -1,27 +1,27 @@
 {
-  "timestamp": "2026-09-23T21:19:37.624Z",
+  "timestamp": "2026-09-23T21:40:45.045Z",
   "idleCPU": {
-    "taskDurationIdle5sSec": "0.009",
-    "scriptDurationIdle5sSec": "0.004",
-    "cpuUtilizationEstimate_pct": "0.2",
-    "heapIdleMo": "2.86"
+    "taskDurationIdle5sSec": "0.001",
+    "scriptDurationIdle5sSec": "0.000",
+    "cpuUtilizationEstimate_pct": "0.0",
+    "heapIdleMo": "2.95"
   },
   "apiLatency": [
     {
       "endpoint": "GET /api/conversations",
       "samples": 10,
       "p50": 3,
-      "p95": 7,
+      "p95": 6,
       "min": 2,
-      "max": 7
+      "max": 6
     },
     {
       "endpoint": "GET /api/models",
       "samples": 10,
       "p50": 1,
-      "p95": 3,
+      "p95": 4,
       "min": 1,
-      "max": 3
+      "max": 4
     },
     {
       "endpoint": "GET /api/providers",
@@ -33,27 +33,10 @@
     }
   ],
   "timersAndPolls": {
-    "observationPeriodMs": 10005,
-    "networkRequestsDuringIdle": 4,
-    "networkRequests": [
-      {
-        "url": "/api/agent/active-tasks",
-        "method": "GET"
-      },
-      {
-        "url": "/api/agent/active-tasks",
-        "method": "GET"
-      },
-      {
-        "url": "/api/agent/active-tasks",
-        "method": "GET"
-      },
-      {
-        "url": "/api/agent/active-tasks",
-        "method": "GET"
-      }
-    ],
-    "pollsPerMinute": 24,
+    "observationPeriodMs": 10003,
+    "networkRequestsDuringIdle": 0,
+    "networkRequests": [],
+    "pollsPerMinute": 0,
     "webSocketInfo": {
       "hasWebSocket": true,
       "note": "Impossible d'énumérer les WS actifs sans monkey-patching"
