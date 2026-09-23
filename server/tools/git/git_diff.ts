@@ -1,8 +1,6 @@
-import { exec } from 'child_process';
-import { promisify } from 'util';
 import { IrokoTool, ToolContext, ToolResult } from '../types';
-
-const execAsync = promisify(exec);
+import { runGit, truncateDiff } from './git_utils';
+import { PathSanitizer } from '../../security/PathSanitizer';
 
 export interface GitDiffInput {
   path?: string;
@@ -38,22 +36,48 @@ export class GitDiffTool implements IrokoTool<GitDiffInput, GitDiffOutput> {
 
   public async execute(input: GitDiffInput, context: ToolContext): Promise<ToolResult<GitDiffOutput>> {
     try {
-      const args = ['git', 'diff'];
+      const args = ['diff'];
       if (input.cached) {
         args.push('--cached');
       }
+
+      let relativeTarget: string | undefined;
       if (input.path) {
-        args.push('--', input.path);
+        const raw = input.path.trim();
+        if (raw.startsWith('-')) {
+          return {
+            success: false,
+            error: `Chemin invalide : un chemin ne peut pas commencer par un tiret ("${raw}").`
+          };
+        }
+
+        const pathVal = PathSanitizer.validatePath(raw, context.workspacePath);
+        if (!pathVal.valid || !pathVal.canonicalPath) {
+          return {
+            success: false,
+            error: pathVal.error || 'Chemin cible invalide ou situé en dehors du workspace.'
+          };
+        }
+        relativeTarget = raw;
+        args.push('--', relativeTarget);
       }
 
-      const cmd = args.join(' ');
-      const { stdout: diffOutput } = await execAsync(cmd, { cwd: context.workspacePath, maxBuffer: 10 * 1024 * 1024 });
+      const { stdout: diffOutput } = await runGit(args, context.workspacePath, {
+        maxBuffer: 15 * 1024 * 1024
+      });
 
-      // Statistique récapitulative
-      const statCmd = `${args.slice(0, input.cached ? 3 : 2).join(' ')} --stat ${input.path ? `-- ${input.path}` : ''}`;
+      // Statistiques résumées
+      const statArgs = ['diff', '--stat'];
+      if (input.cached) {
+        statArgs.push('--cached');
+      }
+      if (relativeTarget) {
+        statArgs.push('--', relativeTarget);
+      }
+
       let statSummary = '';
       try {
-        const { stdout: statOut } = await execAsync(statCmd, { cwd: context.workspacePath });
+        const { stdout: statOut } = await runGit(statArgs, context.workspacePath);
         statSummary = statOut.trim();
       } catch {}
 
@@ -68,15 +92,16 @@ export class GitDiffTool implements IrokoTool<GitDiffInput, GitDiffOutput> {
       }
 
       const cleanDiff = diffOutput.trim();
+      const truncated = truncateDiff(cleanDiff || 'Aucune différence.');
 
       return {
         success: true,
         data: {
-          diff: cleanDiff || 'Aucune différence.',
+          diff: truncated,
           filesChanged: files,
           summary: statSummary
         },
-        diff: cleanDiff || undefined
+        diff: truncated
       };
     } catch (err: any) {
       return {

@@ -1,0 +1,243 @@
+{
+  "timestamp": "2026-09-23T15:59:16.513Z",
+  "standard": "WCAG 2.2 AA",
+  "totalStatesTested": 30,
+  "passedStates": 27,
+  "statesWithViolations": 3,
+  "results": [
+    {
+      "state": "home_pristine",
+      "theme": "dark",
+      "violationsCount": 0,
+      "violations": []
+    },
+    {
+      "state": "home_with_history",
+      "theme": "dark",
+      "violationsCount": 0,
+      "violations": []
+    },
+    {
+      "state": "composer_empty",
+      "theme": "dark",
+      "violationsCount": 0,
+      "violations": []
+    },
+    {
+      "state": "composer_multiline",
+      "theme": "dark",
+      "violationsCount": 0,
+      "violations": []
+    },
+    {
+      "state": "composer_with_project",
+      "theme": "dark",
+      "violationsCount": 0,
+      "violations": []
+    },
+    {
+      "state": "composer_with_attachments",
+      "theme": "dark",
+      "violationsCount": 0,
+      "violations": []
+    },
+    {
+      "state": "composer_streaming",
+      "theme": "dark",
+      "violationsCount": 0,
+      "violations": []
+    },
+    {
+      "state": "chat_short",
+      "theme": "dark",
+      "violationsCount": 0,
+      "violations": []
+    },
+    {
+      "state": "chat_long",
+      "theme": "dark",
+      "violationsCount": 0,
+      "violations": []
+    },
+    {
+      "state": "chat_tool_running",
+      "theme": "dark",
+      "violationsCount": 0,
+      "violations": []
+    },
+    {
+      "state": "chat_permission_prompt",
+      "theme": "dark",
+      "violationsCount": 0,
+      "violations": []
+    },
+    {
+      "state": "chat_artifact_inspector",
+      "theme": "dark",
+      "violationsCount": 0,
+      "violations": []
+    },
+    {
+      "state": "settings_modal_all_tabs",
+      "theme": "dark",
+      "violationsCount": 0,
+      "violations": []
+    },
+    {
+      "state": "runtime_offline",
+      "theme": "dark",
+      "violationsCount": 0,
+      "violations": []
+    },
+    {
+      "state": "model_error_retry",
+      "theme": "dark",
+      "violationsCount": 0,
+      "violations": []
+    },
+    {
+      "state": "home_pristine",
+      "theme": "light",
+      "violationsCount": 0,
+      "violations": []
+    },
+    {
+      "state": "home_with_history",
+      "theme": "light",
+      "violationsCount": 1,
+      "violations": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "description": "Ensure the contrast between foreground and background colors meets WCAG 2 AA minimum contrast ratio thresholds",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodesCount": 1,
+          "nodes": [
+            {
+              "html": "<span>Modèle d'audit local</span>",
+              "target": [
+                "button[title=\"Sélectionner un modèle\"] > span"
+              ],
+              "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 4.28 (foreground color: #7c7a76, background color: #ffffff, font size: 9.8pt (13px), font weight: normal). Expected contrast ratio of 4.5:1"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "state": "composer_empty",
+      "theme": "light",
+      "violationsCount": 0,
+      "violations": []
+    },
+    {
+      "state": "composer_multiline",
+      "theme": "light",
+      "violationsCount": 0,
+      "violations": []
+    },
+    {
+      "state": "composer_with_project",
+      "theme": "light",
+      "violationsCount": 0,
+      "violations": []
+    },
+    {
+      "state": "composer_with_attachments",
+      "theme": "light",
+      "violationsCount": 0,
+      "violations": []
+    },
+    {
+      "state": "composer_streaming",
+      "theme": "light",
+      "violationsCount": 0,
+      "violations": []
+    },
+    {
+      "state": "chat_short",
+      "theme": "light",
+      "violationsCount": 1,
+      "violations": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "description": "Ensure the contrast between foreground and background colors meets WCAG 2 AA minimum contrast ratio thresholds",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodesCount": 1,
+          "nodes": [
+            {
+              "html": "<span>Modèle d'audit local</span>",
+              "target": [
+                "button[title=\"Sélectionner un modèle\"] > span"
+              ],
+              "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 3.44 (foreground color: #8c8a85, background color: #ffffff, font size: 9.8pt (13px), font weight: normal). Expected contrast ratio of 4.5:1"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "state": "chat_long",
+      "theme": "light",
+      "violationsCount": 0,
+      "violations": []
+    },
+    {
+      "state": "chat_tool_running",
+      "theme": "light",
+      "violationsCount": 0,
+      "violations": []
+    },
+    {
+      "state": "chat_permission_prompt",
+      "theme": "light",
+      "violationsCount": 1,
+      "violations": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "description": "Ensure the contrast between foreground and background colors meets WCAG 2 AA minimum contrast ratio thresholds",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodesCount": 1,
+          "nodes": [
+            {
+              "html": "<span>Modèle d'audit local</span>",
+              "target": [
+                "button[title=\"Sélectionner un modèle\"] > span"
+              ],
+              "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 3.44 (foreground color: #8c8a85, background color: #ffffff, font size: 9.8pt (13px), font weight: normal). Expected contrast ratio of 4.5:1"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "state": "chat_artifact_inspector",
+      "theme": "light",
+      "violationsCount": 0,
+      "violations": []
+    },
+    {
+      "state": "settings_modal_all_tabs",
+      "theme": "light",
+      "violationsCount": 0,
+      "violations": []
+    },
+    {
+      "state": "runtime_offline",
+      "theme": "light",
+      "violationsCount": 0,
+      "violations": []
+    },
+    {
+      "state": "model_error_retry",
+      "theme": "light",
+      "violationsCount": 0,
+      "violations": []
+    }
+  ]
+}

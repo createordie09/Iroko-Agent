@@ -1,4 +1,4 @@
-﻿import { PermissionLevel, AgentEvent } from '../types/events';
+import { PermissionLevel, AgentEvent } from '../types/events';
 import { PermissionEngine } from '../permissions/PermissionEngine';
 
 export type ToolCategory = 
@@ -9,13 +9,24 @@ export type ToolCategory =
   | 'testing' 
   | 'browser' 
   | 'mcp' 
-  | 'lsp';
+  | 'lsp'
+  | 'memory'
+  | 'subagent'
+  | 'attachments'
+  | 'artifacts'
+  | 'media';
 
 export interface ToolContext {
   workspacePath: string;
   sessionId: string;
+  taskId?: string;
   permissionEngine: PermissionEngine;
   emitEvent: (event: AgentEvent) => void;
+  abortSignal?: AbortSignal;
+  executionMode?: 'execute' | 'plan';
+  conversationMode?: 'chat' | 'code';
+  conversationId?: string;
+  isReadOnly?: boolean;
 }
 
 export interface ToolResult<T = any> {
@@ -31,5 +42,6 @@ export interface IrokoTool<TInput = any, TOutput = any> {
   category: ToolCategory;
   parameters: Record<string, any>; // JSON Schema
   permission: PermissionLevel;
+  timeoutMs?: number;
   execute(input: TInput, context: ToolContext): Promise<ToolResult<TOutput>>;
 }

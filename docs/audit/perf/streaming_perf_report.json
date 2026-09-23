@@ -1,0 +1,58 @@
+{
+  "timestamp": "2026-09-21T11:21:07.466Z",
+  "architecturalFindings": {
+    "markdownReparsingPerToken": true,
+    "codeHighlightingPerToken": true,
+    "autoscrollForcesReflow": true,
+    "autoscrollSmoothConflict": true,
+    "evidence": [
+      "FormattedMessage (ClaudeChat.tsx:25) appelle parseMarkdownBlocks(content) à chaque token",
+      "CodeBlock (CodeBlock.tsx:230) exécute renderMonochromeCode sans useMemo à chaque rendu",
+      "ClaudeChat.tsx:340-347 useEffect([currentAssistantStream]) lit .scrollHeight et déclenche scrollTo({ behavior: \"smooth\" }) à chaque token"
+    ]
+  },
+  "scenarios": [
+    {
+      "config": {
+        "speedName": "lent (20 tok/s)",
+        "speed": "slow",
+        "length": 500
+      },
+      "actualObservationDurationMs": 4204,
+      "domNodesCount": 154,
+      "longTasksCount": 1,
+      "longTasksTotalDurationMs": 92,
+      "mutationsCount": 0,
+      "memoryUsedMo": "5.42",
+      "estimatedThreadTimePerTokenMs": "1.09"
+    },
+    {
+      "config": {
+        "speedName": "moyen (60 tok/s)",
+        "speed": "medium",
+        "length": 5000
+      },
+      "actualObservationDurationMs": 4178,
+      "domNodesCount": 123,
+      "longTasksCount": 0,
+      "longTasksTotalDurationMs": 0,
+      "mutationsCount": 0,
+      "memoryUsedMo": "5.13",
+      "estimatedThreadTimePerTokenMs": "0.00"
+    },
+    {
+      "config": {
+        "speedName": "rapide (120 tok/s)",
+        "speed": "fast",
+        "length": 20000
+      },
+      "actualObservationDurationMs": 4177,
+      "domNodesCount": 154,
+      "longTasksCount": 0,
+      "longTasksTotalDurationMs": 0,
+      "mutationsCount": 0,
+      "memoryUsedMo": "5.35",
+      "estimatedThreadTimePerTokenMs": "0.00"
+    }
+  ]
+}

@@ -1,0 +1,879 @@
+{
+  "timestamp": "2026-09-21T12:31:01.315Z",
+  "viewports": [
+    {
+      "width": 320,
+      "height": 568,
+      "name": "320x568 (Mobile Ultra-Compact - iPhone SE 1)",
+      "hasOverflow": false,
+      "scrollWidth": 320,
+      "innerWidth": 320,
+      "touchTargets": {
+        "totalChecked": 27,
+        "below24": 4,
+        "below44": 22,
+        "examplesBelow24": [
+          {
+            "tag": "button",
+            "title": "Filtrer les discussions",
+            "w": 18,
+            "h": 18
+          },
+          {
+            "tag": "button",
+            "title": "Chat",
+            "w": 47,
+            "h": 22
+          },
+          {
+            "tag": "button",
+            "title": "Code",
+            "w": 51,
+            "h": 22
+          },
+          {
+            "tag": "button",
+            "title": "Paramètres",
+            "w": 59,
+            "h": 17
+          }
+        ],
+        "examplesBelow44": [
+          {
+            "tag": "button",
+            "title": "Réduire la barre latérale",
+            "w": 24,
+            "h": 24
+          },
+          {
+            "tag": "button",
+            "title": "Nouvelle discussion",
+            "w": 205,
+            "h": 32
+          },
+          {
+            "tag": "button",
+            "title": "Personnaliser — ouvre Paramètres › Compétences",
+            "w": 205,
+            "h": 32
+          },
+          {
+            "tag": "button",
+            "title": "Nouvelle discussion",
+            "w": 205,
+            "h": 28
+          },
+          {
+            "tag": "button",
+            "title": "Test Discussion M1",
+            "w": 205,
+            "h": 28
+          }
+        ]
+      },
+      "proximity": {
+        "count": 3,
+        "examples": [
+          {
+            "el1": "Nouvelle discussion",
+            "el2": "Personnaliser — ouvre Paramètres › Compétences",
+            "dist": 6
+          },
+          {
+            "el1": "Filtrer les discussions",
+            "el2": "Nouvelle discussion",
+            "dist": 4
+          },
+          {
+            "el1": "Nouvelle discussion",
+            "el2": "Test Discussion M1",
+            "dist": 2
+          }
+        ]
+      },
+      "screenshot": "screenshots/320x568.png"
+    },
+    {
+      "width": 375,
+      "height": 667,
+      "name": "375x667 (Mobile Compact Standard - iPhone SE 2/3)",
+      "hasOverflow": false,
+      "scrollWidth": 375,
+      "innerWidth": 375,
+      "touchTargets": {
+        "totalChecked": 26,
+        "below24": 3,
+        "below44": 22,
+        "examplesBelow24": [
+          {
+            "tag": "button",
+            "title": "Filtrer les discussions",
+            "w": 18,
+            "h": 18
+          },
+          {
+            "tag": "button",
+            "title": "Chat",
+            "w": 47,
+            "h": 22
+          },
+          {
+            "tag": "button",
+            "title": "Code",
+            "w": 51,
+            "h": 22
+          }
+        ],
+        "examplesBelow44": [
+          {
+            "tag": "button",
+            "title": "Réduire la barre latérale",
+            "w": 24,
+            "h": 24
+          },
+          {
+            "tag": "button",
+            "title": "Nouvelle discussion",
+            "w": 205,
+            "h": 32
+          },
+          {
+            "tag": "button",
+            "title": "Personnaliser — ouvre Paramètres › Compétences",
+            "w": 205,
+            "h": 32
+          },
+          {
+            "tag": "button",
+            "title": "Nouvelle discussion",
+            "w": 205,
+            "h": 28
+          },
+          {
+            "tag": "button",
+            "title": "Test Discussion M1",
+            "w": 205,
+            "h": 28
+          }
+        ]
+      },
+      "proximity": {
+        "count": 3,
+        "examples": [
+          {
+            "el1": "Nouvelle discussion",
+            "el2": "Personnaliser — ouvre Paramètres › Compétences",
+            "dist": 6
+          },
+          {
+            "el1": "Filtrer les discussions",
+            "el2": "Nouvelle discussion",
+            "dist": 4
+          },
+          {
+            "el1": "Nouvelle discussion",
+            "el2": "Test Discussion M1",
+            "dist": 2
+          }
+        ]
+      },
+      "screenshot": "screenshots/375x667.png"
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "name": "390x844 (Mobile Moderne - iPhone 12/13/14)",
+      "hasOverflow": false,
+      "scrollWidth": 390,
+      "innerWidth": 390,
+      "touchTargets": {
+        "totalChecked": 26,
+        "below24": 3,
+        "below44": 22,
+        "examplesBelow24": [
+          {
+            "tag": "button",
+            "title": "Filtrer les discussions",
+            "w": 18,
+            "h": 18
+          },
+          {
+            "tag": "button",
+            "title": "Chat",
+            "w": 47,
+            "h": 22
+          },
+          {
+            "tag": "button",
+            "title": "Code",
+            "w": 51,
+            "h": 22
+          }
+        ],
+        "examplesBelow44": [
+          {
+            "tag": "button",
+            "title": "Réduire la barre latérale",
+            "w": 24,
+            "h": 24
+          },
+          {
+            "tag": "button",
+            "title": "Nouvelle discussion",
+            "w": 205,
+            "h": 32
+          },
+          {
+            "tag": "button",
+            "title": "Personnaliser — ouvre Paramètres › Compétences",
+            "w": 205,
+            "h": 32
+          },
+          {
+            "tag": "button",
+            "title": "Nouvelle discussion",
+            "w": 205,
+            "h": 28
+          },
+          {
+            "tag": "button",
+            "title": "Test Discussion M1",
+            "w": 205,
+            "h": 28
+          }
+        ]
+      },
+      "proximity": {
+        "count": 3,
+        "examples": [
+          {
+            "el1": "Nouvelle discussion",
+            "el2": "Personnaliser — ouvre Paramètres › Compétences",
+            "dist": 6
+          },
+          {
+            "el1": "Filtrer les discussions",
+            "el2": "Nouvelle discussion",
+            "dist": 4
+          },
+          {
+            "el1": "Nouvelle discussion",
+            "el2": "Test Discussion M1",
+            "dist": 2
+          }
+        ]
+      },
+      "screenshot": "screenshots/390x844.png"
+    },
+    {
+      "width": 844,
+      "height": 390,
+      "name": "844x390 (Mobile Paysage)",
+      "hasOverflow": false,
+      "scrollWidth": 844,
+      "innerWidth": 844,
+      "touchTargets": {
+        "totalChecked": 26,
+        "below24": 4,
+        "below44": 19,
+        "examplesBelow24": [
+          {
+            "tag": "button",
+            "title": "Filtrer les discussions",
+            "w": 18,
+            "h": 18
+          },
+          {
+            "tag": "button",
+            "title": "Chat",
+            "w": 47,
+            "h": 22
+          },
+          {
+            "tag": "button",
+            "title": "Code",
+            "w": 51,
+            "h": 22
+          },
+          {
+            "tag": "button",
+            "title": "Aucun modèle disponible — configurez une clé d'API dans les Paramètres",
+            "w": 163,
+            "h": 20
+          }
+        ],
+        "examplesBelow44": [
+          {
+            "tag": "button",
+            "title": "Réduire la barre latérale",
+            "w": 24,
+            "h": 24
+          },
+          {
+            "tag": "button",
+            "title": "Nouvelle discussion",
+            "w": 205,
+            "h": 32
+          },
+          {
+            "tag": "button",
+            "title": "Personnaliser — ouvre Paramètres › Compétences",
+            "w": 205,
+            "h": 32
+          },
+          {
+            "tag": "button",
+            "title": "Nouvelle discussion",
+            "w": 205,
+            "h": 28
+          },
+          {
+            "tag": "button",
+            "title": "Test Discussion M1",
+            "w": 205,
+            "h": 28
+          }
+        ]
+      },
+      "proximity": {
+        "count": 3,
+        "examples": [
+          {
+            "el1": "Nouvelle discussion",
+            "el2": "Personnaliser — ouvre Paramètres › Compétences",
+            "dist": 6
+          },
+          {
+            "el1": "Filtrer les discussions",
+            "el2": "Nouvelle discussion",
+            "dist": 4
+          },
+          {
+            "el1": "Nouvelle discussion",
+            "el2": "Test Discussion M1",
+            "dist": 2
+          }
+        ]
+      },
+      "screenshot": "screenshots/844x390.png"
+    },
+    {
+      "width": 768,
+      "height": 1024,
+      "name": "768x1024 (Tablette Portrait)",
+      "hasOverflow": false,
+      "scrollWidth": 768,
+      "innerWidth": 768,
+      "touchTargets": {
+        "totalChecked": 26,
+        "below24": 4,
+        "below44": 19,
+        "examplesBelow24": [
+          {
+            "tag": "button",
+            "title": "Filtrer les discussions",
+            "w": 18,
+            "h": 18
+          },
+          {
+            "tag": "button",
+            "title": "Chat",
+            "w": 47,
+            "h": 22
+          },
+          {
+            "tag": "button",
+            "title": "Code",
+            "w": 51,
+            "h": 22
+          },
+          {
+            "tag": "button",
+            "title": "Aucun modèle disponible — configurez une clé d'API dans les Paramètres",
+            "w": 163,
+            "h": 20
+          }
+        ],
+        "examplesBelow44": [
+          {
+            "tag": "button",
+            "title": "Réduire la barre latérale",
+            "w": 24,
+            "h": 24
+          },
+          {
+            "tag": "button",
+            "title": "Nouvelle discussion",
+            "w": 205,
+            "h": 32
+          },
+          {
+            "tag": "button",
+            "title": "Personnaliser — ouvre Paramètres › Compétences",
+            "w": 205,
+            "h": 32
+          },
+          {
+            "tag": "button",
+            "title": "Nouvelle discussion",
+            "w": 205,
+            "h": 28
+          },
+          {
+            "tag": "button",
+            "title": "Test Discussion M1",
+            "w": 205,
+            "h": 28
+          }
+        ]
+      },
+      "proximity": {
+        "count": 3,
+        "examples": [
+          {
+            "el1": "Nouvelle discussion",
+            "el2": "Personnaliser — ouvre Paramètres › Compétences",
+            "dist": 6
+          },
+          {
+            "el1": "Filtrer les discussions",
+            "el2": "Nouvelle discussion",
+            "dist": 4
+          },
+          {
+            "el1": "Nouvelle discussion",
+            "el2": "Test Discussion M1",
+            "dist": 2
+          }
+        ]
+      },
+      "screenshot": "screenshots/768x1024.png"
+    },
+    {
+      "width": 1024,
+      "height": 768,
+      "name": "1024x768 (Tablette Paysage / Petit Laptop)",
+      "hasOverflow": false,
+      "scrollWidth": 1024,
+      "innerWidth": 1024,
+      "touchTargets": {
+        "totalChecked": 26,
+        "below24": 4,
+        "below44": 19,
+        "examplesBelow24": [
+          {
+            "tag": "button",
+            "title": "Filtrer les discussions",
+            "w": 18,
+            "h": 18
+          },
+          {
+            "tag": "button",
+            "title": "Chat",
+            "w": 47,
+            "h": 22
+          },
+          {
+            "tag": "button",
+            "title": "Code",
+            "w": 51,
+            "h": 22
+          },
+          {
+            "tag": "button",
+            "title": "Aucun modèle disponible — configurez une clé d'API dans les Paramètres",
+            "w": 163,
+            "h": 20
+          }
+        ],
+        "examplesBelow44": [
+          {
+            "tag": "button",
+            "title": "Réduire la barre latérale",
+            "w": 24,
+            "h": 24
+          },
+          {
+            "tag": "button",
+            "title": "Nouvelle discussion",
+            "w": 205,
+            "h": 32
+          },
+          {
+            "tag": "button",
+            "title": "Personnaliser — ouvre Paramètres › Compétences",
+            "w": 205,
+            "h": 32
+          },
+          {
+            "tag": "button",
+            "title": "Nouvelle discussion",
+            "w": 205,
+            "h": 28
+          },
+          {
+            "tag": "button",
+            "title": "Test Discussion M1",
+            "w": 205,
+            "h": 28
+          }
+        ]
+      },
+      "proximity": {
+        "count": 3,
+        "examples": [
+          {
+            "el1": "Nouvelle discussion",
+            "el2": "Personnaliser — ouvre Paramètres › Compétences",
+            "dist": 6
+          },
+          {
+            "el1": "Filtrer les discussions",
+            "el2": "Nouvelle discussion",
+            "dist": 4
+          },
+          {
+            "el1": "Nouvelle discussion",
+            "el2": "Test Discussion M1",
+            "dist": 2
+          }
+        ]
+      },
+      "screenshot": "screenshots/1024x768.png"
+    },
+    {
+      "width": 1440,
+      "height": 900,
+      "name": "1440x900 (Laptop Standard)",
+      "hasOverflow": false,
+      "scrollWidth": 1440,
+      "innerWidth": 1440,
+      "touchTargets": {
+        "totalChecked": 27,
+        "below24": 5,
+        "below44": 19,
+        "examplesBelow24": [
+          {
+            "tag": "button",
+            "title": "Filtrer les discussions",
+            "w": 18,
+            "h": 18
+          },
+          {
+            "tag": "button",
+            "title": "Chat",
+            "w": 47,
+            "h": 22
+          },
+          {
+            "tag": "button",
+            "title": "Code",
+            "w": 51,
+            "h": 22
+          },
+          {
+            "tag": "button",
+            "title": "Aucun modèle disponible — configurez une clé d'API dans les Paramètres",
+            "w": 163,
+            "h": 20
+          },
+          {
+            "tag": "button",
+            "title": "Paramètres",
+            "w": 59,
+            "h": 17
+          }
+        ],
+        "examplesBelow44": [
+          {
+            "tag": "button",
+            "title": "Réduire la barre latérale",
+            "w": 24,
+            "h": 24
+          },
+          {
+            "tag": "button",
+            "title": "Nouvelle discussion",
+            "w": 205,
+            "h": 32
+          },
+          {
+            "tag": "button",
+            "title": "Personnaliser — ouvre Paramètres › Compétences",
+            "w": 205,
+            "h": 32
+          },
+          {
+            "tag": "button",
+            "title": "Nouvelle discussion",
+            "w": 205,
+            "h": 28
+          },
+          {
+            "tag": "button",
+            "title": "Test Discussion M1",
+            "w": 205,
+            "h": 28
+          }
+        ]
+      },
+      "proximity": {
+        "count": 3,
+        "examples": [
+          {
+            "el1": "Nouvelle discussion",
+            "el2": "Personnaliser — ouvre Paramètres › Compétences",
+            "dist": 6
+          },
+          {
+            "el1": "Filtrer les discussions",
+            "el2": "Nouvelle discussion",
+            "dist": 4
+          },
+          {
+            "el1": "Nouvelle discussion",
+            "el2": "Test Discussion M1",
+            "dist": 2
+          }
+        ]
+      },
+      "screenshot": "screenshots/1440x900.png"
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "name": "1920x1080 (Desktop Full HD)",
+      "hasOverflow": false,
+      "scrollWidth": 1920,
+      "innerWidth": 1920,
+      "touchTargets": {
+        "totalChecked": 26,
+        "below24": 4,
+        "below44": 19,
+        "examplesBelow24": [
+          {
+            "tag": "button",
+            "title": "Filtrer les discussions",
+            "w": 18,
+            "h": 18
+          },
+          {
+            "tag": "button",
+            "title": "Chat",
+            "w": 47,
+            "h": 22
+          },
+          {
+            "tag": "button",
+            "title": "Code",
+            "w": 51,
+            "h": 22
+          },
+          {
+            "tag": "button",
+            "title": "Aucun modèle disponible — configurez une clé d'API dans les Paramètres",
+            "w": 163,
+            "h": 20
+          }
+        ],
+        "examplesBelow44": [
+          {
+            "tag": "button",
+            "title": "Réduire la barre latérale",
+            "w": 24,
+            "h": 24
+          },
+          {
+            "tag": "button",
+            "title": "Nouvelle discussion",
+            "w": 205,
+            "h": 32
+          },
+          {
+            "tag": "button",
+            "title": "Personnaliser — ouvre Paramètres › Compétences",
+            "w": 205,
+            "h": 32
+          },
+          {
+            "tag": "button",
+            "title": "Nouvelle discussion",
+            "w": 205,
+            "h": 28
+          },
+          {
+            "tag": "button",
+            "title": "Test Discussion M1",
+            "w": 205,
+            "h": 28
+          }
+        ]
+      },
+      "proximity": {
+        "count": 3,
+        "examples": [
+          {
+            "el1": "Nouvelle discussion",
+            "el2": "Personnaliser — ouvre Paramètres › Compétences",
+            "dist": 6
+          },
+          {
+            "el1": "Filtrer les discussions",
+            "el2": "Nouvelle discussion",
+            "dist": 4
+          },
+          {
+            "el1": "Nouvelle discussion",
+            "el2": "Test Discussion M1",
+            "dist": 2
+          }
+        ]
+      },
+      "screenshot": "screenshots/1920x1080.png"
+    },
+    {
+      "width": 2560,
+      "height": 1440,
+      "name": "2560x1440 (Desktop QHD)",
+      "hasOverflow": false,
+      "scrollWidth": 2560,
+      "innerWidth": 2560,
+      "touchTargets": {
+        "totalChecked": 27,
+        "below24": 5,
+        "below44": 19,
+        "examplesBelow24": [
+          {
+            "tag": "button",
+            "title": "Filtrer les discussions",
+            "w": 18,
+            "h": 18
+          },
+          {
+            "tag": "button",
+            "title": "Chat",
+            "w": 47,
+            "h": 22
+          },
+          {
+            "tag": "button",
+            "title": "Code",
+            "w": 51,
+            "h": 22
+          },
+          {
+            "tag": "button",
+            "title": "Aucun modèle disponible — configurez une clé d'API dans les Paramètres",
+            "w": 163,
+            "h": 20
+          },
+          {
+            "tag": "button",
+            "title": "Paramètres",
+            "w": 59,
+            "h": 17
+          }
+        ],
+        "examplesBelow44": [
+          {
+            "tag": "button",
+            "title": "Réduire la barre latérale",
+            "w": 24,
+            "h": 24
+          },
+          {
+            "tag": "button",
+            "title": "Nouvelle discussion",
+            "w": 205,
+            "h": 32
+          },
+          {
+            "tag": "button",
+            "title": "Personnaliser — ouvre Paramètres › Compétences",
+            "w": 205,
+            "h": 32
+          },
+          {
+            "tag": "button",
+            "title": "Nouvelle discussion",
+            "w": 205,
+            "h": 28
+          },
+          {
+            "tag": "button",
+            "title": "Test Discussion M1",
+            "w": 205,
+            "h": 28
+          }
+        ]
+      },
+      "proximity": {
+        "count": 3,
+        "examples": [
+          {
+            "el1": "Nouvelle discussion",
+            "el2": "Personnaliser — ouvre Paramètres › Compétences",
+            "dist": 6
+          },
+          {
+            "el1": "Filtrer les discussions",
+            "el2": "Nouvelle discussion",
+            "dist": 4
+          },
+          {
+            "el1": "Nouvelle discussion",
+            "el2": "Test Discussion M1",
+            "dist": 2
+          }
+        ]
+      },
+      "screenshot": "screenshots/2560x1440.png"
+    }
+  ],
+  "virtualKeyboardAnalysis": {
+    "metaViewport": "width=device-width, initial-scale=1.0",
+    "hasInteractiveWidget": false,
+    "hasViewportFit": false,
+    "isZoomDisabled": false,
+    "usesDvh": true,
+    "inputFontSizes": [
+      {
+        "tag": "input",
+        "fontSize": "16px",
+        "fontSizePx": 16
+      },
+      {
+        "tag": "textarea",
+        "fontSize": "14px",
+        "fontSizePx": 14
+      }
+    ],
+    "hasSub16pxInputs": true,
+    "usesSafeArea": false
+  },
+  "drawerAnalysis": {
+    "openButtonFound": true,
+    "drawerOpensOnClick": true,
+    "overlayPresent": true,
+    "overlayHasAriaHidden": false,
+    "backgroundInert": false,
+    "escapeClosesDrawer": false,
+    "overlayClickClosesDrawer": true
+  },
+  "modalMobileAnalysis": {
+    "modalWidth": 343,
+    "modalHeight": 600,
+    "windowWidth": 375,
+    "windowHeight": 667,
+    "isFullScreen": false,
+    "hasOverflowX": false,
+    "hasOverflowY": false
+  },
+  "readingWidthAnalysis": {
+    "composerMaxWidth": null,
+    "composerWidth": null,
+    "sidebarWidth": 222,
+    "windowWidth": 2560,
+    "readingWidthCharsEst": null
+  }
+}

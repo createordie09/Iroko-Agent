@@ -1,6 +1,7 @@
-﻿import fs from 'fs';
+import fs from 'fs';
 import path from 'path';
 import { IrokoTool, ToolContext, ToolResult } from '../types';
+import { PathSanitizer } from '../../security/PathSanitizer';
 
 export interface ReadFileInput {
   filePath: string;
@@ -34,17 +35,45 @@ export class ReadFileTool implements IrokoTool<ReadFileInput> {
   };
 
   public async execute(input: ReadFileInput, context: ToolContext): Promise<ToolResult> {
-    const fullPath = path.resolve(context.workspacePath, input.filePath);
-
-    if (!fullPath.startsWith(context.workspacePath)) {
-      return { success: false, error: 'Accès refusé : le fichier demandé est hors du workspace.' };
+    const validation = PathSanitizer.validatePath(input.filePath, context.workspacePath);
+    if (!validation.valid || !validation.canonicalPath) {
+      return { success: false, error: validation.error || 'Chemin invalide.' };
     }
+
+    const fullPath = validation.canonicalPath;
 
     if (!fs.existsSync(fullPath)) {
       return { success: false, error: `Fichier introuvable : ${input.filePath}` };
     }
 
+    // 1. Détection de fichier binaire
+    if (PathSanitizer.isBinaryFile(fullPath)) {
+      return {
+        success: false,
+        error: `Le fichier "${input.filePath}" est un fichier binaire et ne peut être lu comme du texte.`
+      };
+    }
+
+    // 2. Traitement des fichiers sensibles (.env, clés privées, certificats)
+    if (validation.isSensitive) {
+      const approved = await context.permissionEngine.requestPermission(
+        this.name,
+        'HIGH',
+        `Lecture d'un fichier sensible contenant potentiellement des secrets : "${input.filePath}"`,
+        { path: input.filePath, isSensitive: true },
+        (req) => context.emitEvent({ type: 'permission_required', request: req })
+      );
+
+      if (!approved) {
+        return {
+          success: false,
+          error: `Action non autorisée : la lecture du fichier sensible "${input.filePath}" a été refusée par l'utilisateur.`
+        };
+      }
+    }
+
     try {
+      // 3. Contrôle de taille (max 2 Mo)
       const stats = fs.statSync(fullPath);
       if (stats.size > 2 * 1024 * 1024) {
         return { success: false, error: `Le fichier est trop volumineux (> 2 Mo) pour être lu intégralement.` };

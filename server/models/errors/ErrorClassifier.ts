@@ -9,18 +9,22 @@ export class ErrorClassifier {
     const lower = rawMessage.toLowerCase();
 
     // 1. Détection par code de statut HTTP
-    const statusMatch = rawMessage.match(/\b(401|402|403|404|408|429|500|502|503|504)\b/);
+    const statusMatch = rawMessage.match(/\b(400|401|402|403|404|408|429|500|502|503|504)\b/);
     const statusCode = statusMatch ? parseInt(statusMatch[1], 10) : undefined;
 
-    // 2. AUTH_ERROR (401 / Invalid Key)
+    // 2. AUTH_ERROR (401 / 403 / Clé invalide / Révoquée / Interdite)
+    // Règle stricte : la clé est immédiatement désactivée, aucune nouvelle tentative
     if (
       statusCode === 401 ||
+      statusCode === 403 ||
       lower.includes('invalid api key') ||
       lower.includes('incorrect api key') ||
       lower.includes('invalid_api_key') ||
       lower.includes('unauthorized') ||
       lower.includes('authentication error') ||
-      lower.includes('api_key_invalid')
+      lower.includes('api_key_invalid') ||
+      lower.includes('forbidden') ||
+      lower.includes('permission_denied')
     ) {
       return {
         category: 'AUTH_ERROR',
@@ -28,7 +32,7 @@ export class ErrorClassifier {
         shouldCooldown: false,
         shouldDisableKey: true,
         shouldFallbackProvider: false,
-        message: 'Clé API invalide ou révoquée par le fournisseur.',
+        message: 'Clé API invalide ou accès refusé (401/403). Clé désactivée sans nouvelle tentative.',
         statusCode: statusCode || 401
       };
     }
@@ -55,6 +59,7 @@ export class ErrorClassifier {
     }
 
     // 4. RATE_LIMIT (429 / Trop de requêtes)
+    // Rotation transparente vers la clé suivante + cooldown exponentiel avec jitter
     if (
       statusCode === 429 ||
       lower.includes('rate limit') ||
@@ -64,8 +69,7 @@ export class ErrorClassifier {
       lower.includes('tokens per minute') ||
       lower.includes('requests per minute')
     ) {
-      // Cooldown progressif selon le nombre d'échecs consécutifs
-      const cooldownSeconds = this.calculateCooldownSeconds(failureCount);
+      const cooldownSeconds = this.calculateCooldownWithJitter(failureCount);
       return {
         category: 'RATE_LIMIT',
         isRetryable: true,
@@ -73,12 +77,12 @@ export class ErrorClassifier {
         cooldownSeconds,
         shouldDisableKey: false,
         shouldFallbackProvider: false,
-        message: `Limite de débit (429) atteinte. Cooldown de ${cooldownSeconds}s activé.`,
-        statusCode: statusCode || 429
+        message: `Limite de débit (429) atteinte. Cooldown exponentiel de ${cooldownSeconds}s activé.`,
+        statusCode: 429
       };
     }
 
-    // 5. TEMPORARY_PROVIDER_ERROR (500, 502, 503, 504 / Panne temporaire)
+    // 5. TEMPORARY_PROVIDER_ERROR (500, 502, 503, 504 / Panne temporaire du fournisseur)
     if (
       (statusCode && statusCode >= 500 && statusCode <= 504) ||
       lower.includes('overloaded') ||
@@ -94,12 +98,12 @@ export class ErrorClassifier {
         cooldownSeconds: 20,
         shouldDisableKey: false,
         shouldFallbackProvider: true,
-        message: 'Erreur temporaire du serveur fournisseur (5xx). Bascule immédiate.',
+        message: 'Erreur temporaire du serveur fournisseur (5xx). Repli automatique.',
         statusCode: statusCode || 503
       };
     }
 
-    // 6. NETWORK_ERROR (Timeout, déconnexion réseau)
+    // 6. NETWORK_ERROR (Timeout, déconnexion réseau, fetch failed)
     if (
       statusCode === 408 ||
       lower.includes('timeout') ||
@@ -115,7 +119,7 @@ export class ErrorClassifier {
         cooldownSeconds: 15,
         shouldDisableKey: false,
         shouldFallbackProvider: false,
-        message: 'Erreur réseau ou délai d\'attente dépassé.',
+        message: 'Erreur de connexion réseau ou délai d\'attente dépassé.',
         statusCode: statusCode || 408
       };
     }
@@ -152,7 +156,7 @@ export class ErrorClassifier {
         shouldDisableKey: false,
         shouldFallbackProvider: true,
         message: 'Le modèle demandé n\'est pas disponible chez ce fournisseur.',
-        statusCode: statusCode || 404
+        statusCode: 404
       };
     }
 
@@ -168,10 +172,15 @@ export class ErrorClassifier {
     };
   }
 
-  private static calculateCooldownSeconds(failureCount: number): number {
-    if (failureCount <= 1) return 30;
-    if (failureCount === 2) return 60;
-    if (failureCount === 3) return 120;
-    return 300; // 5 minutes max
+  /**
+   * Calcul d'un cooldown exponentiel avec jitter aléatoire pour éviter les tempêtes de requêtes
+   * Base: 30s, échec 1: ~30-35s, échec 2: ~60-65s, échec 3: ~120-125s, max 900s (15 min).
+   */
+  public static calculateCooldownWithJitter(failureCount: number): number {
+    const base = 30;
+    const exponent = Math.max(0, Math.min(failureCount - 1, 5));
+    const exponentialValue = base * Math.pow(2, exponent);
+    const jitter = Math.floor(Math.random() * 6); // 0 à 5 secondes de gigue
+    return Math.min(900, exponentialValue + jitter);
   }
 }

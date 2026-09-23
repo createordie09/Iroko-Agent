@@ -54,10 +54,25 @@ export class GeminiProvider implements AIProvider {
       }];
     }
 
+    // Paliers de réflexion Gemini 2.0 (§22, §37)
+    let thinkingBudget = request.thinkingBudget;
+    if (!thinkingBudget && request.thinkingLevel && request.thinkingLevel !== 'disabled') {
+      if (request.thinkingLevel === 'low') thinkingBudget = 1024;
+      else if (request.thinkingLevel === 'medium') thinkingBudget = 4096;
+      else if (request.thinkingLevel === 'high') thinkingBudget = 8192;
+    }
+
+    if (thinkingBudget && thinkingBudget > 0) {
+      payload.generationConfig.thinkingConfig = {
+        thinkingBudget
+      };
+    }
+
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
+      signal: request.abortSignal
     });
 
     if (!response.ok) {
@@ -74,6 +89,7 @@ export class GeminiProvider implements AIProvider {
     let buffer = '';
 
     while (true) {
+      if (request.abortSignal?.aborted) break;
       const { done, value } = await reader.read();
       if (done) break;
 
@@ -93,7 +109,11 @@ export class GeminiProvider implements AIProvider {
           if (Array.isArray(parts)) {
             for (const part of parts) {
               if (part.text) {
-                yield { type: 'text_delta', text: part.text };
+                if (part.thought) {
+                  yield { type: 'thinking_delta', text: part.text };
+                } else {
+                  yield { type: 'text_delta', text: part.text };
+                }
               }
               if (part.functionCall) {
                 yield {

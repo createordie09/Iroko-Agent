@@ -6,30 +6,50 @@
   "scripts": {
     "dev": "vite",
     "agent": "tsx server/index.ts",
-    "build": "vite build",
+    "build:client": "vite build",
+    "build:server": "esbuild server/index.ts --bundle --platform=node --format=esm --target=node20 --packages=external --outfile=dist-server/index.js",
+    "build": "npm run build:client && npm run build:server",
+    "start": "node dist-server/index.js",
     "preview": "vite preview",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "test": "node --import ./tests/setup_test_env.js --import tsx --test --test-timeout=60000 tests/*.test.mjs",
+    "test:strict": "node --import ./tests/setup_test_env.js --import tsx --test --test-timeout=60000 tests/*.test.mjs",
+    "e2e": "node --import ./tests/setup_test_env.js --test tests/e2e/*.test.mjs",
+    "lint:tokens": "node scripts/lint_tokens.mjs",
+    "ui:check": "node scripts/ui_check.mjs",
+    "audit:a11y": "node tools/audit/audit_a11y.mjs",
+    "audit:perf": "node tools/audit/audit_perf.mjs",
+    "audit:responsive": "node tools/audit/audit_responsive.mjs",
+    "audit:tasks": "node tools/audit/audit_tasks.mjs",
+    "audit:all": "node tools/audit/run_all.mjs"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.108.2",
     "@tailwindcss/vite": "^4.1.14",
     "@vitejs/plugin-react": "^5.0.4",
+    "docx": "^9.7.1",
+    "exceljs": "^4.4.0",
     "lucide-react": "^0.546.0",
     "mammoth": "^1.12.0",
+    "pdf-lib": "^1.17.1",
     "pdfjs-dist": "^3.11.174",
+    "pptxgenjs": "^4.0.1",
     "react": "^19.0.1",
     "react-dom": "^19.0.1",
-    "vite": "^6.2.3"
+    "vite": "^6.2.3",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
     "@types/node": "^22.14.0",
     "@types/ws": "^8.18.1",
     "autoprefixer": "^10.4.21",
     "playwright": "^1.63.0",
+    "rollup-plugin-visualizer": "^7.1.1",
     "tailwindcss": "^4.1.14",
     "tsx": "^4.23.13",
     "typescript": "~5.8.2",
     "vite": "^6.2.3",
+    "web-vitals": "^6.2.2",
     "ws": "^8.21.3"
   }
 }

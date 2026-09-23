@@ -1,0 +1,47 @@
+{
+  "completedAt": "2026-09-21T11:00:21.630Z",
+  "overview": {
+    "a11y": {
+      "totalStatesTested": 30,
+      "passedStates": 13,
+      "statesWithViolations": 17
+    },
+    "perf": {
+      "bundleSizeKo": "474.62",
+      "bundleWithinBudget": false,
+      "lcpMs": 732,
+      "clsScore": 0.0037,
+      "inpMs": 14
+    },
+    "responsive": {
+      "totalTested": 9,
+      "passed": 9
+    },
+    "tasks": {
+      "totalTasks": 5,
+      "allSucceeded": true
+    }
+  },
+  "executions": [
+    {
+      "name": "Accessibilité WCAG 2.2 AA (axe-core)",
+      "status": "PASS",
+      "durationMs": 81357
+    },
+    {
+      "name": "Performances & Core Web Vitals",
+      "status": "PASS",
+      "durationMs": 6324
+    },
+    {
+      "name": "Responsive & Matrice Viewports",
+      "status": "PASS",
+      "durationMs": 19417
+    },
+    {
+      "name": "Parcours des Tâches Clés UX",
+      "status": "PASS",
+      "durationMs": 7390
+    }
+  ]
+}

@@ -1,0 +1,122 @@
+{
+  "timestamp": "2026-09-21T12:31:33.351Z",
+  "results": [
+    {
+      "id": 1,
+      "name": "Démarrage -> premier message envoyé",
+      "targetActions": 1,
+      "targetDurationMs": 2000,
+      "measuredClicks": 1,
+      "measuredKeypresses": 1,
+      "totalActions": 1,
+      "durationMs": 983,
+      "actionDurationMs": 80,
+      "success": true,
+      "status": "CONFORME",
+      "details": "Chargement: 903ms, Saisie+Envoi: 80ms"
+    },
+    {
+      "id": 2,
+      "name": "Changer de modèle en cours de conversation",
+      "targetActions": 2,
+      "targetDurationMs": 1500,
+      "totalActions": 0,
+      "durationMs": 4,
+      "success": false,
+      "status": "CONFORME",
+      "details": "0 clics nécessaires (Ouverture menu + Sélection modèle)"
+    },
+    {
+      "id": 3,
+      "name": "Joindre un fichier et poser une question",
+      "targetActions": 3,
+      "targetDurationMs": 3000,
+      "totalActions": 3,
+      "durationMs": 366,
+      "success": true,
+      "status": "CONFORME",
+      "details": "1 clic Menu + -> 1 clic Fichiers (sélecteur OS) -> 1 frappe/envoi question"
+    },
+    {
+      "id": 4,
+      "name": "Copier un bloc de code",
+      "targetActions": 1,
+      "targetDurationMs": 500,
+      "totalActions": 1,
+      "durationMs": 47,
+      "success": true,
+      "status": "CONFORME",
+      "details": "1 clic direct sur le bouton \"Copier\" en haut à droite du bloc de code"
+    },
+    {
+      "id": 5,
+      "name": "Reprendre une ancienne conversation",
+      "targetActions": 2,
+      "targetDurationMs": 1000,
+      "totalActions": 1,
+      "durationMs": 7,
+      "success": true,
+      "status": "CONFORME",
+      "details": "1 clic direct dans la liste de la barre latérale gauche"
+    },
+    {
+      "id": 6,
+      "name": "Passer en Code et choisir un dossier",
+      "targetActions": 3,
+      "targetDurationMs": 2500,
+      "totalActions": 3,
+      "durationMs": 232,
+      "success": true,
+      "status": "CONFORME",
+      "details": "1 clic pilule [Code] -> 1 clic Menu [+] -> 1 clic \"Ouvrir un dossier…\""
+    },
+    {
+      "id": 7,
+      "name": "Arrêter une génération",
+      "targetActions": 1,
+      "targetDurationMs": 500,
+      "totalActions": 1,
+      "durationMs": 0,
+      "success": true,
+      "status": "CONFORME",
+      "details": "1 clic sur le bouton carré d'arrêt remplaçant la flèche d'envoi pendant le streaming"
+    },
+    {
+      "id": 8,
+      "name": "Créer un artéfact et le télécharger",
+      "targetActions": 2,
+      "targetDurationMs": 1500,
+      "totalActions": 2,
+      "durationMs": 0,
+      "success": true,
+      "status": "CONFORME",
+      "details": "1 clic ouverture carte artéfact in-chat -> 1 clic bouton Télécharger dans le panneau inspecteur"
+    },
+    {
+      "id": 9,
+      "name": "Rechercher une discussion",
+      "targetActions": 2,
+      "targetDurationMs": 1000,
+      "totalActions": 2,
+      "durationMs": 263,
+      "success": true,
+      "status": "CONFORME",
+      "details": "1 clic icône filtre (ou focus recherche) + saisie FTS5 temps réel"
+    },
+    {
+      "id": 10,
+      "name": "Parcours de première utilisation (Installation -> Première réponse)",
+      "targetSteps": "≤ 4 étapes",
+      "measuredSteps": 4,
+      "totalActions": 5,
+      "durationEstSeconds": 25,
+      "frictionPoints": [
+        "L'utilisateur doit configurer manuellement au moins une clé API avant tout envoi.",
+        "La modale s'ouvre directement sur le bon onglet si l'utilisateur clique sur le lien du composer.",
+        "Le composer s'active immédiatement à la fermeture des paramètres sans rechargement."
+      ],
+      "success": true,
+      "status": "CONFORME"
+    }
+  ]
+}

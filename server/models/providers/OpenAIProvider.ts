@@ -62,13 +62,22 @@ export class OpenAIProvider implements AIProvider {
       }));
     }
 
+    // Paliers de réflexion OpenAI (o1, o3-mini) (§22, §37)
+    if (request.thinkingLevel && request.thinkingLevel !== 'disabled') {
+      payload.reasoning_effort = request.thinkingLevel;
+      if (model.startsWith('o1') || model.startsWith('o3')) {
+        delete payload.temperature;
+      }
+    }
+
     const response = await fetch(`${this.baseUrl}/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`
       },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
+      signal: request.abortSignal
     });
 
     if (!response.ok) {
@@ -85,6 +94,7 @@ export class OpenAIProvider implements AIProvider {
     let buffer = '';
 
     while (true) {
+      if (request.abortSignal?.aborted) break;
       const { done, value } = await reader.read();
       if (done) break;
 
@@ -104,6 +114,9 @@ export class OpenAIProvider implements AIProvider {
             if (!choice) continue;
 
             const delta = choice.delta;
+            if (delta?.reasoning_content || delta?.reasoning) {
+              yield { type: 'thinking_delta', text: delta.reasoning_content || delta.reasoning };
+            }
             if (delta?.content) {
               yield { type: 'text_delta', text: delta.content };
             }

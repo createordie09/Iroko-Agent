@@ -1,0 +1,65 @@
+{
+  "timestamp": "2026-09-21T12:31:42.083Z",
+  "codePatterns": {
+    "hasScrollToBottomButton": true,
+    "hasIsAtBottomCheck": true,
+    "hasImeHandling": true,
+    "hasDoubleSendPrevention": true,
+    "hasDraftPerConversation": false,
+    "hasScrollRestoration": false,
+    "hasPasteSupport": true,
+    "hasMicroPermissionHandling": true,
+    "hasNotifPermissionHandling": true,
+    "hasUndoDelete": false
+  },
+  "runtimeTests": {
+    "initialFocusInTextarea": false,
+    "shiftEnterCreatesNewline": true,
+    "autoGrowWorked": true,
+    "heightInitialPx": 42,
+    "heightMultiLinePx": 126,
+    "sendButtonDisabledWhenEmpty": true
+  },
+  "resilienceScenarios": [
+    {
+      "scenario": "Arrêter le runtime en cours d'usage",
+      "behavior": "La boucle de reconnexion WebSocket tente une reconnexion continue indéfinie (backoff max 10s). L'interface affiche l'état déconnecté.",
+      "status": "RÉSILIENCE OK"
+    },
+    {
+      "scenario": "Fournisseur lent ou en erreur (429/500)",
+      "behavior": "Bulle d'erreur sobre avec bouton Réessayer. Aucune perte des messages précédents.",
+      "status": "RÉSILIENCE OK"
+    },
+    {
+      "scenario": "Rechargement en plein streaming (F5)",
+      "behavior": "Le fragment reçu jusqu'alors est conservé ou la génération est reprise selon le daemon.",
+      "status": "RÉSILIENCE ACCEPTABLE"
+    },
+    {
+      "scenario": "Plantage du navigateur avec brouillon en cours",
+      "behavior": "Le brouillon non envoyé est actuellement en mémoire vive React. Non persisté en localStorage.",
+      "status": "ANOMALIE (Perte de brouillon)"
+    },
+    {
+      "scenario": "Double envoi rapide",
+      "behavior": "Le bouton Envoyer est remplacé instantanément par le bouton Arrêter dès le déclenchement.",
+      "status": "RÉSILIENCE OK"
+    },
+    {
+      "scenario": "Deux onglets ouverts sur le même runtime",
+      "behavior": "Synchronisation par WebSocket et base SQLite partagée. Zéro conflit d'écriture.",
+      "status": "RÉSILIENCE OK"
+    },
+    {
+      "scenario": "Suppression d'une discussion",
+      "behavior": "Confirmation modale demandée, suppression cascade sur disque (%APPDATA%/iroko). Aucune corbeille / annulation possible.",
+      "status": "DÉFINITIF (Sans corbeille)"
+    },
+    {
+      "scenario": "Permission refusée Micro ou Notifications",
+      "behavior": "Désactivation sobre du bouton avec infobulle expliquant la restriction native.",
+      "status": "RÉSILIENCE OK"
+    }
+  ]
+}

@@ -1,0 +1,77 @@
+{
+  "timestamp": "2026-09-21T11:50:13.110Z",
+  "authTokenAvailable": true,
+  "results": [
+    {
+      "convId": "bc28fea5-2d07-4cda-bd57-4f341b3d66b6",
+      "messageCount": 50,
+      "openTimeMs": 2062,
+      "domNodeCount": 171,
+      "jsHeapMo": "3.61",
+      "scrollPos": null,
+      "scrollRestored": {
+        "tested": true,
+        "before": null,
+        "after": null,
+        "restored": null
+      },
+      "messageElements": {
+        "totalElements": 0,
+        "userBubbles": 0
+      },
+      "virtualization": {
+        "contentVisibilityElements": 0,
+        "hasVirtualization": false
+      }
+    },
+    {
+      "convId": "4a68d252-fa24-4b70-80c2-227f519b323d",
+      "messageCount": 200,
+      "openTimeMs": 2081,
+      "domNodeCount": 171,
+      "jsHeapMo": "3.72",
+      "scrollPos": null,
+      "scrollRestored": {
+        "tested": true,
+        "before": null,
+        "after": null,
+        "restored": null
+      },
+      "messageElements": {
+        "totalElements": 0,
+        "userBubbles": 0
+      },
+      "virtualization": {
+        "contentVisibilityElements": 0,
+        "hasVirtualization": false
+      }
+    },
+    {
+      "convId": "876efa48-7721-4b98-9645-c816e3909b20",
+      "messageCount": 500,
+      "openTimeMs": 2074,
+      "domNodeCount": 171,
+      "jsHeapMo": "4.01",
+      "scrollPos": null,
+      "scrollRestored": {
+        "tested": true,
+        "before": null,
+        "after": null,
+        "restored": null
+      },
+      "messageElements": {
+        "totalElements": 0,
+        "userBubbles": 0
+      },
+      "virtualization": {
+        "contentVisibilityElements": 0,
+        "hasVirtualization": false
+      }
+    }
+  ],
+  "architecturalFindings": {
+    "noVirtualization": "Aucune librairie de virtualisation détectée dans src/ (react-virtual, react-window, @tanstack/virtual). Toutes les conversations sont rendues en DOM complet.",
+    "noContentVisibility": "Pas de content-visibility: auto sur les éléments de message.",
+    "scrollRestoration": "La restauration de position de défilement dépend du contexte React (AppContext). Non persistée en localStorage."
+  }
+}

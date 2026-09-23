@@ -1,0 +1,29 @@
+{
+  "timestamp": "2026-09-21T11:10:09.161Z",
+  "zoom200": {
+    "scrollWidth": 1280,
+    "innerWidth": 1280,
+    "hasHorizontalScroll": false
+  },
+  "zoom400": {
+    "scrollWidth": 1280,
+    "innerWidth": 1280,
+    "hasHorizontalScroll": false
+  },
+  "textSpacingWcag": {
+    "checkedCount": 17,
+    "truncatedCount": 0,
+    "samples": []
+  },
+  "reducedMotionEmulation": {
+    "htmlClasses": "notranslate dark reduce-motion",
+    "transitionDuration": "1e-05s",
+    "respectsPreference": true
+  },
+  "forcedColorsIconsCheck": {
+    "totalSvgs": 12,
+    "svgsWithoutCurrentColor": 0,
+    "iconsPreserved": true
+  },
+  "proof": "MESURÉ"
+}

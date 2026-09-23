@@ -1,6 +1,7 @@
-﻿import fs from 'fs';
+import fs from 'fs';
 import path from 'path';
 import { IrokoTool, ToolContext, ToolResult } from '../types';
+import { PathSanitizer } from '../../security/PathSanitizer';
 
 export interface EditFileInput {
   filePath: string;
@@ -10,7 +11,7 @@ export interface EditFileInput {
 
 export class EditFileTool implements IrokoTool<EditFileInput> {
   public name = 'edit_file';
-  public description = 'Remplace de façon chirurgicale un fragment de texte exact dans un fichier existant.';
+  public description = 'Remplace une portion de texte unique dans un fichier existant du workspace.';
   public category = 'filesystem' as const;
   public permission = 'MEDIUM' as const;
 
@@ -20,36 +21,42 @@ export class EditFileTool implements IrokoTool<EditFileInput> {
     properties: {
       filePath: {
         type: 'string',
-        description: 'Chemin relatif du fichier à modifier.'
+        description: 'Chemin relatif du fichier à modifier depuis la racine du workspace.'
       },
       targetContent: {
         type: 'string',
-        description: 'Extrait de texte exact à remplacer (doit être unique dans le fichier).'
+        description: 'Le contenu exact à remplacer (doit être unique dans le fichier).'
       },
       replacementContent: {
         type: 'string',
-        description: 'Nouveau contenu venant remplacer l\'extrait cible.'
+        description: 'Le nouveau contenu de remplacement.'
       }
     }
   };
 
   public async execute(input: EditFileInput, context: ToolContext): Promise<ToolResult> {
-    const fullPath = path.resolve(context.workspacePath, input.filePath);
-
-    if (!fullPath.startsWith(context.workspacePath)) {
-      return { success: false, error: 'Accès refusé : fichier hors du workspace.' };
+    const validation = PathSanitizer.validatePath(input.filePath, context.workspacePath);
+    if (!validation.valid || !validation.canonicalPath) {
+      return { success: false, error: validation.error || 'Chemin invalide.' };
     }
+
+    const fullPath = validation.canonicalPath;
 
     if (!fs.existsSync(fullPath)) {
       return { success: false, error: `Fichier introuvable : ${input.filePath}` };
     }
 
     // Sollicitation de permission préalable
+    const permLevel = validation.isSensitive ? 'HIGH' : this.permission;
+    const desc = validation.isSensitive
+      ? `Modification chirurgicale d'un fichier sensible (${input.filePath})`
+      : `Modifier chirurgicalement le fichier "${input.filePath}"`;
+
     const approved = await context.permissionEngine.requestPermission(
       this.name,
-      this.permission,
-      `Modifier chirurgicalement le fichier "${input.filePath}"`,
-      { path: input.filePath },
+      permLevel,
+      desc,
+      { path: input.filePath, isSensitive: validation.isSensitive },
       (req) => context.emitEvent({ type: 'permission_required', request: req })
     );
 
@@ -63,13 +70,21 @@ export class EditFileTool implements IrokoTool<EditFileInput> {
     try {
       const original = fs.readFileSync(fullPath, 'utf-8');
 
-      // Normalisation des fins de ligne pour la comparaison
-      const normOriginal = original.replace(/\r\n/g, '\n');
+      // 1. Détection et préservation du BOM UTF-8 (\uFEFF)
+      const hasBOM = original.charCodeAt(0) === 0xfeff;
+      const contentWithoutBOM = hasBOM ? original.slice(1) : original;
+
+      // 2. Détection et préservation des fins de ligne (CRLF vs LF)
+      const isCRLF = contentWithoutBOM.includes('\r\n');
+
+      // Normalisation en LF pour la recherche et le comptage strict
+      const normOriginal = contentWithoutBOM.replace(/\r\n/g, '\n');
       const normTarget = input.targetContent.replace(/\r\n/g, '\n');
       const normReplacement = input.replacementContent.replace(/\r\n/g, '\n');
 
       const occurrences = normOriginal.split(normTarget).length - 1;
 
+      // 3. Échec strict sans rien modifier si la cible est introuvable
       if (occurrences === 0) {
         return {
           success: false,
@@ -77,6 +92,7 @@ export class EditFileTool implements IrokoTool<EditFileInput> {
         };
       }
 
+      // 4. Échec strict sans rien modifier si la cible est ambiguë (> 1 occurrence)
       if (occurrences > 1) {
         return {
           success: false,
@@ -84,8 +100,24 @@ export class EditFileTool implements IrokoTool<EditFileInput> {
         };
       }
 
-      const updated = normOriginal.replace(normTarget, normReplacement);
-      fs.writeFileSync(fullPath, updated, 'utf-8');
+      // 5. Sauvegarde préalable dans le dossier runtime pour annulation et audit
+      PathSanitizer.backupFile(context.workspacePath, fullPath);
+
+      // 6. Remplacement chirurgical
+      let updated = normOriginal.replace(normTarget, normReplacement);
+
+      // Restauration des fins de ligne d'origine
+      if (isCRLF) {
+        updated = updated.replace(/\n/g, '\r\n');
+      }
+
+      // Restauration du BOM d'origine
+      if (hasBOM) {
+        updated = '\uFEFF' + updated;
+      }
+
+      // 7. Écriture atomique via fichier temporaire
+      PathSanitizer.writeAtomic(fullPath, updated, 'utf-8');
 
       const diff = `--- ${input.filePath}\n+++ ${input.filePath}\n- ${normTarget.slice(0, 150)}...\n+ ${normReplacement.slice(0, 150)}...`;
 

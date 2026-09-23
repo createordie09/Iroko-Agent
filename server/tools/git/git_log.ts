@@ -1,8 +1,6 @@
-import { exec } from 'child_process';
-import { promisify } from 'util';
 import { IrokoTool, ToolContext, ToolResult } from '../types';
-
-const execAsync = promisify(exec);
+import { runGit } from './git_utils';
+import { PathSanitizer } from '../../security/PathSanitizer';
 
 export interface GitLogInput {
   limit?: number;
@@ -47,10 +45,28 @@ export class GitLogTool implements IrokoTool<GitLogInput, GitLogOutput> {
       const limit = Math.min(Math.max(input.limit || 10, 1), 50);
       const delimiter = '---IROKO_COMMIT---';
       const format = `%h%x09%an%x09%ad%x09%s${delimiter}`;
-      const pathArg = input.path ? ` -- "${input.path}"` : '';
 
-      const cmd = `git log -n ${limit} --date=short --format="${format}"${pathArg}`;
-      const { stdout } = await execAsync(cmd, { cwd: context.workspacePath });
+      const args = ['log', '-n', String(limit), '--date=short', `--format=${format}`];
+
+      if (input.path) {
+        const raw = input.path.trim();
+        if (raw.startsWith('-')) {
+          return {
+            success: false,
+            error: `Chemin invalide : un chemin ne peut pas commencer par un tiret ("${raw}").`
+          };
+        }
+        const pathVal = PathSanitizer.validatePath(raw, context.workspacePath);
+        if (!pathVal.valid || !pathVal.canonicalPath) {
+          return {
+            success: false,
+            error: pathVal.error || 'Chemin cible invalide ou situé en dehors du workspace.'
+          };
+        }
+        args.push('--', raw);
+      }
+
+      const { stdout } = await runGit(args, context.workspacePath);
 
       const rawCommits = stdout.split(delimiter).map(c => c.trim()).filter(Boolean);
       const commits: GitCommitInfo[] = [];

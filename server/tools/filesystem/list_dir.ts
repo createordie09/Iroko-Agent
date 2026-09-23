@@ -1,6 +1,7 @@
-﻿import fs from 'fs';
+import fs from 'fs';
 import path from 'path';
 import { IrokoTool, ToolContext, ToolResult } from '../types';
+import { PathSanitizer } from '../../security/PathSanitizer';
 
 export interface ListDirInput {
   dirPath?: string;
@@ -30,12 +31,13 @@ export class ListDirTool implements IrokoTool<ListDirInput> {
   };
 
   public async execute(input: ListDirInput, context: ToolContext): Promise<ToolResult> {
-    const targetDir = path.resolve(context.workspacePath, input.dirPath || '.');
-
-    // Sécurité de confinement
-    if (!targetDir.startsWith(context.workspacePath)) {
-      return { success: false, error: 'Accès refusé : le dossier demandé est hors du workspace.' };
+    const rawTarget = input.dirPath || '.';
+    const validation = PathSanitizer.validatePath(rawTarget, context.workspacePath);
+    if (!validation.valid || !validation.canonicalPath) {
+      return { success: false, error: validation.error || 'Dossier invalide.' };
     }
+
+    const targetDir = validation.canonicalPath;
 
     if (!fs.existsSync(targetDir)) {
       return { success: false, error: `Le dossier n'existe pas : ${input.dirPath || '.'}` };

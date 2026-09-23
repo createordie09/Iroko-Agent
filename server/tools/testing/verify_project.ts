@@ -40,10 +40,21 @@ export class VerifyProjectTool implements IrokoTool<VerifyProjectInput, Verifica
         { checksToRun: input.checks }
       );
 
+      let errorMessage: string | undefined;
+      if (!result.allPassed) {
+        if (result.missingDependencies) {
+          errorMessage = 'Dépendances manquantes : le dossier node_modules est absent. Veuillez installer les dépendances avant de lancer la vérification.';
+        } else if (result.firstFailure) {
+          errorMessage = `Vérification échouée : ${result.firstFailure.checkName} (${result.firstFailure.command}). Erreur : ${result.firstFailure.output}`;
+        } else {
+          errorMessage = 'Échec de la vérification du projet.';
+        }
+      }
+
       return {
         success: result.allPassed,
         data: result,
-        error: result.allPassed ? undefined : `Vérification échouée : ${result.firstFailure?.checkName} (${result.firstFailure?.command}). Erreur : ${result.firstFailure?.output}`
+        error: errorMessage
       };
     } catch (err: any) {
       return {

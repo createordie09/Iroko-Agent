@@ -1,0 +1,62 @@
+{
+  "timestamp": "2026-09-21T12:22:24.857Z",
+  "idleCPU": {
+    "taskDurationIdle5sSec": "0.002",
+    "scriptDurationIdle5sSec": "0.001",
+    "cpuUtilizationEstimate_pct": "0.0",
+    "heapIdleMo": "2.75"
+  },
+  "apiLatency": [
+    {
+      "endpoint": "GET /api/conversations",
+      "samples": 10,
+      "p50": 2,
+      "p95": 12,
+      "min": 2,
+      "max": 12
+    },
+    {
+      "endpoint": "GET /api/models",
+      "samples": 10,
+      "p50": 1,
+      "p95": 5,
+      "min": 1,
+      "max": 5
+    },
+    {
+      "endpoint": "GET /api/providers",
+      "samples": 10,
+      "p50": 1,
+      "p95": 3,
+      "min": 1,
+      "max": 3
+    }
+  ],
+  "timersAndPolls": {
+    "observationPeriodMs": 10014,
+    "networkRequestsDuringIdle": 3,
+    "networkRequests": [
+      {
+        "url": "/api/agent/active-tasks",
+        "method": "GET"
+      },
+      {
+        "url": "/api/agent/active-tasks",
+        "method": "GET"
+      },
+      {
+        "url": "/api/agent/active-tasks",
+        "method": "GET"
+      }
+    ],
+    "pollsPerMinute": 18,
+    "webSocketInfo": {
+      "hasWebSocket": true,
+      "note": "Impossible d'énumérer les WS actifs sans monkey-patching"
+    }
+  },
+  "reconnectionBehavior": {
+    "note": "La reconnexion WebSocket ne peut pas être testée automatiquement sans interrompre le serveur. Comportement observable manuellement via DevTools Network.",
+    "serverFile": "server/index.ts — chercher logique reconnexion SSE/WS"
+  }
+}

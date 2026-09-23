@@ -1,6 +1,7 @@
-﻿import fs from 'fs';
+import fs from 'fs';
 import path from 'path';
 import { IrokoTool, ToolContext, ToolResult } from '../types';
+import { PathSanitizer } from '../../security/PathSanitizer';
 
 export interface SearchTextInput {
   query: string;
@@ -13,8 +14,8 @@ const IGNORED_NAMES = new Set(['node_modules', '.git', 'dist', 'build', '.cache'
 
 export class SearchTextTool implements IrokoTool<SearchTextInput> {
   public name = 'search_text';
-  public description = 'Recherche une chaîne de caractères ou expression régulière dans les fichiers du workspace.';
-  public category = 'search' as const;
+  public description = 'Recherche un texte ou une regex dans l\'ensemble des fichiers texte du workspace.';
+  public category = 'filesystem' as const;
   public permission = 'SAFE' as const;
 
   public parameters = {
@@ -41,11 +42,13 @@ export class SearchTextTool implements IrokoTool<SearchTextInput> {
   };
 
   public async execute(input: SearchTextInput, context: ToolContext): Promise<ToolResult> {
-    const targetDir = path.resolve(context.workspacePath, input.dirPath || '.');
-
-    if (!targetDir.startsWith(context.workspacePath)) {
-      return { success: false, error: 'Accès refusé : dossier hors workspace.' };
+    const rawTarget = input.dirPath || '.';
+    const validation = PathSanitizer.validatePath(rawTarget, context.workspacePath);
+    if (!validation.valid || !validation.canonicalPath) {
+      return { success: false, error: validation.error || 'Dossier hors workspace.' };
     }
+
+    const targetDir = validation.canonicalPath;
 
     const limit = input.maxResults || 50;
     const matches: Array<{ file: string; line: number; text: string }> = [];

@@ -22,19 +22,63 @@
   --bg-active: #2b2a29;        /* Active nav item */
   --bg-modal: #1a1a19;         /* Modal body (26, 26, 25) */
   --bg-modal-sidebar: #151515; /* Modal left column */
+  --bg-user-bubble: #242423;   /* Bulle de message utilisateur */
 
-  --border-subtle: #252524;    /* Subtle dividers (37, 37, 36) */
+  --border-subtle: #242423;    /* Subtle dividers (36, 36, 35) */
   --border-composer: #30302f;  /* Composer outline (48, 48, 47) */
   --border-modal: #2d2d2b;     /* Modal border (45, 45, 43) */
   --border-separator: #232322; /* Inner separators */
+  --border-focus: #ededeb;
+  --border-focus-field: #767470; /* Bordure de focus pour champs (>= 3.0:1 sur toutes les surfaces sombres) */
+  --bg-input-focus: #262625;
+  --bg-error-subtle: #2d2020;
+  --border-error-subtle: #402020;
+  --bg-warning-subtle: #2d2d1f;
+  --border-warning-subtle: #404020;
+  --bg-segment: #171716;
+  --text-placeholder: #959390; /* Placeholder composer et recherche (>= 4.5:1 sur toutes surfaces) */
 
-  --text-primary: #ededeb;     /* Off-white main text */
-  --text-secondary: #878684;   /* Secondary gray text */
-  --text-tertiary: #585755;    /* Muted label text */
+  --text-primary: #ededeb;     /* Off-white main text (15.58:1) */
+  --text-secondary: #bcbab5;   /* Secondary gray text rehaussé (9.42:1, palier distinct de tertiaire) */
+  --text-tertiary: #959390;    /* Muted label text et métadonnées (>= 4.5:1 sur toutes surfaces) */
   --text-title: #e5e4e2;       /* Warm white titles */
+  --text-muted: #c4c3be;       /* Navigation inactive, code monospace */
 
   --transition-fast: 150ms cubic-bezier(0.16, 1, 0.3, 1);
   --transition-sidebar: 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ─── Claude UI Tokens : Thème Clair (WCAG AA strict, sans ombre ni dégradé) ─── */
+html.light,
+[data-theme="light"] {
+  --bg-app: #fbfbfa;           /* Toile de fond claire sobre (251, 251, 250) */
+  --bg-sidebar: #f3f2ee;       /* Fond barre latérale (243, 242, 238) */
+  --bg-surface: #ffffff;       /* Composer, cartes (255, 255, 255) */
+  --bg-surface-hover: #eae8e2; /* Surface au survol (234, 232, 226) */
+  --bg-active: #e2dfd7;        /* Élément de navigation actif (226, 223, 215) */
+  --bg-modal: #ffffff;         /* Corps modale (255, 255, 255) */
+  --bg-modal-sidebar: #f7f7f5; /* Colonne latérale modale (247, 247, 245) */
+  --bg-user-bubble: #f3f2ee;   /* Bulle de message utilisateur claire */
+
+  --border-subtle: #e5e4df;    /* Séparateurs subtils (229, 228, 223) */
+  --border-composer: #d8d6ce;  /* Contour composer (216, 214, 206) */
+  --border-modal: #d4d2cb;     /* Bordure modale (212, 210, 203) */
+  --border-separator: #e5e4df; /* Séparateurs internes */
+  --border-focus: #191918;
+  --border-focus-field: #686765; /* Bordure focus champs thème clair */
+  --bg-input-focus: #eae8e2;
+  --bg-error-subtle: #fdf2f2;
+  --border-error-subtle: #f5c6cb;
+  --bg-warning-subtle: #fffdf0;
+  --border-warning-subtle: #ffeeba;
+  --bg-segment: #eae8e2;
+  --text-placeholder: #8c8a85;
+
+  --text-primary: #191918;     /* Texte noir cassé principal (contraste > 15:1) */
+  --text-secondary: #686765;   /* Texte gris secondaire neutre (contraste > 5.5:1, conforme AA) */
+  --text-tertiary: #8c8a85;    /* Métadonnées et libellés discrets */
+  --text-title: #141413;       /* Titres */
+  --text-muted: #686765;       /* Navigation inactive claire (contraste AA) */
 }
 
 @layer base {
@@ -43,6 +87,13 @@
   }
 
   *:focus-visible {
+    outline: 2px solid var(--border-focus);
+    outline-offset: 2px;
+  }
+
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible {
     outline: none;
   }
 
@@ -55,6 +106,15 @@
       transition-duration: 0.01ms !important;
       scroll-behavior: auto !important;
     }
+  }
+
+  html.reduce-motion *,
+  html.reduce-motion *::before,
+  html.reduce-motion *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 
   body {
@@ -111,6 +171,23 @@ html, body, #root {
     background: #484846;
   }
 
+  html.light .claude-scrollbar:hover::-webkit-scrollbar-thumb,
+  html.light .custom-scrollbar:hover::-webkit-scrollbar-thumb,
+  html.light .glass-scrollbar:hover::-webkit-scrollbar-thumb,
+  [data-theme="light"] .claude-scrollbar:hover::-webkit-scrollbar-thumb,
+  [data-theme="light"] .custom-scrollbar:hover::-webkit-scrollbar-thumb,
+  [data-theme="light"] .glass-scrollbar:hover::-webkit-scrollbar-thumb {
+    background: #d4d2cb;
+  }
+  html.light .claude-scrollbar::-webkit-scrollbar-thumb:hover,
+  html.light .custom-scrollbar::-webkit-scrollbar-thumb:hover,
+  html.light .glass-scrollbar::-webkit-scrollbar-thumb:hover,
+  [data-theme="light"] .claude-scrollbar::-webkit-scrollbar-thumb:hover,
+  [data-theme="light"] .custom-scrollbar::-webkit-scrollbar-thumb:hover,
+  [data-theme="light"] .glass-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #bcbab3;
+  }
+
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
   }
@@ -149,3 +226,106 @@ html, body, #root {
     cursor: not-allowed;
   }
 }
+
+/* ─── Accessibilité : Indicateur universel :focus-visible (Lot 1 / WCAG 2.2 AA) ─── */
+*:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+}
+
+/* Conteneurs à overflow caché ou masque de fondu (liste de la sidebar) : décalage négatif anti-rognage (WCAG 2.4.11) */
+aside .overflow-y-auto button:focus-visible,
+aside .overflow-y-auto a:focus-visible,
+aside [data-sidebar-item]:focus-visible,
+aside nav button:focus-visible,
+aside nav a:focus-visible,
+.mask-fade-right button:focus-visible {
+  outline-offset: -2px;
+}
+
+/* Champs texte (composer, recherche sidebar, paramètres) : AUCUN anneau outline */
+input:focus,
+input:focus-visible,
+textarea:focus,
+textarea:focus-visible,
+select:focus,
+select:focus-visible {
+  outline: none !important;
+}
+
+/* Signalisation de focus par bordure de conteneur (>= 3.0:1) */
+[data-field-container]:focus-within {
+  border-color: var(--border-focus-field) !important;
+}
+
+/* Mode contraste élevé (forced-colors) : le focus reste visible sans couleur codée en dur */
+@media (forced-colors: active) {
+  *:focus-visible {
+    outline: 2px solid Highlight !important;
+  }
+  [data-field-container]:focus-within,
+  input:focus,
+  textarea:focus,
+  select:focus {
+    outline: 2px solid Highlight !important;
+    outline-offset: -1px;
+  }
+}
+
+/* ─── Cibles interactives accessibles (WCAG 2.5.8 >= 24px, U3 tactile >= 44px) ─── */
+.tap-target-24 {
+  position: relative;
+}
+.tap-target-24::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  min-width: 24px;
+  min-height: 24px;
+  width: 100%;
+  height: 100%;
+  pointer-events: auto;
+}
+@media (pointer: coarse) {
+  .tap-target-24::before {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
+/* ─── Texte masqué visuellement pour lecteurs d'écran (WCAG 1.3.1) ─── */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+.sr-only:focus,
+.focus\:not-sr-only:focus {
+  position: fixed !important;
+  top: 10px !important;
+  left: 12px !important;
+  z-index: 100 !important;
+  width: auto !important;
+  height: auto !important;
+  padding: 6px 14px !important;
+  margin: 0 !important;
+  overflow: visible !important;
+  clip: auto !important;
+  white-space: nowrap !important;
+  background-color: var(--bg-surface) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border-focus) !important;
+  border-radius: var(--radius-button) !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  line-height: 1.4 !important;
+}
+

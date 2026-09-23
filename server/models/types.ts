@@ -1,6 +1,6 @@
 export interface ModelMessage {
   role: 'system' | 'user' | 'assistant' | 'tool';
-  content: string;
+  content: string | any[];
   name?: string;
   toolCallId?: string;
   toolCalls?: Array<{
@@ -16,12 +16,17 @@ export interface ToolDefinition {
   parameters: Record<string, any>; // JSON Schema
 }
 
+export type ThinkingLevel = 'disabled' | 'low' | 'medium' | 'high';
+
 export interface ModelRequest {
   modelId?: string;
   messages: ModelMessage[];
   tools?: ToolDefinition[];
   temperature?: number;
   maxTokens?: number;
+  abortSignal?: AbortSignal;
+  thinkingLevel?: ThinkingLevel;
+  thinkingBudget?: number;
 }
 
 export type StreamChunk =
@@ -29,6 +34,77 @@ export type StreamChunk =
   | { type: 'thinking_delta'; text: string }
   | { type: 'tool_call_delta'; id: string; name?: string; argumentsDelta?: string }
   | { type: 'usage'; inputTokens: number; outputTokens: number };
+
+export interface ModelCapabilities {
+  vision: boolean;
+  nativePdf: boolean;
+  audio: boolean;
+  video: boolean;
+  tools: boolean;
+  reasoning: boolean;
+}
+
+export function getModelCapabilities(modelId: string): ModelCapabilities {
+  const m = (modelId || '').toLowerCase();
+
+  // Anthropic
+  if (m.includes('claude-3') || m.includes('sonnet') || m.includes('haiku') || m.includes('opus')) {
+    return {
+      vision: true,
+      nativePdf: true,
+      audio: false,
+      video: false,
+      tools: true,
+      reasoning: true
+    };
+  }
+
+  // Google Gemini
+  if (m.includes('gemini')) {
+    return {
+      vision: true,
+      nativePdf: true,
+      audio: true,
+      video: true,
+      tools: true,
+      reasoning: true
+    };
+  }
+
+  // OpenAI
+  if (m.includes('gpt-4o') || m.includes('o1') || m.includes('o3') || m.includes('o4')) {
+    return {
+      vision: true,
+      nativePdf: false,
+      audio: m.includes('audio'),
+      video: false,
+      tools: true,
+      reasoning: true
+    };
+  }
+
+  // Modèles avec vision explicite
+  if (m.includes('vision') || m.includes('-vl') || m.includes('llava') || m.includes('pixtral')) {
+    return {
+      vision: true,
+      nativePdf: false,
+      audio: false,
+      video: false,
+      tools: true,
+      reasoning: false
+    };
+  }
+
+  // Modèles texte par défaut
+  return {
+    vision: false,
+    nativePdf: false,
+    audio: false,
+    video: false,
+    tools: true,
+    reasoning: m.includes('r1') || m.includes('reason')
+  };
+}
 
 // Ancien contrat ModelProvider conservé pour rétro-compatibilité
 export interface ModelProvider {
@@ -131,3 +207,6 @@ export interface FallbackPolicy {
   allowModelSubstitution: boolean;
   allowCrossProviderFallback: boolean;
 }
+
+export * from './catalog/types';
+

@@ -1,0 +1,14 @@
+{
+  "timestamp": "2026-09-21T11:09:47.959Z",
+  "liveRegionsFound": [],
+  "responseBodyIsLiveRegion": false,
+  "liveMutationsCount": 0,
+  "statusAnnouncements": [],
+  "focusRemainsInComposer": false,
+  "proof": "MESURÉ",
+  "stopButtonStatus": {
+    "found": true,
+    "ariaLabel": null,
+    "title": "Arrêter la réponse"
+  }
+}

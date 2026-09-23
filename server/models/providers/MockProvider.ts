@@ -10,10 +10,19 @@ export class MockProvider implements AIProvider {
   }
 
   public async *generateStream(request: ModelRequest, _apiKey: string): AsyncIterable<StreamChunk> {
-    const lastUserMessage = [...request.messages].reverse().find(m => m.role === 'user')?.content || '';
+    const userMsgObj = [...request.messages].reverse().find(m => m.role === 'user');
+    const lastUserMessage = typeof userMsgObj?.content === 'string'
+      ? userMsgObj.content
+      : Array.isArray(userMsgObj?.content)
+      ? userMsgObj.content.map(c => typeof c === 'string' ? c : c.text || '').join(' ')
+      : '';
 
-    yield { type: 'thinking_delta', text: 'Analyse du contexte du projet (Moteur Hors-Ligne)...\n' };
-    await new Promise(r => setTimeout(r, 60));
+    if (request.thinkingLevel !== 'disabled') {
+      yield { type: 'thinking_delta', text: 'Analyse du contexte du projet (Moteur Hors-Ligne)...\n' };
+      await new Promise(r => setTimeout(r, 60));
+    }
+
+    if (request.abortSignal?.aborted) return;
 
     if (request.tools && request.tools.length > 0 && lastUserMessage.toLowerCase().includes('list')) {
       yield {
@@ -29,6 +38,7 @@ export class MockProvider implements AIProvider {
     const words = responseText.split(' ');
 
     for (const word of words) {
+      if (request.abortSignal?.aborted) return;
       yield { type: 'text_delta', text: word + ' ' };
       await new Promise(r => setTimeout(r, 15));
     }

@@ -1,8 +1,5 @@
-import { exec } from 'child_process';
-import { promisify } from 'util';
 import { IrokoTool, ToolContext, ToolResult } from '../types';
-
-const execAsync = promisify(exec);
+import { runGit } from './git_utils';
 
 export interface GitStatusOutput {
   branch: string;
@@ -28,7 +25,7 @@ export class GitStatusTool implements IrokoTool<Record<string, never>, GitStatus
 
   public async execute(_input: Record<string, never>, context: ToolContext): Promise<ToolResult<GitStatusOutput>> {
     try {
-      const { stdout } = await execAsync('git status --porcelain=v1 -b', { cwd: context.workspacePath });
+      const { stdout } = await runGit(['status', '--porcelain=v1', '-b'], context.workspacePath);
       const lines = stdout.split(/\r?\n/).filter(line => line.trim().length > 0);
 
       let branch = 'unknown';

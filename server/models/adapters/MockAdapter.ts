@@ -1,4 +1,4 @@
-﻿import { ModelProvider, ModelRequest, StreamChunk } from '../types';
+import { ModelProvider, ModelRequest, StreamChunk } from '../types';
 
 export class MockAdapter implements ModelProvider {
   public id = 'mock';
@@ -13,7 +13,12 @@ export class MockAdapter implements ModelProvider {
   }
 
   public async *generateStream(request: ModelRequest): AsyncIterable<StreamChunk> {
-    const lastUserMessage = [...request.messages].reverse().find(m => m.role === 'user')?.content || '';
+    const userMsgObj = [...request.messages].reverse().find(m => m.role === 'user');
+    const lastUserMessage = typeof userMsgObj?.content === 'string'
+      ? userMsgObj.content
+      : Array.isArray(userMsgObj?.content)
+      ? userMsgObj.content.map(c => typeof c === 'string' ? c : c.text || '').join(' ')
+      : '';
 
     // Émettre du thinking
     yield { type: 'thinking_delta', text: 'Analyse du contexte du projet et des fichiers environnants...\n' };

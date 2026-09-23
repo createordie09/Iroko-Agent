@@ -1,0 +1,36 @@
+{
+  "timestamp": "2026-09-21T10:59:49.585Z",
+  "bundle": {
+    "initialJsBytes": 486013,
+    "initialJsKo": "474.62",
+    "budgetKo": 250,
+    "isWithinBudget": false,
+    "files": [
+      {
+        "file": "index-BOiEiOug.js",
+        "sizeBytes": 486013,
+        "sizeKo": "474.62"
+      }
+    ]
+  },
+  "vitals": {
+    "lcpMs": 732,
+    "lcpBudgetMs": 1200,
+    "lcpPass": true,
+    "clsScore": 0.0037,
+    "clsBudget": 0,
+    "clsPass": true,
+    "simulatedInpMs": 14,
+    "inpBudgetMs": 50,
+    "inpPass": true,
+    "initialLoadDurationMs": 1466
+  },
+  "chatVolumeMetrics": {
+    "messageCount": 1000,
+    "renderDurationMs": 1201,
+    "memory": {
+      "usedJSHeapSizeMo": "17.67",
+      "totalJSHeapSizeMo": "23.88"
+    }
+  }
+}

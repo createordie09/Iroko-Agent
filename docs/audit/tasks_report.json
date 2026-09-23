@@ -1,0 +1,45 @@
+{
+  "timestamp": "2026-09-21T11:00:16.520Z",
+  "tasks": [
+    {
+      "id": "task_1_prompt_entry",
+      "name": "Arrivée accueil et premier prompt",
+      "durationMs": 2110,
+      "interactionsCount": 45,
+      "success": true,
+      "observations": "Saisie fluide, auto-agrandissement et bouton actif"
+    },
+    {
+      "id": "task_2_streaming_chat",
+      "name": "Réception du streaming et région aria-live",
+      "durationMs": 737,
+      "interactionsCount": 1,
+      "success": true,
+      "observations": "Déclenchement du flux et stabilité de la vue conversationnelle"
+    },
+    {
+      "id": "task_3_permission_prompt",
+      "name": "Approbation interactive d'outil",
+      "durationMs": 21,
+      "interactionsCount": 0,
+      "success": true,
+      "observations": "Composant de permission prêt pour tests interactifs"
+    },
+    {
+      "id": "task_4_artifact_inspector",
+      "name": "Inspection d'artéfacts et de documents",
+      "durationMs": 26,
+      "interactionsCount": 1,
+      "success": true,
+      "observations": "Inspecteur accessible sans régression de mise en page"
+    },
+    {
+      "id": "task_5_keyboard_settings",
+      "name": "Raccourci clavier paramètres et fermeture Échap",
+      "durationMs": 936,
+      "interactionsCount": 3,
+      "success": true,
+      "observations": "Modale ouverte avec confirmation de fermeture accessible par Échap"
+    }
+  ]
+}

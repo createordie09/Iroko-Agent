@@ -1,6 +1,9 @@
 import crypto from 'crypto';
 import path from 'path';
 import fs from 'fs';
+import os from 'os';
+import { execSync } from 'child_process';
+import { logger } from '../utils/logger';
 
 export interface EncryptedData {
   encrypted: string;
@@ -10,50 +13,99 @@ export interface EncryptedData {
 
 export class EncryptionService {
   private static readonly ALGORITHM = 'aes-256-gcm';
-  private static readonly IV_LENGTH = 12; // 96 bits pour GCM
+  private static readonly IV_LENGTH = 12; // 96 bits recommandés pour GCM
   private masterKey: Buffer;
 
-  constructor(workspacePath?: string) {
-    this.masterKey = this.deriveMasterKey(workspacePath || process.cwd());
+  constructor(customKey?: Buffer) {
+    this.masterKey = customKey || this.resolveMasterKey();
   }
 
   /**
-   * Dérive une clé AES-256 de 32 octets de façon reproductible et sécurisée
+   * Obtient le chemin du dossier de sécurité pour la clé maîtresse.
+   * Doit être impérativement hors du dépôt et hors du dossier de données runtime.
    */
-  private deriveMasterKey(workspacePath: string): Buffer {
+  public static getMasterKeyDir(): string {
+    if (process.platform === 'win32' && process.env.USERPROFILE) {
+      return path.join(process.env.USERPROFILE, '.iroko_security');
+    }
+    return path.join(os.homedir(), '.iroko_security');
+  }
+
+  public static getMasterKeyPath(): string {
+    return path.join(EncryptionService.getMasterKeyDir(), 'master.key');
+  }
+
+  /**
+   * Résout la clé maîtresse AES-256 (32 octets).
+   * 1. Variable d'environnement IROKO_MASTER_KEY si définie.
+   * 2. Sinon, fichier sécurisé restreint à l'utilisateur courant.
+   */
+  private resolveMasterKey(): Buffer {
     const envKey = process.env.IROKO_MASTER_KEY;
-    if (envKey && envKey.length >= 16) {
-      return crypto.createHash('sha256').update(envKey).digest();
+    if (envKey && envKey.trim().length >= 16) {
+      return crypto.createHash('sha256').update(envKey.trim()).digest();
     }
 
-    // Sinon, générer ou lire un salt unique par installation dans .iroko/
-    const irokoDir = path.join(workspacePath, '.iroko');
-    const saltFile = path.join(irokoDir, '.master_salt');
+    const keyDir = EncryptionService.getMasterKeyDir();
+    const keyPath = EncryptionService.getMasterKeyPath();
 
-    let salt: Buffer;
-    if (!fs.existsSync(irokoDir)) {
-      try { fs.mkdirSync(irokoDir, { recursive: true }); } catch {}
-    }
-
-    if (fs.existsSync(saltFile)) {
+    if (!fs.existsSync(keyDir)) {
       try {
-        salt = fs.readFileSync(saltFile);
+        fs.mkdirSync(keyDir, { recursive: true, mode: 0o700 });
+      } catch (err) {
+        logger.warn(`Impossible de créer le répertoire de sécurité : ${err}`);
+      }
+    }
+
+    if (fs.existsSync(keyPath)) {
+      try {
+        const raw = fs.readFileSync(keyPath);
+        if (raw.length === 32) {
+          return raw;
+        }
+        return crypto.createHash('sha256').update(raw).digest();
+      } catch (err) {
+        logger.warn(`Erreur lors de la lecture de master.key, régénération : ${err}`);
+      }
+    }
+
+    // Création d'une clé maîtresse cryptographique de 32 octets
+    const newKey = crypto.randomBytes(32);
+    try {
+      fs.writeFileSync(keyPath, newKey, { mode: 0o600 });
+      EncryptionService.applyRestrictedPermissions(keyPath, keyDir);
+      logger.info('Clé maîtresse de sécurité Iroko générée et restreinte.');
+    } catch (err) {
+      logger.warn(`Impossible d'écrire master.key avec droits stricts : ${err}`);
+    }
+
+    return newKey;
+  }
+
+  /**
+   * Applique les permissions restreintes à l'utilisateur courant du système
+   */
+  private static applyRestrictedPermissions(filePath: string, dirPath: string): void {
+    if (process.platform === 'win32') {
+      try {
+        const username = process.env.USERNAME || process.env.USER;
+        if (username) {
+          // Désactiver l'héritage et accorder l'accès total uniquement à l'utilisateur courant
+          execSync(`icacls "${filePath}" /inheritance:r /grant:r "${username}:F"`, { stdio: 'ignore' });
+        }
       } catch {
-        salt = crypto.randomBytes(32);
+        // En environnement sandboxé ou sans icacls, continuer sans bloquer
       }
     } else {
-      salt = crypto.randomBytes(32);
       try {
-        fs.writeFileSync(saltFile, salt);
+        fs.chmodSync(dirPath, 0o700);
+        fs.chmodSync(filePath, 0o600);
       } catch {}
     }
-
-    const machineId = `${process.platform}:${process.arch}:${process.env.USERNAME || process.env.USER || 'iroko'}`;
-    return crypto.pbkdf2Sync(machineId, salt, 100000, 32, 'sha256');
   }
 
   /**
-   * Chiffre une chaîne de caractères en AES-256-GCM
+   * Chiffre une chaîne en AES-256-GCM avec IV aléatoire de 12 octets et tag d'authentification
    */
   public encrypt(plaintext: string): EncryptedData {
     const iv = crypto.randomBytes(EncryptionService.IV_LENGTH);
@@ -72,12 +124,13 @@ export class EncryptionService {
   }
 
   /**
-   * Déchiffre une chaîne chiffrée avec vérification d'intégrité
+   * Déchiffre une charge utile AES-256-GCM avec contrôle d'intégrité strict
    */
-  public decrypt(encryptedData: EncryptedData): string {
+  public decrypt(encryptedData: EncryptedData, alternativeKey?: Buffer): string {
+    const key = alternativeKey || this.masterKey;
     const iv = Buffer.from(encryptedData.iv, 'hex');
     const authTag = Buffer.from(encryptedData.authTag, 'hex');
-    const decipher = crypto.createDecipheriv(EncryptionService.ALGORITHM, this.masterKey, iv);
+    const decipher = crypto.createDecipheriv(EncryptionService.ALGORITHM, key, iv, { authTagLength: 16 });
 
     decipher.setAuthTag(authTag);
 
@@ -88,7 +141,27 @@ export class EncryptionService {
   }
 
   /**
-   * Masque une clé d'API pour l'affichage sécurisé (ex: "••••••••3A9B")
+   * Ancienne méthode de dérivation pour la migration des clés créées sous le schéma précédent
+   */
+  public static deriveLegacyKey(workspacePath: string): Buffer {
+    const saltFile = path.join(workspacePath, '.iroko', '.master_salt');
+    let salt: Buffer;
+    if (fs.existsSync(saltFile)) {
+      try {
+        salt = fs.readFileSync(saltFile);
+      } catch {
+        salt = Buffer.from('default_salt_iroko_legacy_fallback');
+      }
+    } else {
+      salt = Buffer.from('default_salt_iroko_legacy_fallback');
+    }
+    const machineId = `${process.platform}:${process.arch}:${process.env.USERNAME || process.env.USER || 'iroko'}`;
+    return crypto.pbkdf2Sync(machineId, salt, 100000, 32, 'sha256');
+  }
+
+  /**
+   * Masque une clé API pour l'affichage sans jamais exposer le secret.
+   * Conserve le début (ex: sk-•••• ou ••••) et la fin (ex: 3A9B).
    */
   public static maskKey(key: string): string {
     if (!key || typeof key !== 'string') return '••••';

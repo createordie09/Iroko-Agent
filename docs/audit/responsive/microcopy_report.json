@@ -1,0 +1,115 @@
+{
+  "totalStringsSampled": 263,
+  "tutoiementIssues": [],
+  "threeDotsIssues": [],
+  "missingInsecables": {
+    "colon": [
+      {
+        "text": "Outil :",
+        "file": "C:\\Users\\DELL\\Documents\\Iroko-Agent\\src\\features\\agent\\PermissionPrompt.tsx"
+      },
+      {
+        "text": "Cible :",
+        "file": "C:\\Users\\DELL\\Documents\\Iroko-Agent\\src\\features\\agent\\PermissionPrompt.tsx"
+      },
+      {
+        "text": "Version :",
+        "file": "C:\\Users\\DELL\\Documents\\Iroko-Agent\\src\\features\\chat\\ArtifactInspector.tsx"
+      },
+      {
+        "text": "Prompt :",
+        "file": "C:\\Users\\DELL\\Documents\\Iroko-Agent\\src\\features\\chat\\ArtifactInspector.tsx"
+      },
+      {
+        "text": "Exemple : Réponds toujours de façon concise, privilégie le typage strict en TypeScript, évite le superflu...",
+        "file": "C:\\Users\\DELL\\Documents\\Iroko-Agent\\src\\features\\settings\\pages\\PreferencesPage.tsx"
+      },
+      {
+        "text": "Iroko :",
+        "file": "C:\\Users\\DELL\\Documents\\Iroko-Agent\\src\\features\\settings\\pages\\PrivacyPage.tsx"
+      },
+      {
+        "text": "Plateforme :",
+        "file": "C:\\Users\\DELL\\Documents\\Iroko-Agent\\src\\features\\settings\\pages\\PrivacyPage.tsx"
+      },
+      {
+        "text": "Port runtime :",
+        "file": "C:\\Users\\DELL\\Documents\\Iroko-Agent\\src\\features\\settings\\pages\\PrivacyPage.tsx"
+      },
+      {
+        "text": "Base SQLite :",
+        "file": "C:\\Users\\DELL\\Documents\\Iroko-Agent\\src\\features\\settings\\pages\\PrivacyPage.tsx"
+      },
+      {
+        "text": "Dossier données :",
+        "file": "C:\\Users\\DELL\\Documents\\Iroko-Agent\\src\\features\\settings\\pages\\PrivacyPage.tsx"
+      },
+      {
+        "text": "Fournisseurs configurés :",
+        "file": "C:\\Users\\DELL\\Documents\\Iroko-Agent\\src\\features\\settings\\pages\\PrivacyPage.tsx"
+      },
+      {
+        "text": "Serveurs MCP :",
+        "file": "C:\\Users\\DELL\\Documents\\Iroko-Agent\\src\\features\\settings\\pages\\PrivacyPage.tsx"
+      },
+      {
+        "text": "Erreurs récentes :",
+        "file": "C:\\Users\\DELL\\Documents\\Iroko-Agent\\src\\features\\settings\\pages\\PrivacyPage.tsx"
+      },
+      {
+        "text": "Zéro télémétrie :",
+        "file": "C:\\Users\\DELL\\Documents\\Iroko-Agent\\src\\features\\settings\\pages\\PrivacyPage.tsx"
+      },
+      {
+        "text": "Services vocaux :",
+        "file": "C:\\Users\\DELL\\Documents\\Iroko-Agent\\src\\features\\settings\\pages\\PrivacyPage.tsx"
+      },
+      {
+        "text": "Destinations réseau :",
+        "file": "C:\\Users\\DELL\\Documents\\Iroko-Agent\\src\\features\\settings\\pages\\PrivacyPage.tsx"
+      }
+    ],
+    "question": [
+      {
+        "text": "Confirmer la suppression de toutes les discussions ?",
+        "file": "C:\\Users\\DELL\\Documents\\Iroko-Agent\\src\\features\\settings\\pages\\PrivacyPage.tsx"
+      },
+      {
+        "text": "Confirmer la suppression de toute la mémoire ?",
+        "file": "C:\\Users\\DELL\\Documents\\Iroko-Agent\\src\\features\\settings\\pages\\PrivacyPage.tsx"
+      },
+      {
+        "text": "Confirmer la suppression de toutes les clés d'API ?",
+        "file": "C:\\Users\\DELL\\Documents\\Iroko-Agent\\src\\features\\settings\\pages\\PrivacyPage.tsx"
+      },
+      {
+        "text": "Confirmer la restauration de la base ?",
+        "file": "C:\\Users\\DELL\\Documents\\Iroko-Agent\\src\\features\\settings\\pages\\PrivacyPage.tsx"
+      }
+    ],
+    "exclamation": [
+      {
+        "text": "Copié !",
+        "file": "C:\\Users\\DELL\\Documents\\Iroko-Agent\\src\\features\\settings\\pages\\PrivacyPage.tsx"
+      }
+    ],
+    "semicolon": []
+  },
+  "terminology": {
+    "discussionVsConversation": {
+      "discussion": 8,
+      "conversation": 2,
+      "files": []
+    },
+    "projectVsDossier": {
+      "projet": 5,
+      "dossier": 8,
+      "files": []
+    },
+    "artifactOrthography": {
+      "artefactAccent": 4,
+      "artefactSansAccent": 0,
+      "files": []
+    }
+  }
+}

@@ -1,0 +1,63 @@
+{
+  "timestamp": "2026-09-23T15:25:31.963Z",
+  "parcours": [
+    {
+      "name": "Accueil -> Saisie -> Envoi",
+      "tabStopsToTextarea": 8,
+      "reachedTextarea": true,
+      "outlineStyle": "none",
+      "proof": "MESURÉ",
+      "status": "PASS"
+    },
+    {
+      "name": "Menu \"+\" et sous-menus",
+      "plusBtnFound": true,
+      "plusMenuOpen": false,
+      "plusMenuClosedByEscape": true,
+      "focusRestoredOnPlus": true,
+      "proof": "OBSERVÉ",
+      "observation": "Focus restitué sur le déclencheur"
+    },
+    {
+      "name": "Sélecteur de modèle",
+      "modelSelectorFound": true,
+      "modelMenuOpen": true,
+      "modelMenuNavigable": false,
+      "focusRestoredOnModelBtn": false,
+      "proof": "OBSERVÉ"
+    },
+    {
+      "name": "Bascule Chat | Code",
+      "controls": [
+        {
+          "text": "Chat",
+          "role": null,
+          "ariaPressed": null,
+          "ariaSelected": null,
+          "tabIndex": 0
+        },
+        {
+          "text": "Code",
+          "role": null,
+          "ariaPressed": null,
+          "ariaSelected": null,
+          "tabIndex": 0
+        }
+      ],
+      "proof": "OBSERVÉ",
+      "observation": "Rôle radio/tab ou simple bouton"
+    },
+    {
+      "name": "Modale Paramètres (Ctrl+, / Échap)",
+      "modalOpen": true,
+      "focusTrapped": true,
+      "modalClosed": true,
+      "focusRestoredAfterModal": true,
+      "proof": "MESURÉ",
+      "observation": "Focus restitué"
+    }
+  ],
+  "hoverOnlyFeatures": [],
+  "focusVisibilityIssues": [],
+  "focusTrapOrRestorationIssues": []
+}

@@ -44,6 +44,24 @@ export class AnthropicProvider implements AIProvider {
       }));
     }
 
+    // Paliers de réflexion (§22, §37)
+    let thinkingBudget = request.thinkingBudget;
+    if (!thinkingBudget && request.thinkingLevel && request.thinkingLevel !== 'disabled') {
+      if (request.thinkingLevel === 'low') thinkingBudget = 1024;
+      else if (request.thinkingLevel === 'medium') thinkingBudget = 4096;
+      else if (request.thinkingLevel === 'high') thinkingBudget = 16384;
+    }
+
+    if (thinkingBudget && thinkingBudget > 0) {
+      payload.thinking = {
+        type: 'enabled',
+        budget_tokens: thinkingBudget
+      };
+      if (payload.max_tokens <= thinkingBudget) {
+        payload.max_tokens = thinkingBudget + 4096;
+      }
+    }
+
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -51,7 +69,8 @@ export class AnthropicProvider implements AIProvider {
         'x-api-key': apiKey,
         'anthropic-version': '2023-06-01'
       },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
+      signal: request.abortSignal
     });
 
     if (!response.ok) {
@@ -68,6 +87,7 @@ export class AnthropicProvider implements AIProvider {
     let buffer = '';
 
     while (true) {
+      if (request.abortSignal?.aborted) break;
       const { done, value } = await reader.read();
       if (done) break;
 

@@ -1,6 +1,7 @@
-﻿import fs from 'fs';
+import fs from 'fs';
 import path from 'path';
 import { IrokoTool, ToolContext, ToolResult } from '../types';
+import { PathSanitizer } from '../../security/PathSanitizer';
 
 export interface WriteFileInput {
   filePath: string;
@@ -10,9 +11,9 @@ export interface WriteFileInput {
 
 export class WriteFileTool implements IrokoTool<WriteFileInput> {
   public name = 'write_file';
-  public description = 'Crée un nouveau fichier dans le workspace avec le contenu spécifié.';
+  public description = 'Crée un nouveau fichier texte ou remplace intégralement son contenu.';
   public category = 'filesystem' as const;
-  public permission = 'MEDIUM' as const;
+  public permission = 'HIGH' as const;
 
   public parameters = {
     type: 'object',
@@ -20,27 +21,28 @@ export class WriteFileTool implements IrokoTool<WriteFileInput> {
     properties: {
       filePath: {
         type: 'string',
-        description: 'Chemin relatif du fichier à créer depuis la racine du workspace.'
+        description: 'Chemin relatif du fichier à créer ou modifier.'
       },
       content: {
         type: 'string',
-        description: 'Contenu intégral à écrire dans le fichier.'
+        description: 'Nouveau contenu complet du fichier.'
       },
       overwrite: {
         type: 'boolean',
-        description: 'Autorise l\'écrasement si le fichier existe déjà (par défaut false).'
+        description: 'Autoriser l\'écrasement si le fichier existe déjà (false par défaut).'
       }
     }
   };
 
   public async execute(input: WriteFileInput, context: ToolContext): Promise<ToolResult> {
-    const fullPath = path.resolve(context.workspacePath, input.filePath);
-
-    if (!fullPath.startsWith(context.workspacePath)) {
-      return { success: false, error: 'Accès refusé : chemin en dehors du workspace.' };
+    const validation = PathSanitizer.validatePath(input.filePath, context.workspacePath, { allowCreation: true });
+    if (!validation.valid || !validation.canonicalPath) {
+      return { success: false, error: validation.error || 'Chemin invalide.' };
     }
 
+    const fullPath = validation.canonicalPath;
     const fileExists = fs.existsSync(fullPath);
+
     if (fileExists && !input.overwrite) {
       return {
         success: false,
@@ -49,11 +51,16 @@ export class WriteFileTool implements IrokoTool<WriteFileInput> {
     }
 
     // Demande de permission
+    const permLevel = validation.isSensitive ? 'HIGH' : this.permission;
+    const desc = validation.isSensitive
+      ? `Écriture dans un fichier sensible (${input.filePath})`
+      : `${fileExists ? 'Écraser' : 'Créer'} le fichier "${input.filePath}"`;
+
     const approved = await context.permissionEngine.requestPermission(
       this.name,
-      this.permission,
-      `${fileExists ? 'Écraser' : 'Créer'} le fichier "${input.filePath}"`,
-      { path: input.filePath },
+      permLevel,
+      desc,
+      { path: input.filePath, isSensitive: validation.isSensitive },
       (req) => context.emitEvent({ type: 'permission_required', request: req })
     );
 
@@ -65,12 +72,8 @@ export class WriteFileTool implements IrokoTool<WriteFileInput> {
     }
 
     try {
-      const parentDir = path.dirname(fullPath);
-      if (!fs.existsSync(parentDir)) {
-        fs.mkdirSync(parentDir, { recursive: true });
-      }
-
-      fs.writeFileSync(fullPath, input.content, 'utf-8');
+      // Écriture atomique via fichier temporaire
+      PathSanitizer.writeAtomic(fullPath, input.content, 'utf-8');
 
       context.emitEvent({
         type: 'file_changed',

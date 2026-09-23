@@ -1,11 +1,8 @@
-import { exec } from 'child_process';
-import { promisify } from 'util';
 import { IrokoTool, ToolContext, ToolResult } from '../types';
-
-const execAsync = promisify(exec);
+import { runGit, validateBranchName } from './git_utils';
 
 export interface GitBranchInput {
-  action?: 'list' | 'create' | 'checkout';
+  action?: 'list' | 'checkout';
   branchName?: string;
 }
 
@@ -17,7 +14,7 @@ export interface GitBranchOutput {
 
 export class GitBranchTool implements IrokoTool<GitBranchInput, GitBranchOutput> {
   public readonly name = 'git_branch';
-  public readonly description = 'Liste les branches Git du projet ou bascule / crée une nouvelle branche de travail.';
+  public readonly description = 'Liste les branches Git du projet ou bascule sur une branche existante.';
   public readonly category = 'git';
   public readonly permission = 'LOW' as const;
 
@@ -26,12 +23,12 @@ export class GitBranchTool implements IrokoTool<GitBranchInput, GitBranchOutput>
     properties: {
       action: {
         type: 'string',
-        enum: ['list', 'create', 'checkout'],
-        description: 'Action à réaliser : "list" pour voir les branches, "create" pour créer une branche, "checkout" pour basculer'
+        enum: ['list', 'checkout'],
+        description: 'Action à réaliser : "list" pour afficher les branches, "checkout" pour basculer sur une branche existante.'
       },
       branchName: {
         type: 'string',
-        description: 'Nom de la branche (requis pour "create" et "checkout")'
+        description: 'Nom de la branche existante vers laquelle basculer (requis pour "checkout").'
       }
     },
     additionalProperties: false
@@ -43,27 +40,28 @@ export class GitBranchTool implements IrokoTool<GitBranchInput, GitBranchOutput>
     try {
       let actionResult: string | undefined;
 
-      if (action === 'create' || action === 'checkout') {
+      if (action === 'checkout') {
         if (!input.branchName) {
           return {
             success: false,
-            error: 'Le paramètre "branchName" est requis pour cette action.'
+            error: 'Le paramètre "branchName" est requis pour basculer de branche.'
           };
         }
 
-        const sanitizedBranch = input.branchName.trim().replace(/[^a-zA-Z0-9_\-/.]/g, '');
-
-        if (action === 'create') {
-          await execAsync(`git checkout -b "${sanitizedBranch}"`, { cwd: context.workspacePath });
-          actionResult = `Nouvelle branche "${sanitizedBranch}" créée et activée.`;
-        } else if (action === 'checkout') {
-          await execAsync(`git checkout "${sanitizedBranch}"`, { cwd: context.workspacePath });
-          actionResult = `Basculé sur la branche "${sanitizedBranch}".`;
+        const val = validateBranchName(input.branchName);
+        if (!val.valid) {
+          return {
+            success: false,
+            error: val.error || 'Nom de branche invalide.'
+          };
         }
+
+        await runGit(['checkout', input.branchName.trim()], context.workspacePath);
+        actionResult = `Basculé avec succès sur la branche "${input.branchName.trim()}".`;
       }
 
-      // Lister les branches et déterminer la branche active
-      const { stdout: branchListOut } = await execAsync('git branch --no-color', { cwd: context.workspacePath });
+      // Lister les branches et déterminer la branche courante
+      const { stdout: branchListOut } = await runGit(['branch', '--no-color'], context.workspacePath);
       const lines = branchListOut.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
 
       let currentBranch = 'unknown';

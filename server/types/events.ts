@@ -1,4 +1,4 @@
-﻿export type AgentStatus = 
+export type AgentStatus = 
   | 'idle' 
   | 'thinking' 
   | 'planning' 
@@ -24,16 +24,24 @@ export interface PlanStep {
   title: string;
   status: 'pending' | 'in_progress' | 'completed' | 'failed';
   details?: string;
+  description?: string;
 }
 
 export interface VerificationCheck {
   name: string;
   command?: string;
-  status: 'pending' | 'running' | 'passed' | 'failed';
+  status: 'pending' | 'running' | 'passed' | 'failed' | 'skipped';
   output?: string;
 }
 
-export type AgentEvent =
+export type BaseEvent = {
+  sessionId?: string;
+  taskId?: string;
+  toolCallId?: string;
+  timestamp?: string;
+};
+
+export type AgentEvent = BaseEvent & (
   | { type: 'connected'; sessionId: string; workspacePath: string }
   | { type: 'status'; status: AgentStatus; message?: string }
   | { type: 'thinking'; content: string }
@@ -44,11 +52,29 @@ export type AgentEvent =
   | { type: 'file_changed'; path: string; diff?: string; action: 'create' | 'modify' | 'delete' }
   | { type: 'verification_step'; check: VerificationCheck }
   | { type: 'message'; role: 'assistant'; content: string; partial?: boolean }
+  | { type: 'artifact_created'; artifact: { id: string; name: string; title?: string; mimeType: string; version: number; size: number; metadata?: any } }
+  | { type: 'artifact_updated'; artifact: { id: string; name: string; title?: string; mimeType: string; version: number; size: number; metadata?: any } }
+  | { type: 'video_job_updated'; job: any }
+  | { type: 'context_usage'; usage: { inputTokens: number; outputTokens: number; totalTokens: number; contextWindow: number; isEstimate: boolean; ratio: number } }
+  | { type: 'context_summarized'; message: string; usage?: { inputTokens: number; outputTokens: number; totalTokens: number; contextWindow: number; isEstimate: boolean; ratio: number } }
   | { type: 'completed'; summary: string; filesChanged: string[] }
-  | { type: 'error'; message: string; fatal: boolean };
+  | { type: 'error'; message: string; fatal: boolean }
+  | { type: 'providers_changed'; providers?: any[]; timestamp?: string }
+  | { type: 'catalog_updated'; total?: number; byProvider?: Record<string, number>; timestamp?: string }
+);
 
 export type ClientMessage =
   | { type: 'init_session'; workspacePath?: string }
-  | { type: 'send_prompt'; prompt: string; mode?: string }
+  | { 
+      type: 'send_prompt'; 
+      prompt: string; 
+      mode?: string; 
+      preferredProviderId?: string;
+      modelId?: string;
+      thinkingLevel?: 'disabled' | 'low' | 'medium' | 'high';
+      thinkingBudget?: number;
+      conversationId?: string;
+      attachmentIds?: string[];
+    }
   | { type: 'permission_response'; requestId: string; approved: boolean; scope?: 'once' | 'session' | 'workspace' }
   | { type: 'cancel_task' };

@@ -13,11 +13,11 @@ export function ClaudeHero({ onSendMessage, isLoading = false }: ClaudeHeroProps
       {/* ── Contenu centré (~40% de la hauteur du viewport) ── */}
       <div className="w-full flex flex-col items-center -mt-16 sm:-mt-24">
         
-        {/* ── Logo Iroko + Titre "Bonjour, Marion" en serif (Captures 1 et 3) ── */}
+        {/* ── Logo Iroko + Titre "Bonjour" en serif ── */}
         <div className="flex items-center justify-center gap-3.5 mb-8">
           {/* Logo Iroko : astérisque / emblème géométrique en blanc cassé (Règle 8) */}
           <svg
-            className="w-7 h-7 sm:w-8 sm:h-8 text-[#ededeb] shrink-0"
+            className="w-7 h-7 sm:w-8 sm:h-8 text-[var(--text-primary)] shrink-0"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -32,15 +32,15 @@ export function ClaudeHero({ onSendMessage, isLoading = false }: ClaudeHeroProps
             <circle cx="12" cy="12" r="3" fill="currentColor" />
           </svg>
 
-          {/* Titre en serif ~36px */}
+          {/* Titre en serif ~36px (sans prénom par instruction 4) */}
           <h1
-            className="font-serif text-[32px] sm:text-[36px] text-[#ededeb] font-normal tracking-[-0.01em] select-none"
+            className="font-serif text-[32px] sm:text-[36px] text-[var(--text-primary)] font-normal tracking-[-0.01em] select-none"
             style={{
               fontFamily: 'var(--font-serif)',
               letterSpacing: '-0.015em'
             }}
           >
-            Bonjour, Marion
+            Bonjour
           </h1>
         </div>
 

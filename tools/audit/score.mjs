@@ -1,0 +1,195 @@
+/**
+ * tools/audit/score.mjs
+ * Script reproductible de calcul de la note globale UX Iroko 2026.
+ *
+ * Usage :
+ *   node tools/audit/score.mjs
+ *
+ * Résultat :
+ *   Affiche le tableau des 13 axes avec leur score individuel,
+ *   la formule de calcul et la moyenne arithmétique exacte.
+ *
+ * Mise à jour : 21 septembre 2026
+ * Source : docs/audit/RAPPORT_UX_2026.md
+ */
+
+// ─── Table des 13 Axes ────────────────────────────────────────────────────────
+const AXES = [
+  {
+    id: 1,
+    libelle: 'Accessibilité automatique',
+    score: 65,
+    methode: 'Base 100 − pénalités axe-core (9/19 combinaisons thème sombre en échec, 0 forced-colors, repères et labels)',
+    source: 'audit_u1_auto.mjs',
+    partMesuree: 85,
+    partObservee: 15,
+    partSupposee: 0,
+  },
+  {
+    id: 2,
+    libelle: 'Accessibilité clavier',
+    score: 52,
+    methode: '3/6 parcours sans souris conformes. Pénalités : focus trap absent (−20), restitution absente (−15), hover-only (−13)',
+    source: 'audit_u1_keyboard.mjs',
+    partMesuree: 70,
+    partObservee: 30,
+    partSupposee: 0,
+  },
+  {
+    id: 3,
+    libelle: 'Streaming accessible',
+    score: 70,
+    methode: 'Corps de texte non région live (+50 U6). Absence région de statut début/fin (−30)',
+    source: 'audit_u1_streaming.mjs',
+    partMesuree: 60,
+    partObservee: 40,
+    partSupposee: 0,
+  },
+  {
+    id: 4,
+    libelle: 'Contraste des tokens',
+    score: 68,
+    methode: '12/22 couples conformes AA. Thème clair = 90/100 ; thème sombre défaillant sur tertiaire/placeholder/focus = 46/100',
+    source: 'audit_u1_auto.mjs',
+    partMesuree: 100,
+    partObservee: 0,
+    partSupposee: 0,
+  },
+  {
+    id: 5,
+    libelle: 'Interactions (INP)',
+    score: 88,
+    methode: '11/12 interactions < 30 ms en 1x (+80). En 4x : 1er token à 112 ms (−8), artéfact à 154 ms (−4)',
+    source: 'audit_u2_interactions.mjs',
+    partMesuree: 90,
+    partObservee: 10,
+    partSupposee: 0,
+  },
+  {
+    id: 6,
+    libelle: 'Streaming (rendu)',
+    score: 45,
+    methode: 'Reparse Markdown O(n) à chaque token (−25), retokenisation CodeBlock (−15), scroll smooth forcé (−15)',
+    source: 'audit_u2_streaming.mjs',
+    partMesuree: 30,
+    partObservee: 70,
+    partSupposee: 0,
+  },
+  {
+    id: 7,
+    libelle: 'Longues conversations',
+    score: 40,
+    methode: 'Absence totale de virtualisation DOM (−40), scroll non restauré au retour dans la discussion (−20)',
+    source: 'audit_u2_conversations.mjs',
+    partMesuree: 40,
+    partObservee: 60,
+    partSupposee: 0,
+  },
+  {
+    id: 8,
+    libelle: 'Chargement à froid',
+    score: 82,
+    methode: 'Core Web Vitals parfaits (LCP 204ms, CLS 0.0035, TBT 0ms) (+100). Bundle 474 Ko / 250 Ko budget indicatif (−18)',
+    source: 'audit_u2_load.mjs',
+    partMesuree: 85,
+    partObservee: 15,
+    partSupposee: 0,
+  },
+  {
+    id: 9,
+    libelle: 'Animations',
+    score: 90,
+    methode: 'prefers-reduced-motion et .reduce-motion parfaits (0,01 ms) (+95). Scroll JS non conditionné (−5)',
+    source: 'audit_u2_streaming.mjs',
+    partMesuree: 40,
+    partObservee: 60,
+    partSupposee: 0,
+  },
+  {
+    id: 10,
+    libelle: 'Responsivité',
+    score: 78,
+    methode: '0 overflow sur 9 viewports (+70). Tiroir non inerte (−10), inputs < 16px (−6), cibles tactiles < 44px (−6)',
+    source: 'audit_u3_matrix.mjs',
+    partMesuree: 80,
+    partObservee: 20,
+    partSupposee: 0,
+  },
+  {
+    id: 11,
+    libelle: 'Tâches chronométrées',
+    score: 96,
+    methode: '10/10 tâches utilisateur conformes ou surpassant les cibles de vitesse et actions',
+    source: 'audit_u3_tasks.mjs',
+    partMesuree: 100,
+    partObservee: 0,
+    partSupposee: 0,
+  },
+  {
+    id: 12,
+    libelle: 'Résilience',
+    score: 75,
+    methode: 'Reconnexion continue WebSocket, multi-onglets SQLite, anti-double clic (+85). Perte brouillon au crash (−10)',
+    source: 'audit_u3_resilience.mjs',
+    partMesuree: 40,
+    partObservee: 60,
+    partSupposee: 0,
+  },
+  {
+    id: 13,
+    libelle: 'Microcopie',
+    score: 92,
+    methode: '100 % vouvoiement (+50), 100 % ellipse typographique (+30). Espaces simples devant ponctuation double (−8)',
+    source: 'audit_u3_microcopy.mjs',
+    partMesuree: 90,
+    partObservee: 10,
+    partSupposee: 0,
+  },
+];
+
+// ─── Calcul de la Moyenne Arithmétique ────────────────────────────────────────
+const somme = AXES.reduce((acc, axe) => acc + axe.score, 0);
+const moyenne = somme / AXES.length;
+const moyenneArrondie = Math.round(moyenne * 100) / 100;
+
+// ─── Affichage ────────────────────────────────────────────────────────────────
+console.log('\n╔══════════════════════════════════════════════════════════════╗');
+console.log('║    NOTE GLOBALE UX IROKO 2026 — Calcul Reproductible         ║');
+console.log('║    Source : docs/audit/RAPPORT_UX_2026.md                    ║');
+console.log('╚══════════════════════════════════════════════════════════════╝\n');
+
+console.log('Tableau des 13 Axes :');
+console.log('─'.repeat(80));
+console.log(' Axe  Score  Libellé');
+console.log('─'.repeat(80));
+AXES.forEach(axe => {
+  const id = String(axe.id).padStart(2, ' ');
+  const score = String(axe.score).padStart(5, ' ');
+  const libelle = axe.libelle;
+  console.log(` ${id}   ${score}  ${libelle}`);
+});
+console.log('─'.repeat(80));
+
+// Affichage de la formule
+const scoresStr = AXES.map(a => a.score).join(' + ');
+console.log(`\n Formule :\n   (${scoresStr}) / ${AXES.length}`);
+console.log(`         = ${somme} / ${AXES.length}`);
+console.log(`         = ${moyenneArrondie.toFixed(2)} / 100`);
+
+console.log('\n┌─────────────────────────────────────────────────┐');
+console.log(`│  NOTE GLOBALE UX IROKO 2026 : ${moyenneArrondie.toFixed(2)} / 100        │`);
+console.log('└─────────────────────────────────────────────────┘\n');
+
+// ─── Export JSON (pour intégration CI) ────────────────────────────────────────
+const result = {
+  timestamp: new Date().toISOString(),
+  axes: AXES,
+  somme,
+  count: AXES.length,
+  moyenne: parseFloat(moyenneArrondie.toFixed(2)),
+};
+
+import { writeFileSync } from 'node:fs';
+const outPath = new URL('../../docs/audit/score_result.json', import.meta.url).pathname.replace(/^\/([A-Z]:)/, '$1');
+writeFileSync(outPath, JSON.stringify(result, null, 2), 'utf-8');
+console.log(`Résultat exporté dans : docs/audit/score_result.json\n`);

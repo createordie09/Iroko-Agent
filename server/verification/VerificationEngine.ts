@@ -1,18 +1,44 @@
-import { exec } from 'child_process';
-import { promisify } from 'util';
+import path from 'path';
+import fs from 'fs';
 import { WorkspaceMetadata, workspaceManager } from '../workspace/WorkspaceManager';
-import { VerificationCheck, AgentEvent } from '../types/events';
+import { AgentEvent } from '../types/events';
+import { processManager } from '../tools/terminal/ProcessManager';
 
-const execAsync = promisify(exec);
+export interface VerificationErrorLocation {
+  file?: string;
+  line?: number;
+  column?: number;
+  message: string;
+}
+
+export interface VerificationCheck {
+  name: string;
+  type: 'typecheck' | 'lint' | 'test' | 'build';
+  command: string;
+  status: 'running' | 'passed' | 'failed' | 'skipped';
+  output?: string;
+  durationMs?: number;
+  reason?: string;
+  errors?: VerificationErrorLocation[];
+}
+
+export interface SkippedCheck {
+  type: 'typecheck' | 'lint' | 'test' | 'build';
+  name: string;
+  reason: string;
+}
 
 export interface VerificationResult {
   allPassed: boolean;
   checks: VerificationCheck[];
+  skippedChecks: SkippedCheck[];
   summary: string;
+  missingDependencies?: boolean;
   firstFailure?: {
     checkName: string;
     command: string;
     output: string;
+    errors?: VerificationErrorLocation[];
   };
 }
 
@@ -21,55 +47,223 @@ export interface VerificationOptions {
   timeoutMs?: number;
 }
 
+/**
+ * Interface d'adaptateur pour les gestionnaires de paquets (extensible pour d'autres écosystèmes).
+ */
+export interface PackageManagerAdapter {
+  name: string;
+  runScript(scriptName: string, extraArgs?: string[]): string;
+  execBinary(binary: string, args?: string[]): string;
+}
+
+export const PACKAGE_MANAGER_ADAPTERS: Record<string, PackageManagerAdapter> = {
+  npm: {
+    name: 'npm',
+    runScript: (script, extra) => `npm run ${script}${extra?.length ? ' ' + extra.join(' ') : ''}`,
+    execBinary: (bin, args) => `npx ${bin}${args?.length ? ' ' + args.join(' ') : ''}`
+  },
+  pnpm: {
+    name: 'pnpm',
+    runScript: (script, extra) => `pnpm run ${script}${extra?.length ? ' ' + extra.join(' ') : ''}`,
+    execBinary: (bin, args) => `pnpm exec ${bin}${args?.length ? ' ' + args.join(' ') : ''}`
+  },
+  yarn: {
+    name: 'yarn',
+    runScript: (script, extra) => `yarn run ${script}${extra?.length ? ' ' + extra.join(' ') : ''}`,
+    execBinary: (bin, args) => `yarn exec ${bin}${args?.length ? ' ' + args.join(' ') : ''}`
+  },
+  bun: {
+    name: 'bun',
+    runScript: (script, extra) => `bun run ${script}${extra?.length ? ' ' + extra.join(' ') : ''}`,
+    execBinary: (bin, args) => `bun x ${bin}${args?.length ? ' ' + args.join(' ') : ''}`
+  }
+};
+
 export class VerificationEngine {
   /**
-   * Détermine les commandes de vérification applicables en fonction des métadonnées du workspace
+   * Obtient l'adaptateur pour le gestionnaire de paquets détecté (repli sur npm).
    */
-  public getAvailableChecks(meta: WorkspaceMetadata, requested?: Array<'typecheck' | 'lint' | 'test' | 'build'>): Array<{ name: string; type: 'typecheck' | 'lint' | 'test' | 'build'; command: string }> {
-    const list: Array<{ name: string; type: 'typecheck' | 'lint' | 'test' | 'build'; command: string }> = [];
-    const scripts = meta.scripts || {};
-
-    // 1. Typecheck
-    if (meta.languages.includes('TypeScript') || meta.keyFiles.includes('tsconfig.json')) {
-      if (scripts['typecheck']) {
-        list.push({ name: 'Typecheck TypeScript', type: 'typecheck', command: `${meta.packageManager} run typecheck` });
-      } else if (scripts['lint'] && scripts['lint'].includes('tsc')) {
-        list.push({ name: 'Typecheck (via lint)', type: 'typecheck', command: `${meta.packageManager} run lint` });
-      } else {
-        list.push({ name: 'Typecheck TypeScript', type: 'typecheck', command: 'npx tsc --noEmit' });
-      }
-    }
-
-    // 2. Lint (si distinct du typecheck)
-    if (scripts['lint'] && !list.some(c => c.command.includes('run lint'))) {
-      list.push({ name: 'Linter', type: 'lint', command: `${meta.packageManager} run lint` });
-    }
-
-    // 3. Tests
-    if (scripts['test'] && !scripts['test'].includes('no test specified')) {
-      // Pour éviter les serveurs de test interactifs qui bloquent (watch mode)
-      const testCmd = scripts['test'].includes('vitest')
-        ? `${meta.packageManager} run test -- --run`
-        : scripts['test'].includes('jest')
-        ? `${meta.packageManager} run test -- --watchAll=false`
-        : `${meta.packageManager} run test`;
-      list.push({ name: 'Tests Unitaires', type: 'test', command: testCmd });
-    }
-
-    // 4. Build
-    if (scripts['build']) {
-      list.push({ name: 'Build de Production', type: 'build', command: `${meta.packageManager} run build` });
-    }
-
-    if (requested && requested.length > 0) {
-      return list.filter(item => requested.includes(item.type));
-    }
-
-    return list;
+  public getAdapter(packageManager: string): PackageManagerAdapter {
+    return PACKAGE_MANAGER_ADAPTERS[packageManager] || PACKAGE_MANAGER_ADAPTERS.npm;
   }
 
   /**
-   * Exécute le pipeline complet de vérification
+   * Détermine les commandes applicables et les contrôles ignorés avec raison explicite.
+   */
+  public planChecks(
+    workspacePath: string,
+    meta: WorkspaceMetadata,
+    requested?: Array<'typecheck' | 'lint' | 'test' | 'build'>
+  ): {
+    planned: Array<{ name: string; type: 'typecheck' | 'lint' | 'test' | 'build'; command: string }>;
+    skipped: SkippedCheck[];
+  } {
+    const planned: Array<{ name: string; type: 'typecheck' | 'lint' | 'test' | 'build'; command: string }> = [];
+    const skipped: SkippedCheck[] = [];
+    const scripts = meta.scripts || {};
+    const adapter = this.getAdapter(meta.packageManager);
+
+    // 1. Typecheck
+    if (!requested || requested.includes('typecheck')) {
+      if (scripts['typecheck']) {
+        planned.push({ name: 'Typecheck TypeScript', type: 'typecheck', command: adapter.runScript('typecheck') });
+      } else if (scripts['check-types']) {
+        planned.push({ name: 'Typecheck (check-types)', type: 'typecheck', command: adapter.runScript('check-types') });
+      } else if (scripts['tsc']) {
+        planned.push({ name: 'Typecheck (tsc)', type: 'typecheck', command: adapter.runScript('tsc') });
+      } else if (scripts['lint'] && scripts['lint'].includes('tsc')) {
+        planned.push({ name: 'Typecheck (via script lint)', type: 'typecheck', command: adapter.runScript('lint') });
+      } else if (fs.existsSync(path.join(workspacePath, 'tsconfig.json'))) {
+        planned.push({ name: 'Typecheck TypeScript', type: 'typecheck', command: adapter.execBinary('tsc', ['--noEmit']) });
+      } else {
+        skipped.push({
+          type: 'typecheck',
+          name: 'Typecheck TypeScript',
+          reason: 'Ignoré : aucun script de typage (typecheck, check-types, tsc) ni tsconfig.json détecté.'
+        });
+      }
+    }
+
+    // 2. Lint
+    if (!requested || requested.includes('lint')) {
+      const isLintAlreadyUsedForTsc = planned.some(p => p.command.includes('run lint'));
+      if (scripts['lint'] && !isLintAlreadyUsedForTsc) {
+        planned.push({ name: 'Linter (ESLint)', type: 'lint', command: adapter.runScript('lint') });
+      } else {
+        const eslintConfigs = [
+          '.eslintrc.js', '.eslintrc.cjs', '.eslintrc.json', '.eslintrc.yaml', '.eslintrc.yml',
+          '.eslintrc', 'eslint.config.js', 'eslint.config.mjs', 'eslint.config.ts', 'eslint.config.cjs'
+        ];
+        const hasEslintConfig = eslintConfigs.some(cfg => fs.existsSync(path.join(workspacePath, cfg)));
+
+        if (hasEslintConfig && !isLintAlreadyUsedForTsc) {
+          planned.push({ name: 'Linter (ESLint direct)', type: 'lint', command: adapter.execBinary('eslint', ['.']) });
+        } else if (!isLintAlreadyUsedForTsc) {
+          skipped.push({
+            type: 'lint',
+            name: 'Linter',
+            reason: 'Ignoré : aucun script "lint" ni fichier de configuration ESLint détecté.'
+          });
+        }
+      }
+    }
+
+    // 3. Tests
+    if (!requested || requested.includes('test')) {
+      if (scripts['test'] && !scripts['test'].includes('no test specified')) {
+        let testCmd = adapter.runScript('test');
+        if (scripts['test'].includes('vitest')) {
+          testCmd = adapter.runScript('test', ['--', '--run']);
+        } else if (scripts['test'].includes('jest')) {
+          testCmd = adapter.runScript('test', ['--', '--watchAll=false']);
+        }
+        planned.push({ name: 'Tests Unitaires', type: 'test', command: testCmd });
+      } else {
+        skipped.push({
+          type: 'test',
+          name: 'Tests Unitaires',
+          reason: 'Ignoré : aucun script "test" configuré dans package.json.'
+        });
+      }
+    }
+
+    // 4. Build
+    if (!requested || requested.includes('build')) {
+      if (scripts['build']) {
+        planned.push({ name: 'Build de Production', type: 'build', command: adapter.runScript('build') });
+      } else {
+        skipped.push({
+          type: 'build',
+          name: 'Build de Production',
+          reason: 'Ignoré : aucun script "build" configuré dans package.json.'
+        });
+      }
+    }
+
+    return { planned, skipped };
+  }
+
+  /**
+   * Analyse et extrait les erreurs structurées (fichier:ligne:colonne) depuis la sortie.
+   */
+  public static parseErrorLocations(output: string): VerificationErrorLocation[] {
+    const locations: VerificationErrorLocation[] = [];
+    const lines = output.split(/\r?\n/);
+
+    // Motifs courants :
+    // TypeScript : src/App.tsx(12,5): error TS2322: ...
+    // TypeScript : src/App.tsx:12:5 - error TS2322: ...
+    // ESLint :   12:5  error  Unexpected any  @typescript-eslint/no-explicit-any
+    // Général : src/file.ts:12:5 ou src/file.ts:12
+    const tsParenRegex = /^([a-zA-Z0-9._/\\]+)\((\d+),(\d+)\):\s*(?:error|warning)\s*TS\d+:\s*(.+)$/i;
+    const tsColonRegex = /^([a-zA-Z0-9._/\\]+):(\d+):(\d+)\s*-\s*(?:error|warning)\s*TS\d+:\s*(.+)$/i;
+    const generalRegex = /^([a-zA-Z0-9._/\\]+\.[a-zA-Z0-9]+):(\d+)(?::(\d+))?\s*(?:-\s*)?(.+)$/i;
+
+    let currentFile = '';
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+
+      // Détection de nom de fichier seul (ex: ESLint groupe par fichier)
+      if (/^[a-zA-Z0-9._/\\]+\.[a-zA-Z0-9]+$/.test(trimmed)) {
+        currentFile = trimmed;
+        continue;
+      }
+
+      // Format TypeScript avec parenthèses
+      const parenMatch = trimmed.match(tsParenRegex);
+      if (parenMatch) {
+        locations.push({
+          file: parenMatch[1].replace(/\\/g, '/'),
+          line: parseInt(parenMatch[2], 10),
+          column: parseInt(parenMatch[3], 10),
+          message: parenMatch[4].trim()
+        });
+        continue;
+      }
+
+      // Format TypeScript avec deux-points
+      const colonMatch = trimmed.match(tsColonRegex);
+      if (colonMatch) {
+        locations.push({
+          file: colonMatch[1].replace(/\\/g, '/'),
+          line: parseInt(colonMatch[2], 10),
+          column: parseInt(colonMatch[3], 10),
+          message: colonMatch[4].trim()
+        });
+        continue;
+      }
+
+      // Format ESLint sous un fichier courant : "  12:5  error  ..."
+      const eslintMatch = trimmed.match(/^(\d+):(\d+)\s+(?:error|warning)\s+(.+)$/i);
+      if (eslintMatch && currentFile) {
+        locations.push({
+          file: currentFile.replace(/\\/g, '/'),
+          line: parseInt(eslintMatch[1], 10),
+          column: parseInt(eslintMatch[2], 10),
+          message: eslintMatch[3].trim()
+        });
+        continue;
+      }
+
+      // Format général file:line:col
+      const genMatch = trimmed.match(generalRegex);
+      if (genMatch) {
+        locations.push({
+          file: genMatch[1].replace(/\\/g, '/'),
+          line: parseInt(genMatch[2], 10),
+          column: genMatch[3] ? parseInt(genMatch[3], 10) : undefined,
+          message: genMatch[4].trim()
+        });
+      }
+    }
+
+    return locations.slice(0, 10); // Limiter aux 10 premières erreurs
+  }
+
+  /**
+   * Exécute le pipeline de vérification complet et structuré.
    */
   public async runVerification(
     workspacePath: string,
@@ -77,23 +271,43 @@ export class VerificationEngine {
     options: VerificationOptions = {}
   ): Promise<VerificationResult> {
     const meta = await workspaceManager.analyze(workspacePath);
-    const plannedChecks = this.getAvailableChecks(meta, options.checksToRun);
-    const timeoutMs = options.timeoutMs || 45000; // 45s max par commande
+
+    // Vérification de la présence de node_modules (si package.json existe)
+    if (meta.keyFiles.includes('package.json') && !meta.hasNodeModules) {
+      const msg = `Dépendances manquantes : le répertoire "node_modules" est absent. Une installation préalable (${meta.packageManager} install) est requise.`;
+      return {
+        allPassed: false,
+        missingDependencies: true,
+        checks: [],
+        skippedChecks: [],
+        summary: msg,
+        firstFailure: {
+          checkName: 'Dépendances',
+          command: `${meta.packageManager} install`,
+          output: msg
+        }
+      };
+    }
+
+    const { planned, skipped } = this.planChecks(workspacePath, meta, options.checksToRun);
+    const timeoutMs = options.timeoutMs || 60000; // 60s max par étape
 
     const checksResults: VerificationCheck[] = [];
     let firstFailure: VerificationResult['firstFailure'] | undefined;
 
-    if (plannedChecks.length === 0) {
+    if (planned.length === 0) {
       return {
         allPassed: true,
         checks: [],
-        summary: 'Aucun script de vérification automatisé détecté dans ce workspace.'
+        skippedChecks: skipped,
+        summary: 'Aucun contrôle de vérification applicable dans ce workspace.'
       };
     }
 
-    for (const plan of plannedChecks) {
+    for (const plan of planned) {
       const check: VerificationCheck = {
         name: plan.name,
+        type: plan.type,
         command: plan.command,
         status: 'running'
       };
@@ -105,25 +319,39 @@ export class VerificationEngine {
         });
       }
 
-      try {
-        const { stdout, stderr } = await execAsync(plan.command, {
-          cwd: workspacePath,
-          timeout: timeoutMs,
-          maxBuffer: 5 * 1024 * 1024
-        });
+      const startTime = Date.now();
 
+      // Exécution sécurisée via ProcessManager (environnement assaini L8, destruction récursive, timeout)
+      const executionResult = await processManager.executeCommand(
+        plan.command,
+        workspacePath,
+        timeoutMs
+      );
+
+      const durationMs = Date.now() - startTime;
+      check.durationMs = durationMs;
+
+      if (executionResult.exitCode === 0 && !executionResult.timedOut) {
         check.status = 'passed';
-        check.output = (stdout || stderr || 'Succès sans avertissement.').trim();
-      } catch (err: any) {
+        check.output = executionResult.stdout || executionResult.stderr || 'Succès sans avertissement.';
+      } else {
         check.status = 'failed';
-        const errOutput = (err.stdout || err.stderr || err.message || 'Échec de la vérification').trim();
-        check.output = errOutput;
+        const rawError = executionResult.stderr || executionResult.stdout || 'Échec de la commande de vérification.';
+        // Plafonner la sortie d'erreur à 50 Ko
+        const cappedError = rawError.length > 50 * 1024
+          ? `${rawError.slice(0, 50 * 1024)}\n\n[Sortie d'erreur tronquée : limite de 50 Ko atteinte]`
+          : rawError;
+
+        check.output = cappedError;
+        const parsedErrors = VerificationEngine.parseErrorLocations(cappedError);
+        check.errors = parsedErrors;
 
         if (!firstFailure) {
           firstFailure = {
             checkName: plan.name,
             command: plan.command,
-            output: errOutput
+            output: cappedError,
+            errors: parsedErrors
           };
         }
       }
@@ -137,21 +365,34 @@ export class VerificationEngine {
         });
       }
 
-      // Si une étape échoue (ex: TypeScript invalide), on arrête la chaîne pour corriger en priorité
+      // En cas d'échec, interrompre la chaîne immédiatement pour remonter l'erreur (§18)
       if (check.status === 'failed') {
         break;
       }
     }
 
-    const allPassed = checksResults.every(c => c.status === 'passed');
+    const allPassed = checksResults.length > 0 && checksResults.every(c => c.status === 'passed');
     const passedCount = checksResults.filter(c => c.status === 'passed').length;
-    const summary = allPassed
-      ? `Toutes les vérifications ont réussi (${passedCount}/${plannedChecks.length} contrôles validés avec succès).`
-      : `Échec de vérification sur "${firstFailure?.checkName}". ${passedCount} contrôle(s) validé(s).`;
+
+    let summary = '';
+    if (allPassed) {
+      summary = `Toutes les vérifications requises ont réussi (${passedCount}/${planned.length} contrôles validés).`;
+      if (skipped.length > 0) {
+        const skippedReasons = skipped.map(s => `${s.name} (${s.reason})`).join(' ; ');
+        summary += ` Contrôles ignorés : ${skippedReasons}.`;
+      }
+    } else {
+      summary = `Échec de vérification sur "${firstFailure?.checkName}" (${firstFailure?.command}). ${passedCount}/${planned.length} contrôle(s) validé(s).`;
+      if (firstFailure?.errors && firstFailure.errors.length > 0) {
+        const errLoc = firstFailure.errors[0];
+        summary += ` Erreur détectée dans ${errLoc.file || 'fichier'}${errLoc.line ? `:${errLoc.line}` : ''} : ${errLoc.message}`;
+      }
+    }
 
     return {
       allPassed,
       checks: checksResults,
+      skippedChecks: skipped,
       summary,
       firstFailure
     };

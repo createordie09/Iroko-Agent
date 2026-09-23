@@ -1,0 +1,13 @@
+{
+  "osPlatform": "win32",
+  "osRelease": "10.0.22000",
+  "osArch": "x64",
+  "totalMemoryGo": "15.86",
+  "cpuModel": "Intel(R) Core(TM) i7-7600U CPU @ 2.80GHz",
+  "cpuCores": 4,
+  "cpuSpeedMhz": 2904,
+  "nodeVersion": "v25.8.2",
+  "browserChannel": "Microsoft Edge",
+  "browserVersion": "153.0.4234.48",
+  "timestamp": "2026-09-21T11:16:54.212Z"
+}

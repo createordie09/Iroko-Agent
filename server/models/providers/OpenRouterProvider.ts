@@ -58,6 +58,10 @@ export class OpenRouterProvider implements AIProvider {
       }));
     }
 
+    if (request.thinkingLevel && request.thinkingLevel !== 'disabled') {
+      payload.reasoning = { effort: request.thinkingLevel };
+    }
+
     const response = await fetch(`${this.baseUrl}/chat/completions`, {
       method: 'POST',
       headers: {
@@ -66,7 +70,8 @@ export class OpenRouterProvider implements AIProvider {
         'HTTP-Referer': 'https://iroko-agent.local',
         'X-Title': 'Iroko Code Agent'
       },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
+      signal: request.abortSignal
     });
 
     if (!response.ok) {
@@ -83,6 +88,7 @@ export class OpenRouterProvider implements AIProvider {
     let buffer = '';
 
     while (true) {
+      if (request.abortSignal?.aborted) break;
       const { done, value } = await reader.read();
       if (done) break;
 
@@ -102,6 +108,9 @@ export class OpenRouterProvider implements AIProvider {
             if (!choice) continue;
 
             const delta = choice.delta;
+            if (delta?.reasoning || delta?.reasoning_content) {
+              yield { type: 'thinking_delta', text: delta.reasoning || delta.reasoning_content };
+            }
             if (delta?.content) {
               yield { type: 'text_delta', text: delta.content };
             }

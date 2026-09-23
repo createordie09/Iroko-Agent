@@ -1,16 +1,27 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { Project, Message, Persona, KnowledgeItem, CalendarItem, HistoryItem } from '../types';
-import { supabase } from '../lib/supabase';
+import { Project, Message, HistoryItem } from '../types';
 import { agentClient } from '../lib/agent-client';
 import { AgentEvent, AgentStatus } from '../../server/types/events';
+import { tokenService } from '../services/security/TokenService';
 
-export type NavView = 'home' | 'chat' | 'workspace' | 'projects' | 'tasks' | 'settings' | 'activity';
+import { useSettings } from '../hooks/useSettings';
+import { VoiceSpeed } from '../services/speech/SpeechService';
+
+export type NavView = 'home' | 'chat' | 'projects' | 'settings' | 'activity';
 export type WorkspaceTab = 'code' | 'files' | 'terminal' | 'git' | 'diffs';
 export type AgentType = 'coder' | 'editorial' | 'planner' | 'reviewer';
 export type ConversationFont = 'serif' | 'sans';
 export type ThemeMode = 'system' | 'light' | 'dark';
 export type AnimationsMode = 'system' | 'reduced';
 export type ComposerMode = 'chat' | 'code';
+
+export interface ActiveWorkspaceInfo {
+  path: string;
+  name: string;
+  isTemp?: boolean;
+  isReadOnly?: boolean;
+  warning?: string;
+}
 
 export interface AppContextType {
   // Navigation & Shell
@@ -25,7 +36,7 @@ export interface AppContextType {
   isCommandPaletteOpen: boolean;
   setIsCommandPaletteOpen: (v: boolean) => void;
 
-  // Settings Modal & Preferences (Claude reference)
+  // Settings Modal & Preferences
   isSettingsOpen: boolean;
   setIsSettingsOpen: (v: boolean) => void;
   activeSettingsTab: string;
@@ -36,10 +47,20 @@ export interface AppContextType {
   setTheme: (t: ThemeMode) => void;
   animations: AnimationsMode;
   setAnimations: (a: AnimationsMode) => void;
+  voiceLang: string;
+  setVoiceLang: (l: string) => void;
+  voiceURI: string;
+  setVoiceURI: (u: string) => void;
+  voiceSpeed: VoiceSpeed;
+  setVoiceSpeed: (s: VoiceSpeed) => void;
+  notificationsEnabled: boolean;
+  toggleNotifications: () => Promise<boolean>;
   composerMode: ComposerMode;
   setComposerMode: (m: ComposerMode) => void;
+  activeWorkspace: ActiveWorkspaceInfo | null;
+  setActiveWorkspace: (ws: ActiveWorkspaceInfo | null) => void;
 
-  // CURRENT CONTEXT (The OS Core)
+  // CURRENT CONTEXT
   activeProjectId: string | null;
   setActiveProjectId: (id: string | null) => void;
   activeProject: Project | null;
@@ -54,28 +75,26 @@ export interface AppContextType {
   projects: Project[];
   createProject: (name: string, description?: string) => Promise<Project>;
   deleteProject: (id: string) => Promise<void>;
-  
+
   // Chat & Messaging
   messages: Message[];
   setMessages: React.Dispatch<React.SetStateAction<Message[]>>;
   chatStatus: 'idle' | 'loading' | 'success' | 'error';
   setChatStatus: (s: 'idle' | 'loading' | 'success' | 'error') => void;
   resetChat: () => void;
-  
+
   // Agent Runtime Stream
   runtimeConnected: boolean;
   runtimeStatus: AgentStatus;
   runtimeMessage: string;
-  
-  // Editorial / Tasks / Persona
-  persona: Persona;
-  setPersona: (p: Persona) => void;
-  knowledgeBase: KnowledgeItem[];
-  setKnowledgeBase: React.Dispatch<React.SetStateAction<KnowledgeItem[]>>;
-  calendarItems: CalendarItem[];
-  setCalendarItems: React.Dispatch<React.SetStateAction<CalendarItem[]>>;
+
   history: HistoryItem[];
+  setHistory: React.Dispatch<React.SetStateAction<HistoryItem[]>>;
   clearHistory: () => void;
+
+  // Rafraîchissement des modèles disponibles (M10.0)
+  modelsRefreshKey: number;
+  refreshModels: () => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -91,43 +110,66 @@ export function AppProvider({ children }: { children: ReactNode }) {
   // Settings Modal & Preferences
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [activeSettingsTab, setActiveSettingsTab] = useState('preferences');
-  const [conversationFont, setConversationFont] = useState<ConversationFont>(() => {
-    return (localStorage.getItem('iroko_font') as ConversationFont) || 'serif';
-  });
-  const [theme, setTheme] = useState<ThemeMode>(() => {
-    return (localStorage.getItem('iroko_theme') as ThemeMode) || 'dark';
-  });
-  const [animations, setAnimations] = useState<AnimationsMode>('system');
-  const [composerMode, setComposerMode] = useState<ComposerMode>('chat');
+  const [composerMode, setComposerModeState] = useState<ComposerMode>('chat');
 
-  useEffect(() => {
-    localStorage.setItem('iroko_font', conversationFont);
-  }, [conversationFont]);
+  const setComposerMode = (m: ComposerMode) => {
+    setComposerModeState(m);
+    if (history.length > 0 && history[0]?.id) {
+      const activeId = history[0].id;
+      setHistory(prev => prev.map(h => h.id === activeId ? { ...h, mode: m } : h));
+      tokenService.fetch(`/api/conversations/${activeId}/mode`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode: m })
+      }).catch(() => {});
+    }
+  };
 
-  useEffect(() => {
-    localStorage.setItem('iroko_theme', theme);
-  }, [theme]);
+  const {
+    settings,
+    setTheme,
+    setConversationFont,
+    setAnimations,
+    setVoiceLang,
+    setVoiceURI,
+    setVoiceSpeed,
+    toggleNotifications
+  } = useSettings();
 
-  // Current Context (Core)
+  // Current Context
   const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
   const [activeAgent, setActiveAgent] = useState<AgentType>('coder');
   const [activeModel, setActiveModel] = useState<string>('anthropic/claude-3.5-sonnet');
   const [activeProvider, setActiveProvider] = useState<string>('openrouter');
 
+  // Clé de rafraîchissement des modèles (M10.0) — incrémentée pour forcer un re-fetch du Composer
+  const [modelsRefreshKey, setModelsRefreshKey] = useState(0);
+  const refreshModels = () => setModelsRefreshKey(prev => prev + 1);
+
   // Projects
   const [projects, setProjects] = useState<Project[]>(() => {
-    const saved = localStorage.getItem('iroko_projects');
-    if (saved) {
-      try { return JSON.parse(saved); } catch (e) {}
-    }
-    return [
-      { id: 'proj-iroko', name: 'Oria Projet', description: 'AI Native Coding Platform', created_at: new Date().toISOString() },
-      { id: 'proj-ds2api', name: 'Configuration de DS2API po...', description: 'API configuration', created_at: new Date().toISOString() },
-      { id: 'proj-relais', name: 'Relais App', description: 'Relais service', created_at: new Date().toISOString() }
-    ];
+    try {
+      const saved = localStorage.getItem('iroko_projects');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          const cleaned = parsed.filter(
+            (p: any) =>
+              p &&
+              p.name !== 'Iroko Workspace' &&
+              !p.name?.includes('NBDV') &&
+              p.id !== 'proj-iroko' &&
+              p.id !== 'proj-ds2api' &&
+              p.id !== 'proj-relais'
+          );
+          localStorage.setItem('iroko_projects', JSON.stringify(cleaned));
+          return cleaned;
+        }
+      }
+    } catch (e) {}
+    return [];
   });
 
-  // Active project calculation
   const activeProject = projects.find(p => p.id === activeProjectId) || projects[0] || null;
 
   useEffect(() => {
@@ -140,10 +182,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
   // Chat messages
   const [messages, setMessages] = useState<Message[]>([]);
   const [chatStatus, setChatStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [activeWorkspace, setActiveWorkspace] = useState<ActiveWorkspaceInfo | null>(null);
 
   const resetChat = () => {
     setMessages([]);
     setChatStatus('idle');
+    setComposerModeState('chat');
+    setActiveWorkspace(null);
   };
 
   // Agent Runtime live state
@@ -160,6 +205,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (event.type === 'status') {
         setRuntimeStatus(event.status);
         if (event.message) setRuntimeMessage(event.message);
+      } else if (event.type === 'completed') {
+        tokenService.fetch('/api/conversations')
+          .then(res => res.json())
+          .then(data => {
+            if (Array.isArray(data.conversations)) {
+              const runtimeItems: HistoryItem[] = data.conversations.map((c: any) => ({
+                id: c.id,
+                topic: c.title,
+                time: 'Récemment',
+                timestamp: new Date(c.updated_at).getTime(),
+                mode: c.mode || 'chat',
+                workspace_id: c.workspace_id || null
+              }));
+              setHistory(runtimeItems);
+              localStorage.setItem('iroko_history', JSON.stringify(runtimeItems));
+            }
+          })
+          .catch(() => {});
       }
     });
 
@@ -169,51 +232,144 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  // Global Keyboard Shortcuts (⌘, or Escape)
+  // Global Keyboard Shortcuts (§ Mission M8.2)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // 1. Ctrl+B / Cmd+B : Afficher / masquer la barre latérale
+      if ((e.metaKey || e.ctrlKey) && (e.key === 'b' || e.key === 'B')) {
+        e.preventDefault();
+        setIsSidebarCollapsed(prev => !prev);
+        return;
+      }
+
+      // 2. Ctrl+Maj+O / Cmd+Maj+O : Nouvelle discussion (pas Ctrl+N réservé au navigateur)
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && (e.key === 'o' || e.key === 'O')) {
+        e.preventDefault();
+        resetChat();
+        setActiveView('home');
+        return;
+      }
+
+      // 3. Ctrl+K / Cmd+K : Recherche / focus recherche
+      if ((e.metaKey || e.ctrlKey) && (e.key === 'k' || e.key === 'K')) {
+        e.preventDefault();
+        setIsSidebarCollapsed(false);
+        const searchInput = document.querySelector('input[data-search="true"]') as HTMLInputElement;
+        if (searchInput) {
+          searchInput.focus();
+        }
+        return;
+      }
+
+      // 4. Ctrl+, / Cmd+, : Ouvrir / fermer les paramètres
       if ((e.metaKey || e.ctrlKey) && e.key === ',') {
         e.preventDefault();
         setIsSettingsOpen(prev => !prev);
+        return;
+      }
+
+      // 5. Échap : Hiérarchie stricte
+      // Si une modale est ouverte, la fermer.
+      // N'arrête la tâche que si aucun calque n'est ouvert et qu'une tâche tourne.
+      if (e.key === 'Escape') {
+        if (isSettingsOpen) {
+          e.preventDefault();
+          setIsSettingsOpen(false);
+          return;
+        }
+        if (runtimeStatus === 'running') {
+          e.preventDefault();
+          agentClient.cancelTask();
+          return;
+        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [isSettingsOpen, runtimeStatus]);
 
-  // Persona / Voice
-  const [persona, setPersona] = useState<Persona>(() => {
-    const saved = localStorage.getItem('iroko_persona');
-    return saved ? JSON.parse(saved) : {
-      secteur: 'Intelligence Artificielle & DevTools',
-      style: 'Expert, direct, percutant et technique',
-      motsAEviter: 'Révolutionnaire, game-changer, incroyable',
-      exemplePost: 'Nous avons transformé notre agent autonome...'
-    };
-  });
-
-  const [knowledgeBase, setKnowledgeBase] = useState<KnowledgeItem[]>([]);
-  const [calendarItems, setCalendarItems] = useState<CalendarItem[]>([]);
-
-  // History with sample Claude-style discussion threads
+  // History — alimenté par le runtime SQLite (§21, §29)
   const [history, setHistory] = useState<HistoryItem[]>(() => {
-    const saved = localStorage.getItem('iroko_history');
-    if (saved) {
-      try { return JSON.parse(saved); } catch (e) {}
-    }
-    return [
-      { id: 'h-1', topic: 'Refonte interface avec identité Claude', timestamp: Date.now() - 3600000, result: 'Interface épurée et moderne.' },
-      { id: 'h-2', topic: 'Améliorer un prompt pour agent de code', timestamp: Date.now() - 7200000, result: 'Prompt de code optimisé.' },
-      { id: 'h-3', topic: 'Partager des codes avec la communauté', timestamp: Date.now() - 14400000, result: 'Modèle de partage communautaire.' },
-      { id: 'h-4', topic: 'Jugement et dignité dans les systèmes IA', timestamp: Date.now() - 28800000, result: 'Essai éthique.' },
-      { id: 'h-5', topic: "Améliorer un prompt de design system", timestamp: Date.now() - 86400000, result: 'Spécifications de tokens.' },
-      { id: 'h-6', topic: "La matrice de l'IA : une expérience fluide", timestamp: Date.now() - 172800000, result: 'Analyse comparative.' },
-      { id: 'h-7', topic: 'Comparaison de modèles et latence', timestamp: Date.now() - 259200000, result: 'Benchmarks OpenRouter.' },
-      { id: 'h-8', topic: 'Running a server locally with proxy', timestamp: Date.now() - 345600000, result: 'Setup local server.' },
-      { id: 'h-9', topic: 'Informations sur une offre cloud', timestamp: Date.now() - 432000000, result: 'Tarification.' },
-      { id: 'h-10', topic: 'Performance des modèles en production', timestamp: Date.now() - 518400000, result: 'Métriques clés.' }
-    ];
+    try {
+      const saved = localStorage.getItem('iroko_history');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          return parsed.filter((h: any) => h && !h.id?.startsWith('h-'));
+        }
+      }
+    } catch (e) {}
+    return [];
   });
+
+  // Synchronisation avec le runtime SQLite local
+  useEffect(() => {
+    let isMounted = true;
+
+    const syncWithRuntime = async () => {
+      try {
+        await tokenService.bootstrap();
+
+        const res = await tokenService.fetch('/api/conversations');
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data.conversations) && data.conversations.length > 0) {
+            const runtimeItems: HistoryItem[] = data.conversations.map((c: any) => ({
+              id: c.id,
+              topic: c.title,
+              time: 'Récemment',
+              timestamp: new Date(c.updated_at).getTime(),
+              mode: c.mode || 'chat',
+              workspace_id: c.workspace_id || null
+            }));
+            if (isMounted) {
+              setHistory(runtimeItems);
+              localStorage.setItem('iroko_history', JSON.stringify(runtimeItems));
+            }
+            return;
+          }
+        }
+
+        // Migration unique depuis localStorage si runtime vide
+        const saved = localStorage.getItem('iroko_history');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            const validConversations = parsed.filter((h: any) => h && !h.id?.startsWith('h-'));
+            if (validConversations.length > 0) {
+              const migRes = await tokenService.fetch('/api/migration/from-localstorage', {
+                method: 'POST',
+                body: JSON.stringify({ conversations: validConversations })
+              });
+              if (migRes.ok) {
+                const refreshed = await tokenService.fetch('/api/conversations');
+                if (refreshed.ok) {
+                  const refData = await refreshed.json();
+                  const items: HistoryItem[] = refData.conversations.map((c: any) => ({
+                    id: c.id,
+                    topic: c.title,
+                    time: 'Récemment',
+                    timestamp: new Date(c.updated_at).getTime(),
+                    mode: c.mode || 'chat',
+                    workspace_id: c.workspace_id || null
+                  }));
+                  if (isMounted) {
+                    setHistory(items);
+                    localStorage.setItem('iroko_history', JSON.stringify(items));
+                  }
+                }
+              }
+            }
+          }
+        }
+      } catch (e) {
+        // En cas d'indisponibilité du runtime, conservation du cache localStorage
+      }
+    };
+
+    syncWithRuntime();
+    return () => { isMounted = false; };
+  }, []);
 
   const clearHistory = () => {
     setHistory([]);
@@ -227,24 +383,27 @@ export function AppProvider({ children }: { children: ReactNode }) {
       description: description || 'Projet de travail Iroko',
       created_at: new Date().toISOString()
     };
-    try {
-      await supabase.from('projects').insert(newP);
-    } catch (e) {}
     setProjects(prev => [newP, ...prev]);
     setActiveProjectId(newP.id);
     return newP;
   };
 
   const deleteProject = async (id: string) => {
-    try {
-      await supabase.from('projects').delete().eq('id', id);
-    } catch (e) {}
     setProjects(prev => prev.filter(p => p.id !== id));
     if (activeProjectId === id) {
       const remaining = projects.filter(p => p.id !== id);
       setActiveProjectId(remaining.length > 0 ? remaining[0].id : null);
     }
   };
+
+  // Synchronisation dynamique du titre de page (WCAG 2.4.2 — Lot 2)
+  useEffect(() => {
+    if (activeView === 'chat' && history.length > 0 && history[0]?.topic?.trim()) {
+      document.title = `${history[0].topic.trim()} — Iroko`;
+    } else {
+      document.title = 'Iroko';
+    }
+  }, [activeView, history]);
 
   return (
     <AppContext.Provider
@@ -263,14 +422,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setIsSettingsOpen,
         activeSettingsTab,
         setActiveSettingsTab,
-        conversationFont,
+        conversationFont: settings.conversationFont,
         setConversationFont,
-        theme,
+        theme: settings.theme,
         setTheme,
-        animations,
+        animations: settings.animations,
         setAnimations,
+        voiceLang: settings.voiceLang,
+        setVoiceLang,
+        voiceURI: settings.voiceURI,
+        setVoiceURI,
+        voiceSpeed: settings.voiceSpeed,
+        setVoiceSpeed,
+        notificationsEnabled: settings.notificationsEnabled,
+        toggleNotifications,
         composerMode,
         setComposerMode,
+        activeWorkspace,
+        setActiveWorkspace,
         activeProjectId,
         setActiveProjectId,
         activeProject,
@@ -291,14 +460,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
         runtimeConnected,
         runtimeStatus,
         runtimeMessage,
-        persona,
-        setPersona,
-        knowledgeBase,
-        setKnowledgeBase,
-        calendarItems,
-        setCalendarItems,
         history,
-        clearHistory
+        setHistory,
+        clearHistory,
+        modelsRefreshKey,
+        refreshModels
       }}
     >
       {children}

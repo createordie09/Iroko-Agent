@@ -1,4 +1,5 @@
-﻿import { AgentEvent, ClientMessage } from '../../server/types/events';
+import { AgentEvent, ClientMessage } from '../../server/types/events';
+import { tokenService } from '../services/security/TokenService';
 
 export type EventListener = (event: AgentEvent) => void;
 export type ConnectionListener = (connected: boolean) => void;
@@ -14,17 +15,28 @@ export class IrokoAgentClient {
   private isExplicitlyClosed = false;
 
   constructor(url?: string) {
-    this.url = url || (import.meta as any).env?.VITE_AGENT_WS_URL || 'ws://localhost:3001/ws';
+    if (url) {
+      this.url = url;
+    } else {
+      const protocol = typeof window !== 'undefined' && window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const host = typeof window !== 'undefined' ? window.location.host : '127.0.0.1:5173';
+      this.url = `${protocol}//${host}/ws`;
+    }
   }
 
-  public connect(): void {
+  public async connect(): Promise<void> {
     this.isExplicitlyClosed = false;
     if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) {
       return;
     }
 
     try {
-      this.ws = new WebSocket(this.url);
+      // Obtenir un ticket éphémère à usage unique (30s) (§26)
+      const ticket = await tokenService.getWsTicket();
+
+      // Connexion au WebSocket avec le ticket éphémère (le jeton maître n'apparaît jamais)
+      const wsUrl = `${this.url}?ticket=${ticket}`;
+      this.ws = new WebSocket(wsUrl);
 
       this.ws.onopen = () => {
         this.reconnectAttempts = 0;
@@ -77,12 +89,41 @@ export class IrokoAgentClient {
     return false;
   }
 
-  public sendPrompt(prompt: string, mode?: string): boolean {
-    return this.send({ type: 'send_prompt', prompt, mode });
+  public sendPrompt(
+    prompt: string, 
+    options?: { 
+      mode?: string; 
+      preferredProviderId?: string; 
+      modelId?: string; 
+      thinkingLevel?: 'disabled' | 'low' | 'medium' | 'high'; 
+      thinkingBudget?: number; 
+      conversationId?: string;
+      attachmentIds?: string[];
+    } | string
+  ): boolean {
+    if (typeof options === 'string') {
+      return this.send({ type: 'send_prompt', prompt, mode: options });
+    }
+    return this.send({
+      type: 'send_prompt',
+      prompt,
+      mode: options?.mode,
+      preferredProviderId: options?.preferredProviderId,
+      modelId: options?.modelId,
+      thinkingLevel: options?.thinkingLevel,
+      thinkingBudget: options?.thinkingBudget,
+      conversationId: options?.conversationId,
+      attachmentIds: options?.attachmentIds
+    });
   }
 
-  public respondPermission(requestId: string, approved: boolean, scope: 'once' | 'session' | 'workspace' = 'once'): boolean {
-    return this.send({ type: 'permission_response', requestId, approved, scope });
+  public respondPermission(
+    requestId: string, 
+    approved: boolean, 
+    scope: 'once' | 'session' | 'workspace' | 'project' | 'reject' = 'once'
+  ): boolean {
+    const effectiveScope = scope === 'project' ? 'workspace' : scope;
+    return this.send({ type: 'permission_response', requestId, approved, scope: effectiveScope as any });
   }
 
   public cancelTask(): boolean {
@@ -111,10 +152,12 @@ export class IrokoAgentClient {
   }
 
   private scheduleReconnect(): void {
-    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      return;
+    if (this.isExplicitlyClosed) return;
+    if (this.reconnectTimeout) {
+      clearTimeout(this.reconnectTimeout);
+      this.reconnectTimeout = null;
     }
-    const delay = Math.min(1000 * Math.pow(1.5, this.reconnectAttempts), 10000);
+    const delay = Math.min(1000 * Math.pow(1.5, Math.min(this.reconnectAttempts, 8)), 10000);
     this.reconnectAttempts++;
     this.reconnectTimeout = window.setTimeout(() => {
       this.connect();

@@ -1,9 +1,11 @@
-﻿import { IrokoTool, ToolContext, ToolResult } from '../types';
+import { IrokoTool, ToolContext, ToolResult } from '../types';
 import { processManager } from './ProcessManager';
-import { PermissionLevel } from '../../types/events';
+import { CommandRiskClassifier } from '../../permissions/CommandRiskClassifier';
+import { PathSanitizer } from '../../security/PathSanitizer';
 
 export interface ExecuteCommandInput {
   command: string;
+  cwd?: string;
   timeoutMs?: number;
 }
 
@@ -21,6 +23,10 @@ export class ExecuteCommandTool implements IrokoTool<ExecuteCommandInput> {
         type: 'string',
         description: 'La ligne de commande shell exacte à exécuter.'
       },
+      cwd: {
+        type: 'string',
+        description: 'Sous-dossier relatif ou chemin dans le workspace où exécuter la commande (optionnel).'
+      },
       timeoutMs: {
         type: 'number',
         description: 'Délai d\'expiration maximal en millisecondes (par défaut 60000ms).'
@@ -28,61 +34,32 @@ export class ExecuteCommandTool implements IrokoTool<ExecuteCommandInput> {
     }
   };
 
-  /**
-   * Analyse le risque intrinsèque de la commande pour ajuster le niveau de permission
-   */
-  private assessRisk(command: string): PermissionLevel {
-    const cmd = command.toLowerCase().trim();
-
-    // Commandes critiques destructives
-    if (
-      cmd.includes('rm -rf') ||
-      cmd.includes('rmdir /s') ||
-      cmd.includes('format ') ||
-      cmd.includes('git reset --hard') ||
-      cmd.includes('git clean -fd') ||
-      cmd.includes('drop database') ||
-      cmd.includes('mkfs')
-    ) {
-      return 'CRITICAL';
-    }
-
-    // Commandes impactantes sur l'environnement externe
-    if (
-      cmd.includes('git push') ||
-      cmd.includes('npm publish') ||
-      cmd.includes('npm uninstall')
-    ) {
-      return 'HIGH';
-    }
-
-    // Commandes en lecture seule / inspection
-    if (
-      cmd.startsWith('git status') ||
-      cmd.startsWith('git diff') ||
-      cmd.startsWith('git log') ||
-      cmd.startsWith('node -v') ||
-      cmd.startsWith('npm -v') ||
-      cmd.startsWith('dir') ||
-      cmd.startsWith('ls ') ||
-      cmd === 'ls'
-    ) {
-      return 'SAFE';
-    }
-
-    // Par défaut : modification ou exécution standard
-    return 'MEDIUM';
-  }
-
   public async execute(input: ExecuteCommandInput, context: ToolContext): Promise<ToolResult> {
-    const riskLevel = this.assessRisk(input.command);
+    const analysis = CommandRiskClassifier.analyze(input.command);
+    const riskLevel = analysis.overallRisk;
+
+    // Validation et confinement du cwd
+    const targetPath = input.cwd || context.workspacePath;
+    const pathValidation = PathSanitizer.validatePath(targetPath, context.workspacePath);
+    if (!pathValidation.valid || !pathValidation.canonicalPath) {
+      return {
+        success: false,
+        error: pathValidation.error || 'Répertoire d\'exécution invalide ou situé en dehors du workspace.'
+      };
+    }
 
     // Demande de permission
     const approved = await context.permissionEngine.requestPermission(
       this.name,
       riskLevel,
       `Exécuter la commande dans le terminal : "${input.command}"`,
-      { command: input.command, risk: riskLevel },
+      { 
+        command: input.command, 
+        risk: riskLevel,
+        isCompound: analysis.isCompound,
+        segments: analysis.segments,
+        cwd: pathValidation.canonicalPath
+      },
       (req) => context.emitEvent({ type: 'permission_required', request: req })
     );
 
@@ -96,7 +73,7 @@ export class ExecuteCommandTool implements IrokoTool<ExecuteCommandInput> {
     try {
       const result = await processManager.executeCommand(
         input.command,
-        context.workspacePath,
+        pathValidation.canonicalPath,
         input.timeoutMs || 60000,
         (chunk) => {
           // Streaming du terminal vers l'UI
@@ -106,7 +83,8 @@ export class ExecuteCommandTool implements IrokoTool<ExecuteCommandInput> {
             content: chunk,
             partial: true
           });
-        }
+        },
+        context.abortSignal
       );
 
       const isSuccess = result.exitCode === 0;

@@ -1,37 +1,37 @@
-﻿export type HistoryItem = {
+export type HistoryItem = {
   id: string;
   topic: string;
   result: string;
   timestamp: number;
-};
-
-export type Persona = {
-  secteur: string;
-  style: string;
-  motsAEviter: string;
-  exemplePost: string;
-};
-
-export type KnowledgeItem = {
-  id: string;
-  type: string;
-  title: string;
-  content: string;
-};
-
-export type ProjectSource = {
-  id: string;
-  project_id: string;
-  title?: string;
-  type?: 'pdf' | 'docx' | 'text';
-  content: string;
-  created_at: string;
+  mode?: 'chat' | 'code';
+  workspace_id?: string | null;
+  pinned?: boolean;
 };
 
 export type Message = {
-  role: 'user' | 'assistant';
+  id?: string;
+  role: 'user' | 'assistant' | 'system';
   content: string;
   timestamp: number;
+  metadata?: {
+    attachmentIds?: string[];
+    attachments?: Array<{
+      id: string;
+      name: string;
+      size: number;
+      mimeType: string;
+      detectedType: string;
+    }>;
+    artifactIds?: string[];
+    artifacts?: Array<{
+      id: string;
+      name: string;
+      title?: string;
+      mimeType: string;
+      version: number;
+      size: number;
+    }>;
+  };
 };
 
 export type ProjectConversation = {
@@ -48,14 +48,4 @@ export type Project = {
   description?: string;
   memory?: 'default' | 'project-only';
   created_at: string;
-};
-
-export type CalendarItem = {
-  id: string;
-  idea: string;
-  description: string;
-  network: string;
-  planned_date: string;
-  status: 'idea' | 'in_progress' | 'published';
-  created_at?: string;
 };

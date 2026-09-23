@@ -1,0 +1,246 @@
+{
+  "timestamp": "2026-09-21T10:59:57.252Z",
+  "totalViewportsTested": 9,
+  "passedViewports": 9,
+  "results": [
+    {
+      "viewport": "320x568",
+      "name": "320x568 (Mobile Ultra-Compact - iPhone SE 1)",
+      "overflow": {
+        "scrollWidth": 320,
+        "innerWidth": 320,
+        "hasOverflow": false
+      },
+      "touchTargets": {
+        "totalChecked": 14,
+        "compliantCount": 5,
+        "smallTargets": [
+          {
+            "tag": "button",
+            "text": "",
+            "width": 24,
+            "height": 24
+          },
+          {
+            "tag": "button",
+            "text": "",
+            "width": 28,
+            "height": 28
+          },
+          {
+            "tag": "button",
+            "text": "",
+            "width": 28,
+            "height": 28
+          },
+          {
+            "tag": "button",
+            "text": "",
+            "width": 24,
+            "height": 24
+          },
+          {
+            "tag": "button",
+            "text": "Chat",
+            "width": 47,
+            "height": 22
+          }
+        ]
+      },
+      "screenshot": "screenshots\\responsive\\320x568.png"
+    },
+    {
+      "viewport": "375x667",
+      "name": "375x667 (Mobile Compact Standard)",
+      "overflow": {
+        "scrollWidth": 375,
+        "innerWidth": 375,
+        "hasOverflow": false
+      },
+      "touchTargets": {
+        "totalChecked": 14,
+        "compliantCount": 5,
+        "smallTargets": [
+          {
+            "tag": "button",
+            "text": "",
+            "width": 24,
+            "height": 24
+          },
+          {
+            "tag": "button",
+            "text": "",
+            "width": 28,
+            "height": 28
+          },
+          {
+            "tag": "button",
+            "text": "",
+            "width": 28,
+            "height": 28
+          },
+          {
+            "tag": "button",
+            "text": "",
+            "width": 24,
+            "height": 24
+          },
+          {
+            "tag": "button",
+            "text": "Chat",
+            "width": 47,
+            "height": 22
+          }
+        ]
+      },
+      "screenshot": "screenshots\\responsive\\375x667.png"
+    },
+    {
+      "viewport": "390x844",
+      "name": "390x844 (Mobile Moderne Standard)",
+      "overflow": {
+        "scrollWidth": 390,
+        "innerWidth": 390,
+        "hasOverflow": false
+      },
+      "touchTargets": {
+        "totalChecked": 14,
+        "compliantCount": 5,
+        "smallTargets": [
+          {
+            "tag": "button",
+            "text": "",
+            "width": 24,
+            "height": 24
+          },
+          {
+            "tag": "button",
+            "text": "",
+            "width": 28,
+            "height": 28
+          },
+          {
+            "tag": "button",
+            "text": "",
+            "width": 28,
+            "height": 28
+          },
+          {
+            "tag": "button",
+            "text": "",
+            "width": 24,
+            "height": 24
+          },
+          {
+            "tag": "button",
+            "text": "Chat",
+            "width": 47,
+            "height": 22
+          }
+        ]
+      },
+      "screenshot": "screenshots\\responsive\\390x844.png"
+    },
+    {
+      "viewport": "844x390",
+      "name": "844x390 (Mobile Paysage)",
+      "overflow": {
+        "scrollWidth": 844,
+        "innerWidth": 844,
+        "hasOverflow": false
+      },
+      "touchTargets": "N/A (Desktop)",
+      "screenshot": "screenshots\\responsive\\844x390.png"
+    },
+    {
+      "viewport": "768x1024",
+      "name": "768x1024 (Tablette Portrait)",
+      "overflow": {
+        "scrollWidth": 768,
+        "innerWidth": 768,
+        "hasOverflow": false
+      },
+      "touchTargets": {
+        "totalChecked": 14,
+        "compliantCount": 5,
+        "smallTargets": [
+          {
+            "tag": "button",
+            "text": "",
+            "width": 24,
+            "height": 24
+          },
+          {
+            "tag": "button",
+            "text": "",
+            "width": 24,
+            "height": 24
+          },
+          {
+            "tag": "button",
+            "text": "Chat",
+            "width": 47,
+            "height": 22
+          },
+          {
+            "tag": "button",
+            "text": "Code",
+            "width": 51,
+            "height": 22
+          },
+          {
+            "tag": "button",
+            "text": "",
+            "width": 24,
+            "height": 24
+          }
+        ]
+      },
+      "screenshot": "screenshots\\responsive\\768x1024.png"
+    },
+    {
+      "viewport": "1024x768",
+      "name": "1024x768 (Tablette Paysage / Petit Laptop)",
+      "overflow": {
+        "scrollWidth": 1024,
+        "innerWidth": 1024,
+        "hasOverflow": false
+      },
+      "touchTargets": "N/A (Desktop)",
+      "screenshot": "screenshots\\responsive\\1024x768.png"
+    },
+    {
+      "viewport": "1440x900",
+      "name": "1440x900 (Laptop Standard)",
+      "overflow": {
+        "scrollWidth": 1440,
+        "innerWidth": 1440,
+        "hasOverflow": false
+      },
+      "touchTargets": "N/A (Desktop)",
+      "screenshot": "screenshots\\responsive\\1440x900.png"
+    },
+    {
+      "viewport": "1920x1080",
+      "name": "1920x1080 (Desktop Full HD)",
+      "overflow": {
+        "scrollWidth": 1920,
+        "innerWidth": 1920,
+        "hasOverflow": false
+      },
+      "touchTargets": "N/A (Desktop)",
+      "screenshot": "screenshots\\responsive\\1920x1080.png"
+    },
+    {
+      "viewport": "2560x1440",
+      "name": "2560x1440 (Desktop QHD)",
+      "overflow": {
+        "scrollWidth": 2560,
+        "innerWidth": 2560,
+        "hasOverflow": false
+      },
+      "touchTargets": "N/A (Desktop)",
+      "screenshot": "screenshots\\responsive\\2560x1440.png"
+    }
+  ]
+}

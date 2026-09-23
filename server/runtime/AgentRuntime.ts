@@ -1,8 +1,22 @@
-﻿import { AgentEvent } from '../types/events';
+import { AgentEvent } from '../types/events';
 import { PermissionEngine } from '../permissions/PermissionEngine';
 import { Planner } from './Planner';
 import { AgentLoop } from './AgentLoop';
 import { ToolContext } from '../tools/types';
+import { workspaceLockManager } from '../workspace/WorkspaceLockManager';
+
+export interface RunTaskOptions {
+  taskId?: string;
+  preferredProviderId?: string;
+  modelId?: string;
+  thinkingLevel?: 'disabled' | 'low' | 'medium' | 'high';
+  thinkingBudget?: number;
+  conversationId?: string;
+  conversationMode?: 'chat' | 'code';
+  executionMode?: 'execute' | 'plan';
+  resumeFromCheckpoint?: boolean;
+  attachmentIds?: string[];
+}
 
 export class AgentRuntime {
   private planner: Planner;
@@ -24,7 +38,7 @@ export class AgentRuntime {
     return this.isBusy;
   }
 
-  public async runTask(prompt: string, preferredProviderId?: string): Promise<void> {
+  public async runTask(prompt: string, options: RunTaskOptions = {}): Promise<void> {
     if (this.isBusy) {
       this.cancelTask();
     }
@@ -35,14 +49,28 @@ export class AgentRuntime {
     const toolContext: ToolContext = {
       workspacePath: this.workspacePath,
       sessionId: this.sessionId,
+      taskId: options.taskId,
       permissionEngine: this.permissionEngine,
-      emitEvent: this.emitEvent
+      emitEvent: this.emitEvent,
+      abortSignal: this.currentAbortController.signal,
+      executionMode: options.executionMode || 'execute',
+      conversationMode: options.conversationMode || 'chat',
+      conversationId: options.conversationId,
+      isReadOnly: options.conversationId ? workspaceLockManager.isReadOnly(this.workspacePath, options.conversationId) : false
     };
 
     try {
       await this.agentLoop.run(prompt, toolContext, this.planner, {
-        preferredProviderId,
-        abortSignal: this.currentAbortController.signal
+        preferredProviderId: options.preferredProviderId,
+        modelId: options.modelId,
+        abortSignal: this.currentAbortController.signal,
+        thinkingLevel: options.thinkingLevel,
+        thinkingBudget: options.thinkingBudget,
+        conversationId: options.conversationId,
+        conversationMode: options.conversationMode || 'chat',
+        executionMode: options.executionMode,
+        resumeFromCheckpoint: options.resumeFromCheckpoint,
+        attachmentIds: options.attachmentIds
       });
     } finally {
       this.isBusy = false;
@@ -57,5 +85,10 @@ export class AgentRuntime {
     }
     this.permissionEngine.clear();
     this.isBusy = false;
+    this.emitEvent({
+      type: 'status',
+      status: 'idle',
+      message: 'Tâche interrompue par l\'utilisateur.'
+    });
   }
 }

@@ -4,14 +4,24 @@ import { OpenAIProvider } from '../providers/OpenAIProvider';
 import { GeminiProvider } from '../providers/GeminiProvider';
 import { AnthropicProvider } from '../providers/AnthropicProvider';
 import { OpenRouterProvider } from '../providers/OpenRouterProvider';
+import { LMStudioProvider } from '../providers/LMStudioProvider';
+import { OllamaProvider } from '../providers/OllamaProvider';
+import { CustomOpenAIProvider } from '../providers/CustomOpenAIProvider';
+import { OpenAICompatibleProvider } from '../providers/OpenAICompatibleProvider';
+import { getProviderPreset } from '../providers/presets';
 import { MockProvider } from '../providers/MockProvider';
+import { logger } from '../../utils/logger';
 
 export class ModelRouter {
   private providers: Map<string, AIProvider> = new Map();
   private mockProvider = new MockProvider();
   private fallbackPolicy: FallbackPolicy = {
     enabled: true,
-    providers: ['anthropic', 'openai', 'openrouter', 'gemini'],
+    providers: [
+      'anthropic', 'openai', 'gemini', 'openrouter',
+      'mistral', 'groq', 'deepseek', 'xai', 'together',
+      'ollama', 'lmstudio', 'custom'
+    ],
     maxAttemptsPerProvider: 3,
     allowModelSubstitution: true,
     allowCrossProviderFallback: true
@@ -23,6 +33,26 @@ export class ModelRouter {
     this.registerProvider(new OpenAIProvider());
     this.registerProvider(new GeminiProvider());
     this.registerProvider(new OpenRouterProvider());
+
+    // Nouveaux fournisseurs gérés via presets OpenAI-compatibles
+    const mistralPreset = getProviderPreset('mistral');
+    if (mistralPreset) this.registerProvider(new OpenAICompatibleProvider(mistralPreset));
+
+    const groqPreset = getProviderPreset('groq');
+    if (groqPreset) this.registerProvider(new OpenAICompatibleProvider(groqPreset));
+
+    const deepseekPreset = getProviderPreset('deepseek');
+    if (deepseekPreset) this.registerProvider(new OpenAICompatibleProvider(deepseekPreset));
+
+    const xaiPreset = getProviderPreset('xai');
+    if (xaiPreset) this.registerProvider(new OpenAICompatibleProvider(xaiPreset));
+
+    const togetherPreset = getProviderPreset('together');
+    if (togetherPreset) this.registerProvider(new OpenAICompatibleProvider(togetherPreset));
+
+    this.registerProvider(new LMStudioProvider());
+    this.registerProvider(new OllamaProvider());
+    this.registerProvider(new CustomOpenAIProvider());
     this.registerProvider(this.mockProvider);
   }
 
@@ -79,7 +109,7 @@ export class ModelRouter {
       }
     }
 
-    // Always keep mock as ultimate safety net
+    // Garder le mock en dernier recours si présent
     if (!providerQueue.includes('mock')) {
       providerQueue.push('mock');
     }
@@ -91,17 +121,14 @@ export class ModelRouter {
       const provider = this.providers.get(providerId);
       if (!provider) continue;
 
-      // Pour le provider mock, pas besoin de clé API : filet de sécurité ultime
+      // Pour le provider mock, pas besoin de clé API : filet de secours
       if (provider.id === 'mock') {
-        console.warn(`[ModelRouter] Utilisation du moteur hors-ligne de secours (Mock).`);
-        yield { type: 'thinking_delta', text: `\n[Info: Utilisation du moteur hors-ligne de secours]` };
+        logger.warn('Utilisation du moteur hors-ligne de secours (Mock).');
         for await (const chunk of provider.generateStream(request, 'mock-key')) {
           yield chunk;
         }
         return;
       }
-
-      console.log(`[ModelRouter] Tentative avec le provider "${provider.name}" (${provider.id})...`);
 
       let attempts = 0;
       const maxAttempts = this.fallbackPolicy.maxAttemptsPerProvider;
@@ -112,54 +139,68 @@ export class ModelRouter {
 
         const keyAcquisition = this.poolManager.acquireKey(provider.id, activeStrategy);
         if (!keyAcquisition) {
-          console.warn(`[ModelRouter] Aucune clé disponible pour ${provider.name} (épuisées ou en cooldown).`);
+          // Aucun clé disponible pour ce provider (aucune configurée ou toutes en cooldown/invalides)
           break; // Passer au provider suivant
         }
 
         const { credential, rawKey, release } = keyAcquisition;
-        console.log(`[ModelRouter] Clé sélectionnée : ${credential.label} (${credential.maskedKey}) pour ${provider.name}`);
+        logger.info(`Appel modèle avec clé ${credential.maskedKey} (${provider.name})`);
 
         let hasYieldedAnyChunk = false;
 
         try {
           for await (const chunk of provider.generateStream(request, rawKey)) {
+            if (request.abortSignal?.aborted) {
+              release();
+              return;
+            }
             hasYieldedAnyChunk = true;
             yield chunk;
+          }
+
+          if (request.abortSignal?.aborted) {
+            release();
+            return;
           }
 
           // Succès complet
           this.poolManager.reportSuccess(credential.id);
           release();
-          return; // Sortie réussie
+          return; // Sortie réussie sans erreur
         } catch (err: any) {
           release();
+          if (request.abortSignal?.aborted || err.name === 'AbortError' || (err.message && err.message.toLowerCase().includes('abort'))) {
+            logger.info(`Génération interrompue par l'utilisateur sur ${credential.maskedKey} (${provider.name})`);
+            return;
+          }
+
           const classification = this.poolManager.reportFailure(credential.id, err);
           lastError = err;
 
-          console.warn(
-            `[ModelRouter] Échec clé ${credential.maskedKey} (${provider.name}) : ${classification.message} [Catégorie: ${classification.category}]`
+          logger.warn(
+            `Échec clé ${credential.maskedKey} (${provider.name}) : ${classification.message} [${classification.category}]`
           );
 
           // Si des chunks ont déjà été émis vers l'utilisateur, ne pas rejouer la génération
           if (hasYieldedAnyChunk) {
             yield {
               type: 'text_delta',
-              text: `\n\n[Flux interrompu suite à une erreur : ${classification.message}]`
+              text: `\n\n[Flux interrompu : ${classification.message}]`
             };
             return;
           }
 
-          // Si l'erreur justifie une bascule immédiate de provider (ex: 5xx ou modèle indisponible)
+          // Si l'erreur justifie une bascule immédiate de provider (5xx ou modèle indisponible)
           if (classification.shouldFallbackProvider) {
-            break; // Passer au provider suivant sans brûler d'autres clés
+            break; // Passer au provider suivant
           }
 
-          // Sinon, la boucle while retente avec la prochaine clé saine du même provider
+          // Pour 429 ou 401/403, la boucle while continue immédiatement avec la clé saine suivante
         }
       }
     }
 
-    // Si tout a échoué et que le mock n'a pas été exécuté
+    // Si tout a échoué
     throw lastError || new Error('Tous les fournisseurs et clés d\'IA configurés sont actuellement indisponibles.');
   }
 }
