@@ -6,6 +6,7 @@ export interface CodeBlockProps {
   code: string;
   language?: string;
   title?: string;
+  isOpen?: boolean;
 }
 
 // Mots-clés courants pour la coloration monochrome sobre
@@ -129,7 +130,7 @@ function renderMonochromeCode(code: string, language?: string): React.ReactNode 
   });
 }
 
-export function CodeBlock({ code, language, title }: CodeBlockProps) {
+function CodeBlockComponent({ code, language, title, isOpen = false }: CodeBlockProps) {
   const [copied, setCopied] = useState(false);
   const [isWrapped, setIsWrapped] = useState(false);
   const copyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -140,6 +141,15 @@ export function CodeBlock({ code, language, title }: CodeBlockProps) {
     }
     return '';
   }, [language]);
+
+  // Coloration monochrome exécutée une seule fois à la fermeture (règles UX U7 et Lot 4)
+  // Pas de coloration pendant que le bloc est ouvert (texte monochrome brut)
+  const renderedCode = useMemo(() => {
+    if (isOpen) {
+      return code;
+    }
+    return renderMonochromeCode(code, displayLang);
+  }, [code, displayLang, isOpen]);
 
   const handleCopy = async () => {
     const success = await copyToClipboard(code);
@@ -227,9 +237,12 @@ export function CodeBlock({ code, language, title }: CodeBlockProps) {
             isWrapped ? 'whitespace-pre-wrap break-words' : 'whitespace-pre'
           }`}
         >
-          <code>{renderMonochromeCode(code, displayLang)}</code>
+          <code>{renderedCode}</code>
         </pre>
       </div>
     </div>
   );
 }
+
+export const CodeBlock = React.memo(CodeBlockComponent);
+

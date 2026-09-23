@@ -17,55 +17,147 @@ import { attachmentService, AttachmentPreviewResult, AttachmentPublicInfo } from
 import { artifactService, ArtifactPublicInfo } from '../../services/artifacts/ArtifactService';
 import { mediaService, VideoJobData } from '../../services/media/MediaService';
 import { CodeBlock } from './CodeBlock';
-import { parseMarkdownBlocks } from './markdownParser';
+import { parseMarkdownBlocks, ParsedBlock } from './markdownParser';
 import { ArtifactCard } from './ArtifactCard';
 import { ArtifactInspector } from './ArtifactInspector';
 import { useStreamBuffer } from '../../hooks/useStreamBuffer';
 
-function FormattedMessage({ content }: { content: string }) {
-  const blocks = parseMarkdownBlocks(content);
+interface MemoizedBlockProps {
+  block: ParsedBlock;
+  index: number;
+  isOpen: boolean;
+}
+
+const MemoizedBlock = React.memo(function MemoizedBlock({ block, index, isOpen }: MemoizedBlockProps) {
+  if (block.type === 'code') {
+    return (
+      <CodeBlock
+        code={block.code}
+        language={block.language}
+        title={block.title}
+        isOpen={isOpen}
+      />
+    );
+  }
+
+  if (block.type === 'table') {
+    if (isOpen || !block.isClosed) {
+      // Une construction non fermée s'affiche en texte brut, sans erreur (règles UX U7 et Lot 4)
+      return (
+        <div className="space-y-1">
+          {block.rawLines.map((line, lIdx) => (
+            <p key={lIdx} className="leading-[1.65] font-mono text-[13px]">{renderInline(line)}</p>
+          ))}
+        </div>
+      );
+    }
+
+    return (
+      <div className="overflow-x-auto my-2 border border-[var(--border-subtle)] rounded-[var(--radius-button)]">
+        <table className="w-full text-left text-[13px] border-collapse">
+          <thead className="bg-[var(--bg-surface)] border-b border-[var(--border-subtle)] text-[var(--text-secondary)] font-medium">
+            <tr>
+              {block.headers.map((h, i) => (
+                <th key={i} className="py-2 px-3">{renderInline(h.trim())}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-[var(--border-subtle)]">
+            {block.rows.map((row, rIdx) => (
+              <tr key={rIdx} className="hover:bg-[var(--bg-surface-hover)]">
+                {row.map((cell, cIdx) => (
+                  <td key={cIdx} className="py-2 px-3 text-[var(--text-primary)]">{renderInline(cell.trim())}</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  }
+
+  const lines = block.content.split('\n');
+  return (
+    <>
+      {lines.map((line, i) => {
+        if (line.startsWith('### ')) {
+          return (
+            <h4 key={`${index}-${i}`} className="text-[16px] font-semibold text-[var(--text-primary)] pt-3 pb-1">
+              {line.replace('### ', '')}
+            </h4>
+          );
+        }
+        if (line.startsWith('• ') || line.startsWith('- ')) {
+          const text = line.replace(/^[•\-]\s*/, '');
+          return (
+            <div key={`${index}-${i}`} className="flex items-start gap-2 pl-1">
+              <span className="text-[var(--text-secondary)] select-none shrink-0 mt-1">•</span>
+              <span className="flex-1">{renderInline(text)}</span>
+            </div>
+          );
+        }
+        if (!line.trim()) {
+          return <div key={`${index}-${i}`} className="h-1" />;
+        }
+        return <p key={`${index}-${i}`} className="leading-[1.65]">{renderInline(line)}</p>;
+      })}
+    </>
+  );
+}, (prevProps, nextProps) => {
+  // Règle d'or : chaque bloc terminé n'est jamais recalculé ; seul le dernier bloc, ouvert, se met à jour
+  if (!prevProps.isOpen && !nextProps.isOpen) {
+    if (prevProps.block === nextProps.block) return true;
+    if (prevProps.block.type === nextProps.block.type) {
+      if (prevProps.block.type === 'code' && nextProps.block.type === 'code') {
+        return prevProps.block.code === nextProps.block.code &&
+               prevProps.block.language === nextProps.block.language &&
+               prevProps.block.title === nextProps.block.title &&
+               prevProps.block.isClosed === nextProps.block.isClosed;
+      }
+      if (prevProps.block.type === 'table' && nextProps.block.type === 'table') {
+        return prevProps.block.content === nextProps.block.content &&
+               prevProps.block.isClosed === nextProps.block.isClosed;
+      }
+      if (prevProps.block.type === 'text' && nextProps.block.type === 'text') {
+        return prevProps.block.content === nextProps.block.content &&
+               prevProps.block.isClosed === nextProps.block.isClosed;
+      }
+    }
+  }
+  return false;
+});
+
+interface FormattedMessageProps {
+  content: string;
+  isStreaming?: boolean;
+}
+
+const FormattedMessage = React.memo(function FormattedMessage({
+  content,
+  isStreaming = false
+}: FormattedMessageProps) {
+  const blocks = useMemo(() => parseMarkdownBlocks(content), [content]);
 
   return (
     <div className="space-y-2">
       {blocks.map((block, bIdx) => {
-        if (block.type === 'code') {
-          return (
-            <CodeBlock
-              key={bIdx}
-              code={block.code}
-              language={block.language}
-              title={block.title}
-            />
-          );
-        }
+        const isLast = bIdx === blocks.length - 1;
+        const isBlockOpen = isLast && isStreaming && !block.isClosed;
+        const contentKey = block.type === 'code' ? block.code : block.content;
+        const key = `${bIdx}-${contentKey}`;
 
-        const lines = block.content.split('\n');
-        return lines.map((line, i) => {
-          if (line.startsWith('### ')) {
-            return (
-              <h4 key={`${bIdx}-${i}`} className="text-[16px] font-semibold text-[var(--text-primary)] pt-3 pb-1">
-                {line.replace('### ', '')}
-              </h4>
-            );
-          }
-          if (line.startsWith('• ') || line.startsWith('- ')) {
-            const text = line.replace(/^[•\-]\s*/, '');
-            return (
-              <div key={`${bIdx}-${i}`} className="flex items-start gap-2 pl-1">
-                <span className="text-[var(--text-secondary)] select-none shrink-0 mt-1">•</span>
-                <span className="flex-1">{renderInline(text)}</span>
-              </div>
-            );
-          }
-          if (!line.trim()) {
-            return <div key={`${bIdx}-${i}`} className="h-1" />;
-          }
-          return <p key={`${bIdx}-${i}`} className="leading-[1.65]">{renderInline(line)}</p>;
-        });
+        return (
+          <MemoizedBlock
+            key={key}
+            block={block}
+            index={bIdx}
+            isOpen={isBlockOpen}
+          />
+        );
       })}
     </div>
   );
-}
+});
 
 function renderInline(text: string): React.ReactNode {
   const parts: React.ReactNode[] = [];
@@ -1160,7 +1252,7 @@ export function ClaudeChat() {
                       conversationFont === 'serif' ? 'font-serif' : 'font-sans'
                     }`}
                   >
-                    <FormattedMessage content={currentAssistantStream} />
+                    <FormattedMessage content={currentAssistantStream} isStreaming={true} />
                   </div>
                 )}
               </article>
