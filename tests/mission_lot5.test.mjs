@@ -94,3 +94,54 @@ test('Mission Lot 5 - 2. Clavier virtuel, hauteur visualViewport et zones sûres
   assert.ok(shellContent.includes('safe-area-inset-right'), 'ZyriconAppShell doit gérer safe-area-inset-right pour le paysage');
 });
 
+test('Mission Lot 5 - 3. Cibles tactiles étendues à 44x44 px sous pointer: coarse (Point 3)', async () => {
+  // 3.1 Définition CSS de .tap-target-24 et son extension sous pointer: coarse
+  const cssPath = path.join(rootDir, 'src', 'index.css');
+  const cssContent = fs.readFileSync(cssPath, 'utf-8');
+  assert.ok(cssContent.includes('.tap-target-24'), 'index.css doit définir la classe utilitaire tap-target-24');
+  assert.ok(cssContent.includes('min-width: 44px') && cssContent.includes('min-height: 44px'), 'tap-target-24::before doit atteindre 44x44 px sous pointer: coarse');
+
+  // 3.2 Contrôles principaux équipés de la classe
+  const composerPath = path.join(rootDir, 'src', 'components', 'composer', 'ClaudeComposer.tsx');
+  const composerContent = fs.readFileSync(composerPath, 'utf-8');
+  assert.ok(composerContent.includes('tap-target-24'), 'ClaudeComposer doit appliquer tap-target-24 sur ses contrôles');
+
+  const sidebarPath = path.join(rootDir, 'src', 'components', 'layout', 'ClaudeSidebar.tsx');
+  const sidebarContent = fs.readFileSync(sidebarPath, 'utf-8');
+  assert.ok(sidebarContent.includes('tap-target-24'), 'ClaudeSidebar doit appliquer tap-target-24 sur ses contrôles');
+
+  // 3.3 Test Playwright : calcul réel de la dimension du pseudo-élément ::before sous pointer: coarse
+  let browser;
+  try {
+    browser = await chromium.launch({ channel: 'msedge', headless: true });
+  } catch {
+    browser = await chromium.launch({ headless: true });
+  }
+  try {
+    const context = await browser.newContext({
+      viewport: { width: 375, height: 812 },
+      hasTouch: true,
+      isMobile: true
+    });
+    const page = await context.newPage();
+    await page.goto('http://127.0.0.1:5173');
+    await page.waitForSelector('.tap-target-24', { timeout: 10000 });
+
+    const dimensions = await page.$eval('.tap-target-24', el => {
+      const style = window.getComputedStyle(el, '::before');
+      return {
+        minWidth: parseFloat(style.minWidth) || 0,
+        minHeight: parseFloat(style.minHeight) || 0
+      };
+    });
+
+    assert.ok(dimensions.minWidth >= 44, `minWidth du pseudo-élément tactile doit être >= 44px (obtenu: ${dimensions.minWidth}px)`);
+    assert.ok(dimensions.minHeight >= 44, `minHeight du pseudo-élément tactile doit être >= 44px (obtenu: ${dimensions.minHeight}px)`);
+
+    await context.close();
+  } finally {
+    await browser.close();
+  }
+});
+
+

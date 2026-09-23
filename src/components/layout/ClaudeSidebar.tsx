@@ -135,7 +135,7 @@ export function ClaudeSidebar({ onOpenPersonalize }: ClaudeSidebarProps) {
           <button
             type="button"
             onClick={() => setIsSidebarCollapsed(true)}
-            className="p-1 rounded-[6px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-hover)] transition-colors"
+            className="p-1 rounded-[6px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-hover)] transition-colors tap-target-24"
             title="Réduire la barre latérale"
             aria-label="Réduire la barre latérale"
           >
@@ -279,7 +279,7 @@ export function ClaudeSidebar({ onOpenPersonalize }: ClaudeSidebarProps) {
                       type="button"
                       onClick={() => { setFilterMode(mode); setShowAll(false); }}
                       aria-pressed={active}
-                      className={`text-[11px] px-1.5 py-0.5 rounded transition-colors ${
+                      className={`text-[11px] px-1.5 py-0.5 rounded transition-colors tap-target-24 ${
                         active ? 'bg-[var(--bg-active)] text-[var(--text-primary)] font-medium' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-hover)]'
                       }`}
                     >

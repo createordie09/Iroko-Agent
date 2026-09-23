@@ -770,7 +770,7 @@ export function ClaudeComposer({
               onClick={() => setIsToolsOpen(!isToolsOpen)}
               aria-label="Options d'ajout et gestion des outils"
               aria-expanded={isToolsOpen}
-              className="w-6 h-6 rounded-full flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-active)] transition-colors"
+              className="w-6 h-6 rounded-full flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-active)] transition-colors tap-target-24"
               title={`Ajouter du contenu ou activer des outils (${enabledToolsCount})`}
             >
               <Plus className="w-4 h-4" />
@@ -1004,7 +1004,7 @@ export function ClaudeComposer({
               type="button"
               onClick={() => setComposerMode('chat')}
               aria-pressed={composerMode === 'chat'}
-              className={`px-2.5 py-0.5 text-[12px] font-medium rounded-[var(--radius-pill)] transition-all ${
+              className={`px-2.5 py-0.5 text-[12px] font-medium rounded-[var(--radius-pill)] transition-all tap-target-24 ${
                 composerMode === 'chat'
                   ? 'bg-[var(--bg-active)] text-[var(--text-primary)]'
                   : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
@@ -1016,7 +1016,7 @@ export function ClaudeComposer({
               type="button"
               onClick={() => setComposerMode('code')}
               aria-pressed={composerMode === 'code'}
-              className={`px-2.5 py-0.5 text-[12px] font-medium rounded-[var(--radius-pill)] transition-all ${
+              className={`px-2.5 py-0.5 text-[12px] font-medium rounded-[var(--radius-pill)] transition-all tap-target-24 ${
                 composerMode === 'code'
                   ? 'bg-[var(--bg-active)] text-[var(--text-primary)]'
                   : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
@@ -1039,7 +1039,7 @@ export function ClaudeComposer({
               }}
               disabled={!isReady}
               aria-disabled={!isReady}
-              className={`flex items-center gap-1 text-[13px] transition-colors ${
+              className={`flex items-center gap-1 text-[13px] transition-colors tap-target-24 ${
                 isReady
                   ? 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] cursor-pointer'
                   : 'text-[var(--text-tertiary)] cursor-not-allowed opacity-60'
@@ -1080,7 +1080,7 @@ export function ClaudeComposer({
                 onStop?.();
               }}
               aria-label="Arrêter la génération"
-              className="w-7 h-7 rounded-full flex items-center justify-center transition-all shrink-0 bg-[var(--text-primary)] text-[var(--bg-app)] hover:opacity-90 cursor-pointer"
+              className="w-7 h-7 rounded-full flex items-center justify-center transition-all shrink-0 bg-[var(--text-primary)] text-[var(--bg-app)] hover:opacity-90 cursor-pointer tap-target-24"
               title="Arrêter la réponse"
             >
               <Square className="w-3.5 h-3.5 fill-current" />
@@ -1101,7 +1101,7 @@ export function ClaudeComposer({
                   ? "Téléversement en cours..."
                   : undefined
               }
-              className={`w-7 h-7 rounded-full flex items-center justify-center transition-all shrink-0 ${
+              className={`w-7 h-7 rounded-full flex items-center justify-center transition-all shrink-0 tap-target-24 ${
                 runtimeConnected && isReady && !attachments.some(a => a.status === 'uploading')
                   ? 'bg-[var(--text-primary)] text-[var(--bg-app)] hover:opacity-90 cursor-pointer'
                   : 'bg-[var(--bg-active)] text-[var(--text-secondary)] opacity-40 cursor-not-allowed'
@@ -1127,7 +1127,7 @@ export function ClaudeComposer({
                 aria-disabled={!isRecognitionSupported}
                 aria-label={isListening ? "Arrêter la saisie vocale" : "Saisie vocale"}
                 aria-description={!isRecognitionSupported ? "Saisie vocale non prise en charge par ce navigateur" : undefined}
-                className={`p-1 rounded transition-colors ${
+                className={`p-1 rounded transition-colors tap-target-24 ${
                   !isRecognitionSupported
                     ? 'opacity-40 cursor-not-allowed'
                     : isListening
@@ -1151,7 +1151,7 @@ export function ClaudeComposer({
                 aria-disabled={!isSynthesisSupported}
                 aria-label={isSpeaking ? "Arrêter la lecture" : "Lecture de la dernière réponse"}
                 aria-description={!isSynthesisSupported ? "Synthèse vocale non prise en charge par ce navigateur" : undefined}
-                className={`p-1 rounded transition-colors ${
+                className={`p-1 rounded transition-colors tap-target-24 ${
                   !isSynthesisSupported
                     ? 'opacity-40 cursor-not-allowed'
                     : isSpeaking
