@@ -183,23 +183,25 @@ function analyzeFontDisplay() {
 function checkLazyLoading() {
   // Vérifier si la modale paramètres est chargée en dynamique (import() dans le bundle)
   try {
-    const jsFile = readdirSync(DIST_ASSETS).find(f => f.endsWith('.js') && f.startsWith('index'));
+    const assets = readdirSync(DIST_ASSETS);
+    const jsFile = assets.find(f => f.endsWith('.js') && f.startsWith('index'));
     if (!jsFile) return { error: 'Pas de fichier JS index trouvé' };
     const js = readFileSync(join(DIST_ASSETS, jsFile), 'utf8');
 
-    // Recherche de chunks dynamiques (import() crée des __vitePreload ou des dynamic chunks)
+    // Vérifier si un chunk séparé ClaudeSettingsModal existe
+    const hasDedicatedModalChunk = assets.some(f => f.startsWith('ClaudeSettingsModal') && f.endsWith('.js'));
     const dynamicChunks = js.match(/import\s*\([^)]+\)/g) || [];
-    const hasDynamicModal = js.includes('ClaudeSettingsModal') && dynamicChunks.length > 0;
 
-    // Chercher si ClaudeSettingsModal est dans le bundle initial ou séparé
-    const settingsInBundle = js.includes('ClaudeSettingsModal');
+    // Si un chunk dédié existe, le composant est différé (lazy)
+    const settingsInBundle = !hasDedicatedModalChunk;
     const syntaxHighlightLibs = ['highlight.js', 'shiki', 'prism', 'hljs'].filter(lib => js.toLowerCase().includes(lib));
 
     return {
       dynamicImportsCount: dynamicChunks.length,
       settingsModalInInitialBundle: settingsInBundle,
+      hasDedicatedModalChunk,
       syntaxHighlightLibsDetected: syntaxHighlightLibs,
-      note: settingsInBundle ? 'La modale Paramètres est dans le bundle initial (pas de lazy loading)' : 'La modale Paramètres est chargée séparément (lazy)',
+      note: !settingsInBundle ? 'La modale Paramètres est chargée séparément (lazy)' : 'La modale Paramètres est dans le bundle initial (pas de lazy loading)',
     };
   } catch (e) {
     return { error: e.message };

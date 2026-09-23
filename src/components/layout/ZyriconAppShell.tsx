@@ -1,14 +1,16 @@
-import React, { useRef } from 'react';
+import React, { useRef, lazy, Suspense } from 'react';
 import { ClaudeSidebar } from './ClaudeSidebar';
 import { ClaudeTopbar } from './ClaudeTopbar';
 import { ClaudeHero } from '../../features/home/ClaudeHero';
-import { ClaudeChat } from '../../features/chat/ClaudeChat';
-import { ClaudeSettingsModal } from '../../features/settings/ClaudeSettingsModal';
 import { useApp } from '../../context/AppContext';
 import { agentClient } from '../../lib/agent-client';
 import { useOverlayFocus } from '../../hooks/useOverlayFocus';
 import { useLiveAnnouncements } from '../../hooks/useLiveAnnouncements';
 import { useVisualViewportHeight } from '../../hooks/useVisualViewportHeight';
+
+// Chargement dynamique différé (Lot 6 Fiche 19) pour alléger le bundle initial
+const ClaudeChat = lazy(() => import('../../features/chat/ClaudeChat').then(m => ({ default: m.ClaudeChat })));
+const ClaudeSettingsModal = lazy(() => import('../../features/settings/ClaudeSettingsModal').then(m => ({ default: m.ClaudeSettingsModal })));
 
 export function ZyriconAppShell() {
   useVisualViewportHeight();
@@ -20,6 +22,7 @@ export function ZyriconAppShell() {
     setChatStatus,
     isMobileSidebarOpen,
     setIsMobileSidebarOpen,
+    isSettingsOpen,
     setIsSettingsOpen,
     setActiveSettingsTab,
     composerMode,
@@ -127,14 +130,20 @@ export function ZyriconAppShell() {
           {activeView === 'home' && messages.length === 0 ? (
             <ClaudeHero onSendMessage={handleHeroSendMessage} />
           ) : (
-            <ClaudeChat />
+            <Suspense fallback={<div className="flex-1 bg-[var(--bg-app)]" />}>
+              <ClaudeChat />
+            </Suspense>
           )}
         </main>
 
       </div>
 
-      {/* ── Modale de Paramètres ── */}
-      <ClaudeSettingsModal />
+      {/* ── Modale de Paramètres (Chargement différé à l'ouverture) ── */}
+      {isSettingsOpen && (
+        <Suspense fallback={null}>
+          <ClaudeSettingsModal />
+        </Suspense>
+      )}
 
     </div>
   );

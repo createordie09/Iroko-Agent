@@ -74,4 +74,30 @@ test('Mission Lot 6 - 3. Remplacement du sondage actif par événement WebSocket
   assert.ok(!sidebarCode.includes('setInterval(fetchActive, 2500)'), 'ClaudeSidebar ne doit plus poller active-tasks toutes les 2.5s');
 });
 
+test('Mission Lot 6 - 4. Allègement du bundle initial et imports dynamiques (Point 4)', async () => {
+  // 4.1 ZyriconAppShell implémente le chargement dynamique via lazy / Suspense
+  const shellCode = fs.readFileSync(path.join(rootDir, 'src', 'components', 'layout', 'ZyriconAppShell.tsx'), 'utf-8');
+  assert.ok(shellCode.includes("const ClaudeSettingsModal = lazy("), 'ZyriconAppShell doit charger ClaudeSettingsModal avec lazy()');
+  assert.ok(shellCode.includes("const ClaudeChat = lazy("), 'ZyriconAppShell doit charger ClaudeChat avec lazy()');
+  assert.ok(shellCode.includes("<Suspense"), 'ZyriconAppShell doit envelopper les composants différés avec Suspense');
+
+  // 4.2 Vérification des chunks générés dans dist/assets/
+  const distAssetsDir = path.join(rootDir, 'dist', 'assets');
+  assert.ok(fs.existsSync(distAssetsDir), 'Le dossier dist/assets doit exister');
+  const files = fs.readdirSync(distAssetsDir);
+
+  const modalChunk = files.find(f => f.startsWith('ClaudeSettingsModal') && f.endsWith('.js'));
+  assert.ok(modalChunk, 'Un chunk séparé pour ClaudeSettingsModal doit exister dans dist/assets');
+
+  const chatChunk = files.find(f => f.startsWith('ClaudeChat') && f.endsWith('.js'));
+  assert.ok(chatChunk, 'Un chunk séparé pour ClaudeChat doit exister dans dist/assets');
+
+  const mainChunk = files.find(f => f.startsWith('index') && f.endsWith('.js'));
+  assert.ok(mainChunk, 'Le chunk initial index.js doit exister');
+  const mainChunkStat = fs.statSync(path.join(distAssetsDir, mainChunk));
+  const mainChunkKo = mainChunkStat.size / 1024;
+  assert.ok(mainChunkKo < 450, `Le chunk initial (${mainChunkKo.toFixed(1)} Ko) doit être strictement inférieur à 450 Ko`);
+});
+
+
 
