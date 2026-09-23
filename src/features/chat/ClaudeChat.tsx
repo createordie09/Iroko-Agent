@@ -963,11 +963,9 @@ export function ClaudeChat() {
                 const headingId = `msg-heading-${msg.id || idx}`;
                 const isOptimizedVisibility = idx < activeMessages.length - 6;
                 return (
-                  <article
-                    key={msg.id || idx}
+                  <article key={msg.id || idx} aria-labelledby={headingId}
                     id={`msg-${msg.id || idx}`}
                     data-message-id={msg.id || idx}
-                    aria-labelledby={headingId}
                     className={`w-full ${isOptimizedVisibility ? 'message-content-visibility' : ''}`}
                   >
                     <h3 id={headingId} className="sr-only">
