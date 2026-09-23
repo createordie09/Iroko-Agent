@@ -20,6 +20,7 @@ import { CodeBlock } from './CodeBlock';
 import { parseMarkdownBlocks } from './markdownParser';
 import { ArtifactCard } from './ArtifactCard';
 import { ArtifactInspector } from './ArtifactInspector';
+import { useStreamBuffer } from '../../hooks/useStreamBuffer';
 
 function FormattedMessage({ content }: { content: string }) {
   const blocks = parseMarkdownBlocks(content);
@@ -178,7 +179,12 @@ export function ClaudeChat() {
 
   const [thinkingLogs, setThinkingLogs] = useState<string[]>([]);
   const [isThinkingOpen, setIsThinkingOpen] = useState(false);
-  const [currentAssistantStream, setCurrentAssistantStream] = useState('');
+  const {
+    streamContent: currentAssistantStream,
+    appendDelta: appendStreamDelta,
+    flushImmediately: flushStreamImmediately,
+    reset: resetStreamBuffer
+  } = useStreamBuffer();
   const [ariaLiveSentence, setAriaLiveSentence] = useState('');
   const announcedIndexRef = useRef(0);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -406,7 +412,7 @@ export function ClaudeChat() {
           break;
         case 'message':
           if (event.role === 'assistant') {
-            setCurrentAssistantStream(prev => prev + event.content);
+            appendStreamDelta(event.content);
           }
           break;
         case 'tool_call_start':
@@ -501,7 +507,8 @@ export function ClaudeChat() {
           break;
         case 'status':
           if (event.status === 'idle') {
-            if (currentAssistantStream) {
+            const finalContent = flushStreamImmediately();
+            if (finalContent) {
               const turnArtifacts: any[] = [];
               for (const te of toolExecutionsRef.current) {
                 if (!te.success) continue;
@@ -565,7 +572,7 @@ export function ClaudeChat() {
                 { 
                   id: crypto.randomUUID(),
                   role: 'assistant', 
-                  content: currentAssistantStream, 
+                  content: finalContent, 
                   timestamp: Date.now(),
                   metadata: turnArtifacts.length > 0 ? {
                     artifacts: turnArtifacts.map(a => ({
@@ -580,17 +587,17 @@ export function ClaudeChat() {
                   } : undefined
                 }
               ]);
-              const remaining = currentAssistantStream.slice(announcedIndexRef.current).trim();
+              const remaining = finalContent.slice(announcedIndexRef.current).trim();
               if (remaining) {
                 setAriaLiveSentence(remaining);
               }
-              setCurrentAssistantStream('');
+              resetStreamBuffer();
             }
             setChatStatus('idle');
           }
           break;
         case 'completed':
-          const finishedContent = currentAssistantStream;
+          const finishedContent = flushStreamImmediately();
           const turnArtifacts: any[] = [];
           for (const te of toolExecutionsRef.current) {
             if (!te.success) continue;
@@ -631,13 +638,13 @@ export function ClaudeChat() {
             }
           }
 
-          if (currentAssistantStream) {
+          if (finishedContent) {
             setMessages(prev => [
               ...prev,
               { 
                 id: crypto.randomUUID(),
                 role: 'assistant', 
-                content: currentAssistantStream, 
+                content: finishedContent, 
                 timestamp: Date.now(),
                 metadata: turnArtifacts.length > 0 ? {
                   artifacts: turnArtifacts.map(a => ({
@@ -652,11 +659,11 @@ export function ClaudeChat() {
                 } : undefined
               }
             ]);
-            const remaining = currentAssistantStream.slice(announcedIndexRef.current).trim();
+            const remaining = finishedContent.slice(announcedIndexRef.current).trim();
             if (remaining) {
               setAriaLiveSentence(remaining);
             }
-            setCurrentAssistantStream('');
+            resetStreamBuffer();
           }
           setChatStatus('success');
           if (notificationsEnabled) {
@@ -667,7 +674,7 @@ export function ClaudeChat() {
     });
 
     return () => unsubEvents();
-  }, [currentAssistantStream, notificationsEnabled]);
+  }, [notificationsEnabled, flushStreamImmediately, appendStreamDelta, resetStreamBuffer]);
 
   const handlePermissionResponse = (approved: boolean, scope: 'once' | 'session' | 'project' | 'reject') => {
     if (pendingPermission) {
@@ -713,7 +720,7 @@ export function ClaudeChat() {
     setChatStatus('loading');
     setThinkingLogs([]); // Zéro log inventé : alimenté uniquement par les flux réels du provider
     setToolExecutions([]);
-    setCurrentAssistantStream('');
+    resetStreamBuffer();
     setErrorMessage(null);
     const activeConvId = history[0]?.id;
 
