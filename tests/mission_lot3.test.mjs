@@ -124,8 +124,8 @@ test('Mission Lot 3 - 5. Messages encapsulés dans des articles avec titres masq
 
   // Article pour chaque message
   assert.ok(chatContent.includes('<article key={msg.id || idx} aria-labelledby={headingId}'), 'Chaque message doit être encapsulé dans un <article>');
-  assert.ok(chatContent.includes('Vous avez dit :'), 'Le message utilisateur doit comporter un titre sr-only "Vous avez dit :"');
-  assert.ok(chatContent.includes('Iroko a dit :'), 'La réponse assistant doit comporter un titre sr-only "Iroko a dit :"');
+  assert.ok(chatContent.includes('Vous avez dit\\u00A0:') || chatContent.includes('Vous avez dit :'), 'Le message utilisateur doit comporter un titre sr-only "Vous avez dit :"');
+  assert.ok(chatContent.includes('Iroko a dit\\u00A0:') || chatContent.includes('Iroko a dit :'), 'La réponse assistant doit comporter un titre sr-only "Iroko a dit :"');
 
   // Article pour le streaming en direct
   assert.ok(chatContent.includes('<article aria-labelledby="assistant-stream-heading"'), 'Le flux streaming doit être encapsulé dans un <article>');
