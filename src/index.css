@@ -46,6 +46,11 @@
 
   --transition-fast: 150ms cubic-bezier(0.16, 1, 0.3, 1);
   --transition-sidebar: 200ms cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Tokens de typographie adaptative des champs (Règle U8 / Lot 5) */
+  --font-size-composer: 14px;
+  --font-size-field: 13px;
+  --font-size-search: 12px;
 }
 
 /* ─── Claude UI Tokens : Thème Clair (WCAG AA strict, sans ombre ni dégradé) ─── */
@@ -292,6 +297,37 @@ select:focus-visible {
   .tap-target-24::before {
     min-width: 44px;
     min-height: 44px;
+  }
+
+  :root {
+    --font-size-composer: 16px;
+    --font-size-field: 16px;
+    --font-size-search: 16px;
+  }
+
+  /* Règle globale pour tous les champs texte, de recherche et des paramètres */
+  textarea,
+  input[type="text"],
+  input[type="search"],
+  input[type="password"],
+  input[type="email"],
+  input[type="url"],
+  input[type="number"],
+  input:not([type]),
+  select {
+    font-size: 16px;
+  }
+
+  /* Priorité garantie sur les sélecteurs de conteneurs existants sans !important */
+  [data-field-container] textarea,
+  [data-field-container] input,
+  [data-search="true"],
+  [data-modal] input,
+  [data-modal] textarea,
+  [data-modal] select,
+  .composer-textarea,
+  .sidebar-search-input {
+    font-size: 16px;
   }
 }
 

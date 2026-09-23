@@ -250,7 +250,7 @@ export function ClaudeSidebar({ onOpenPersonalize }: ClaudeSidebarProps) {
                       }
                     }}
                     placeholder="Rechercher..."
-                    className="w-full bg-transparent text-[12px] text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] outline-none"
+                    className="w-full bg-transparent text-[var(--font-size-search,12px)] text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] outline-none sidebar-search-input"
                   />
                   {searchQuery && (
                     <button

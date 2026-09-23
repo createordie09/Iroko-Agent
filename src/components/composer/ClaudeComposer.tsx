@@ -749,7 +749,7 @@ export function ClaudeComposer({
         disabled={!runtimeConnected}
         aria-disabled={!runtimeConnected}
         rows={1}
-        className={`w-full bg-transparent resize-none outline-none text-[var(--text-primary)] placeholder:text-[var(--text-placeholder)] text-[14px] leading-[1.5] claude-scrollbar ${!runtimeConnected ? 'opacity-50 cursor-not-allowed' : ''}`}
+        className={`w-full bg-transparent resize-none outline-none text-[var(--text-primary)] placeholder:text-[var(--text-placeholder)] text-[var(--font-size-composer,14px)] leading-[1.5] claude-scrollbar composer-textarea ${!runtimeConnected ? 'opacity-50 cursor-not-allowed' : ''}`}
         style={{
           minHeight: 24,
           maxHeight: 200,
