@@ -25,7 +25,8 @@ export function ClaudeSidebar({ onOpenPersonalize }: ClaudeSidebarProps) {
     setIsMobileSidebarOpen,
     setIsSettingsOpen,
     history,
-    setHistory
+    setHistory,
+    loadConversation
   } = useApp();
 
   const sidebarRef = useRef<HTMLElement>(null);
@@ -335,8 +336,7 @@ export function ClaudeSidebar({ onOpenPersonalize }: ClaudeSidebarProps) {
                   key={item.id}
                   type="button"
                   onClick={() => {
-                    setHistory(prev => [item, ...prev.filter(h => h.id !== item.id)]);
-                    setActiveView('chat');
+                    loadConversation(item.id);
                     setIsMobileSidebarOpen(false);
                   }}
                   className="w-full flex items-center gap-2 px-2.5 h-[28px] rounded-[var(--radius-item)] text-[13px] text-left text-[var(--text-muted)] hover:bg-[var(--bg-surface-hover)] hover:text-[var(--text-primary)] transition-colors group"

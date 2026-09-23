@@ -95,6 +95,9 @@ export interface AppContextType {
   // Rafraîchissement des modèles disponibles (M10.0)
   modelsRefreshKey: number;
   refreshModels: () => void;
+
+  // Chargement d'une discussion persistée
+  loadConversation: (id: string) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -189,6 +192,47 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setChatStatus('idle');
     setComposerModeState('chat');
     setActiveWorkspace(null);
+    if (typeof window !== 'undefined' && window.location.pathname.startsWith('/conversations/')) {
+      window.history.pushState(null, '', '/');
+    }
+  };
+
+  const loadConversation = async (id: string) => {
+    try {
+      await tokenService.bootstrap();
+      const res = await tokenService.fetch(`/api/conversations/${encodeURIComponent(id)}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.messages)) {
+          const mapped: Message[] = data.messages.map((m: any) => ({
+            id: m.id,
+            role: m.role,
+            content: m.content,
+            timestamp: m.created_at ? new Date(m.created_at).getTime() : Date.now(),
+            metadata: typeof m.metadata === 'string' ? JSON.parse(m.metadata) : m.metadata
+          }));
+          setMessages(mapped);
+        }
+        if (data.conversation) {
+          const convItem: HistoryItem = {
+            id: data.conversation.id,
+            topic: data.conversation.title,
+            result: '',
+            timestamp: new Date(data.conversation.updated_at).getTime(),
+            mode: data.conversation.mode || 'chat',
+            workspace_id: data.conversation.workspace_id || null
+          };
+          setHistory(prev => [convItem, ...prev.filter(h => h.id !== convItem.id)]);
+          if (data.conversation.mode) {
+            setComposerModeState(data.conversation.mode);
+          }
+        }
+        setActiveView('chat');
+        if (typeof window !== 'undefined' && window.location.pathname !== `/conversations/${id}`) {
+          window.history.pushState(null, '', `/conversations/${id}`);
+        }
+      }
+    } catch {}
   };
 
   // Agent Runtime live state
@@ -309,6 +353,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const syncWithRuntime = async () => {
       try {
         await tokenService.bootstrap();
+
+        // Si l'URL pointe directement vers une discussion, charger ses messages
+        const urlMatch = typeof window !== 'undefined' ? window.location.pathname.match(/^\/conversations\/([^/?#]+)/) : null;
+        if (urlMatch && urlMatch[1]) {
+          await loadConversation(urlMatch[1]);
+        }
 
         const res = await tokenService.fetch('/api/conversations');
         if (res.ok) {
@@ -464,7 +514,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setHistory,
         clearHistory,
         modelsRefreshKey,
-        refreshModels
+        refreshModels,
+        loadConversation
       }}
     >
       {children}

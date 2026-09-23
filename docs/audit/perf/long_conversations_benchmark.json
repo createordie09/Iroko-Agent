@@ -1,0 +1,46 @@
+[
+  {
+    "messageCount": 200,
+    "cpuThrottle": "×1",
+    "openTimeMs": 477,
+    "domNodeCount": 4281,
+    "heapMo": 8.29,
+    "scrollFps": 59,
+    "droppedFramesPct": 0.9,
+    "cls": 0.0035,
+    "targetMet": false
+  },
+  {
+    "messageCount": 200,
+    "cpuThrottle": "×4",
+    "openTimeMs": 666,
+    "domNodeCount": 4281,
+    "heapMo": 8.37,
+    "scrollFps": 61,
+    "droppedFramesPct": 0,
+    "cls": 0.0035,
+    "targetMet": true
+  },
+  {
+    "messageCount": 1000,
+    "cpuThrottle": "×1",
+    "openTimeMs": 599,
+    "domNodeCount": 20681,
+    "heapMo": 18.13,
+    "scrollFps": 58,
+    "droppedFramesPct": 3.6,
+    "cls": 0.0035,
+    "targetMet": true
+  },
+  {
+    "messageCount": 1000,
+    "cpuThrottle": "×4",
+    "openTimeMs": 2030,
+    "domNodeCount": 20680,
+    "heapMo": 24.11,
+    "scrollFps": 61,
+    "droppedFramesPct": 0,
+    "cls": 0.0035,
+    "targetMet": true
+  }
+]

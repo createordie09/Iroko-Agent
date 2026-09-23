@@ -147,6 +147,21 @@ function verifyWcagAA() {
   // Helper d'isolation stricte pour les contextes Playwright (Mission M10.1)
   // ui:check ne touche JAMAIS à la base réelle et présente un état neuf déterministe
   const setupIsolatedContext = async (ctx, theme = 'dark') => {
+    await ctx.route('**/api/settings', route => route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        settings: {
+          theme,
+          conversationFont: 'serif',
+          animations: 'system',
+          voiceLang: 'Français',
+          voiceURI: '',
+          voiceSpeed: 'Normale',
+          notificationsEnabled: false
+        }
+      })
+    }));
     await ctx.route('**/api/conversations', route => route.fulfill({
       status: 200,
       contentType: 'application/json',
