@@ -954,8 +954,15 @@ export function ClaudeChat() {
 
                 const isUser = msg.role === 'user';
                 const headingId = `msg-heading-${msg.id || idx}`;
+                const isOptimizedVisibility = idx < activeMessages.length - 6;
                 return (
-                  <article key={msg.id || idx} aria-labelledby={headingId} className="w-full">
+                  <article
+                    key={msg.id || idx}
+                    id={`msg-${msg.id || idx}`}
+                    data-message-id={msg.id || idx}
+                    aria-labelledby={headingId}
+                    className={`w-full ${isOptimizedVisibility ? 'message-content-visibility' : ''}`}
+                  >
                     <h3 id={headingId} className="sr-only">
                       {isUser ? 'Vous avez dit\u00A0:' : 'Iroko a dit\u00A0:'}
                     </h3>

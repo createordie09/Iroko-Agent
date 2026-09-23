@@ -367,3 +367,10 @@ select:focus-visible {
   line-height: 1.4 !important;
 }
 
+/* ─── Optimisation du rendu des longues conversations (Lot 7 Fiche 20) ─── */
+.message-content-visibility {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 120px;
+}
+
+
