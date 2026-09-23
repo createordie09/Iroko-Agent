@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { tokenService } from '../../services/security/TokenService';
+import { clearAllDrafts } from '../useDraft';
 
 export function usePrivacySettings() {
   const [privacyInfo, setPrivacyInfo] = useState<any>(null);
@@ -61,6 +62,9 @@ export function usePrivacySettings() {
         body: JSON.stringify({ category })
       });
       if (res.ok) {
+        if (category === 'conversations' || category === 'all') {
+          clearAllDrafts();
+        }
         await fetchStorageBreakdown();
         setConfirmCleanCategory(null);
       }
@@ -115,6 +119,7 @@ export function usePrivacySettings() {
   const handleClearAllConversations = async () => {
     try {
       await tokenService.fetch('/api/privacy/conversations', { method: 'DELETE' });
+      clearAllDrafts();
       setShowClearConversationsConfirm(false);
       setPrivacySuccessMessage('Toutes les discussions ont été supprimées.');
       fetchPrivacyData();

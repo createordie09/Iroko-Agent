@@ -144,4 +144,60 @@ test('Mission Lot 5 - 3. Cibles tactiles étendues à 44x44 px sous pointer: coa
   }
 });
 
+test('Mission Lot 5 - 4. Gestion des brouillons useDraft et rétention (Point 4)', async () => {
+  // 4.1 Fichier src/hooks/useDraft.ts
+  const draftHookPath = path.join(rootDir, 'src', 'hooks', 'useDraft.ts');
+  assert.ok(fs.existsSync(draftHookPath), 'src/hooks/useDraft.ts doit exister');
+  const draftHookContent = fs.readFileSync(draftHookPath, 'utf-8');
+  assert.ok(draftHookContent.includes('export function useDraft'), 'Doit exporter useDraft');
+  assert.ok(draftHookContent.includes('clearAllDrafts'), 'Doit exporter clearAllDrafts');
+  assert.ok(draftHookContent.includes('pruneDrafts'), 'Doit implémenter le nettoyage pruneDrafts');
+  assert.ok(draftHookContent.includes('400'), 'Doit appliquer un debounce de 400 ms');
+  assert.ok(draftHookContent.includes('50'), 'Doit limiter à 50 brouillons maximum');
+  assert.ok(draftHookContent.includes('30'), 'Doit appliquer une rétention de 30 jours');
+
+  // 4.2 Test unitaire des fonctions de stockage et nettoyage
+  const { getDraftStorageKey, pruneDrafts, clearAllDrafts } = await import('../src/hooks/useDraft.ts');
+
+  // Mock basique de localStorage en environnement Node
+  const mockStorage = new Map();
+  global.window = global.window || {};
+  global.localStorage = {
+    getItem: (k) => mockStorage.get(k) || null,
+    setItem: (k, v) => mockStorage.set(k, String(v)),
+    removeItem: (k) => mockStorage.delete(k),
+    get length() { return mockStorage.size; },
+    key: (i) => Array.from(mockStorage.keys())[i] || null,
+    clear: () => mockStorage.clear()
+  };
+  global.window.localStorage = global.localStorage;
+
+  assert.strictEqual(getDraftStorageKey(), 'iroko_draft_home');
+  assert.strictEqual(getDraftStorageKey('conv-123'), 'iroko_draft_conv-123');
+
+  // Test d'expiration à 30 jours
+  const oldDate = Date.now() - (35 * 24 * 60 * 60 * 1000);
+  global.localStorage.setItem('iroko_draft_old', JSON.stringify({ text: 'vieux brouillon', updatedAt: oldDate }));
+  global.localStorage.setItem('iroko_draft_recent', JSON.stringify({ text: 'nouveau brouillon', updatedAt: Date.now() }));
+  pruneDrafts();
+
+  assert.strictEqual(global.localStorage.getItem('iroko_draft_old'), null, 'Le brouillon > 30 jours doit être supprimé');
+  assert.notStrictEqual(global.localStorage.getItem('iroko_draft_recent'), null, 'Le brouillon récent doit être conservé');
+
+  // Test de clearAllDrafts
+  clearAllDrafts();
+  assert.strictEqual(global.localStorage.getItem('iroko_draft_recent'), null, 'clearAllDrafts doit tout effacer');
+
+  // 4.3 Intégration dans ClaudeComposer.tsx et usePrivacySettings.ts
+  const composerPath = path.join(rootDir, 'src', 'components', 'composer', 'ClaudeComposer.tsx');
+  const composerContent = fs.readFileSync(composerPath, 'utf-8');
+  assert.ok(composerContent.includes('useDraft('), 'ClaudeComposer doit utiliser useDraft');
+  assert.ok(composerContent.includes('clearDraft()'), 'ClaudeComposer doit appeler clearDraft lors de l\'envoi');
+
+  const privacyPath = path.join(rootDir, 'src', 'hooks', 'settings', 'usePrivacySettings.ts');
+  const privacyContent = fs.readFileSync(privacyPath, 'utf-8');
+  assert.ok(privacyContent.includes('clearAllDrafts()'), 'usePrivacySettings doit appeler clearAllDrafts lors de la purge');
+});
+
+
 

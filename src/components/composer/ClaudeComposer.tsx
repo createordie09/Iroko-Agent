@@ -11,6 +11,7 @@ import { workspaceService, RecentWorkspace } from '../../services/workspace/Work
 import { mediaService } from '../../services/media/MediaService';
 import { useModelSelection } from '../../hooks/models';
 import { ModelSelectorMenu } from './ModelSelectorMenu';
+import { useDraft } from '../../hooks/useDraft';
 
 export interface ClaudeComposerProps {
   onSend: (text: string, options?: { mode: 'chat' | 'code'; tools?: string[]; attachmentIds?: string[] }) => void;
@@ -90,6 +91,7 @@ export function ClaudeComposer({
   const capabilities = useMemo(() => getModelCapabilities(activeModel), [activeModel]);
 
   const [input, setInput] = useState('');
+  const { clearDraft } = useDraft(conversationId, input, setInput);
   const [isToolsOpen, setIsToolsOpen] = useState(false);
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
   const [toolCategories, setToolCategories] = useState<ToolCategoryInfo[]>([]);
@@ -506,6 +508,7 @@ export function ClaudeComposer({
       setHasVideoChip(false);
     }
     const readyAttachmentIds = attachments.filter(a => a.id).map(a => a.id!);
+    clearDraft();
     setInput('');
     setAttachments([]);
     if (textareaRef.current) textareaRef.current.style.height = 'auto';
