@@ -81,9 +81,9 @@ export function PreferencesPage() {
           </div>
         </div>
 
-        {/* Police de la conversation */}
+        {/* Police de la discussion */}
         <div className="flex items-center justify-between py-3 border-b border-[var(--border-subtle)]">
-          <span className="text-[13px] text-[var(--text-primary)]">Police de la conversation</span>
+          <span className="text-[13px] text-[var(--text-primary)]">Police de la discussion</span>
           <button
             type="button"
             onClick={() => setConversationFont(conversationFont === 'serif' ? 'sans' : 'serif')}

@@ -169,3 +169,17 @@ L'application Iroko applique l'intégralité des critères de succès WCAG 2.2 A
 7. `1440x900` : Ordinateur portable standard.
 8. `1920x1080` : Écran d'ordinateur de bureau Full HD.
 9. `2560x1440` : Écran d'ordinateur de bureau QHD.
+
+---
+
+## 11. Glossaire Normé de Microcopie
+
+Afin de garantir la cohérence textuelle et le professionnalisme de l'interface Iroko, les termes suivants font l'objet d'une normalisation stricte :
+
+| Terme Normé | Définition & Règle d'Usage | Termes Proscrits dans l'UI |
+| :--- | :--- | :--- |
+| **Discussion** | Désigne un fil d'échange interactif avec l'agent. Utilisé pour tous les libellés visibles (titres, boutons, menus, historique). *Remarque : `conversationId` ou `/api/conversations` restent réservés aux identifiants techniques et routes internes.* | *Conversation*, *Chat*, *Thread* |
+| **Dossier** | Répertoire local du système de fichiers ouvert ou lié par l'utilisateur comme espace de travail actif (*workspace*). Exemples : « Choisir un dossier », « Ouvrir le dossier ». | *Folder*, *Workspace* (dans les libellés visibles) |
+| **Projet** | Contexte de travail structuré regroupant des instructions spécifiques, des documents de référence ou des compétences dédiées. | *Workspace*, *Task* |
+| **Artéfact** | Document structuré, code, diagramme ou livrable pérenne produit par l'agent et inspectable dans le volet latéral dédié. Orthographe avec accent aigu obligatoire. | *Artefact* (sans accent), *Artifact* |
+

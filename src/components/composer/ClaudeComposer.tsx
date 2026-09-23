@@ -602,7 +602,7 @@ export function ClaudeComposer({
       {/* ── Notification de lecture seule (verrou concurrent) ── */}
       {activeWorkspace?.isReadOnly && (
         <div className="text-[12px] text-[var(--text-primary)] bg-[var(--bg-surface-hover)] border border-[var(--border-composer)] rounded-[6px] px-2.5 py-1 mb-2">
-          <span>Ce dossier est ouvert en lecture seule car une autre conversation détient le verrou d'écriture.</span>
+          <span>Ce dossier est ouvert en lecture seule car une autre discussion détient le verrou d'écriture.</span>
         </div>
       )}
 

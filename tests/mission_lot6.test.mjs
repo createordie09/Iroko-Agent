@@ -32,3 +32,24 @@ test('Mission Lot 6 - 1. Typographie française et script lint:fr (Point 1)', as
   assert.ok(storageCode.includes("«{'\\u00A0'}"), 'StorageBreakdownSection doit comporter une espace insécable après «');
   assert.ok(storageCode.includes("{'\\u00A0'}»{'\\u00A0'}?"), 'StorageBreakdownSection doit comporter une espace insécable avant » et ?');
 });
+
+test('Mission Lot 6 - 2. Terminologie "Discussion" et Glossaire UX (Point 2)', async () => {
+  // 2.1 ClaudeComposer.tsx utilise "discussion" et non "conversation" dans l'alerte de verrou
+  const composerCode = fs.readFileSync(path.join(rootDir, 'src', 'components', 'composer', 'ClaudeComposer.tsx'), 'utf-8');
+  assert.ok(composerCode.includes("une autre discussion détient le verrou"), 'ClaudeComposer doit utiliser "discussion" pour le verrou');
+  assert.ok(!composerCode.includes("une autre conversation détient le verrou"), 'ClaudeComposer ne doit plus contenir "conversation" pour le verrou');
+
+  // 2.2 PreferencesPage.tsx utilise "Police de la discussion"
+  const prefCode = fs.readFileSync(path.join(rootDir, 'src', 'features', 'settings', 'pages', 'PreferencesPage.tsx'), 'utf-8');
+  assert.ok(prefCode.includes("Police de la discussion"), 'PreferencesPage doit afficher "Police de la discussion"');
+  assert.ok(!prefCode.includes("Police de la conversation"), 'PreferencesPage ne doit plus afficher "Police de la conversation"');
+
+  // 2.3 docs/UX_STANDARDS.md intègre le Glossaire Normé
+  const uxStandards = fs.readFileSync(path.join(rootDir, 'docs', 'UX_STANDARDS.md'), 'utf-8');
+  assert.ok(uxStandards.includes("## 11. Glossaire Normé de Microcopie"), 'docs/UX_STANDARDS.md doit comporter la section Glossaire Normé');
+  assert.ok(uxStandards.includes("**Discussion**"), 'Le glossaire doit définir "Discussion"');
+  assert.ok(uxStandards.includes("**Dossier**"), 'Le glossaire doit définir "Dossier"');
+  assert.ok(uxStandards.includes("**Projet**"), 'Le glossaire doit définir "Projet"');
+  assert.ok(uxStandards.includes("**Artéfact**"), 'Le glossaire doit définir "Artéfact"');
+});
+
