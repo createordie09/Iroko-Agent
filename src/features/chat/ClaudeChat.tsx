@@ -22,6 +22,7 @@ import { ArtifactCard } from './ArtifactCard';
 import { ArtifactInspector } from './ArtifactInspector';
 import { useStreamBuffer } from '../../hooks/useStreamBuffer';
 import { useStickToBottom, getScrollBehavior } from '../../hooks/useStickToBottom';
+import { useScrollRestoration } from '../../hooks/useScrollRestoration';
 
 interface MemoizedBlockProps {
   block: ParsedBlock;
@@ -385,6 +386,12 @@ export function ClaudeChat() {
   });
 
   const conversationId = history[0]?.id || 'default_conversation';
+
+  useScrollRestoration(scrollContainerRef, {
+    conversationId,
+    messagesCount: messages.length,
+    isStreaming: chatStatus === 'loading'
+  });
 
   const loadArtifacts = async () => {
     try {

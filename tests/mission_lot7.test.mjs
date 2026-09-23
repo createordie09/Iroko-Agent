@@ -46,3 +46,21 @@ test('Mission Lot 7 - 2. Mesures de performance 200 et 1000 messages & propositi
   const propPath = path.join(rootDir, 'docs', 'audit', 'perf', 'PROPOSITION_CONCEPTION_VIRTUALISATION.md');
   assert.ok(fs.existsSync(propPath), 'PROPOSITION_CONCEPTION_VIRTUALISATION.md doit exister');
 });
+
+test('Mission Lot 7 - 3. Hook useScrollRestoration & ancrage par message (Point 3)', async () => {
+  // 3.1 Définition du hook useScrollRestoration
+  const hookPath = path.join(rootDir, 'src', 'hooks', 'useScrollRestoration.ts');
+  assert.ok(fs.existsSync(hookPath), 'useScrollRestoration.ts doit exister');
+  const hookCode = fs.readFileSync(hookPath, 'utf-8');
+
+  assert.ok(hookCode.includes('useLayoutEffect'), 'Le hook doit utiliser useLayoutEffect pour une restauration sans flash');
+  assert.ok(hookCode.includes('messageId'), 'L\'ancre doit comporter messageId');
+  assert.ok(hookCode.includes('offsetTop'), 'L\'ancre doit comporter offsetTop');
+  assert.ok(hookCode.includes('isAtBottom'), 'L\'ancre doit comporter isAtBottom');
+  assert.ok(hookCode.includes('el.scrollTop = el.scrollHeight'), 'L\'ouverture par défaut doit se faire en bas');
+
+  // 3.2 Intégration dans ClaudeChat.tsx
+  const chatCode = fs.readFileSync(path.join(rootDir, 'src', 'features', 'chat', 'ClaudeChat.tsx'), 'utf-8');
+  assert.ok(chatCode.includes('useScrollRestoration'), 'ClaudeChat doit importer et appeler useScrollRestoration');
+  assert.ok(chatCode.includes('useScrollRestoration(scrollContainerRef'), 'ClaudeChat doit passer scrollContainerRef au hook');
+});
