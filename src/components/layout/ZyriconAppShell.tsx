@@ -8,8 +8,10 @@ import { useApp } from '../../context/AppContext';
 import { agentClient } from '../../lib/agent-client';
 import { useOverlayFocus } from '../../hooks/useOverlayFocus';
 import { useLiveAnnouncements } from '../../hooks/useLiveAnnouncements';
+import { useVisualViewportHeight } from '../../hooks/useVisualViewportHeight';
 
 export function ZyriconAppShell() {
+  useVisualViewportHeight();
   const {
     activeView,
     setActiveView,
@@ -55,7 +57,16 @@ export function ZyriconAppShell() {
   };
 
   return (
-    <div className="w-screen h-[100dvh] bg-[var(--bg-app)] flex overflow-hidden font-sans select-none text-[var(--text-primary)] m-0 p-0 relative">
+    <div
+      style={{
+        height: 'var(--app-height, 100dvh)',
+        paddingTop: 'env(safe-area-inset-top, 0px)',
+        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+        paddingLeft: 'env(safe-area-inset-left, 0px)',
+        paddingRight: 'env(safe-area-inset-right, 0px)'
+      }}
+      className="w-screen bg-[var(--bg-app)] flex overflow-hidden font-sans select-none text-[var(--text-primary)] m-0 p-0 relative"
+    >
 
       {/* ── Lien d'évitement / Skip link (WCAG 2.4.1 — À VALIDER, invisible au repos) ── */}
       <a

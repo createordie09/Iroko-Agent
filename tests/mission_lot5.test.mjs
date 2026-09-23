@@ -65,3 +65,32 @@ test('Mission Lot 5 - 1. Taille des champs texte sous pointer: coarse (anti-zoom
     await browser.close();
   }
 });
+
+test('Mission Lot 5 - 2. Clavier virtuel, hauteur visualViewport et zones sûres (Point 2)', () => {
+  // 2.1 Meta viewport : viewport-fit=cover et pas de interactive-widget=resizes-content
+  const htmlPath = path.join(rootDir, 'index.html');
+  const htmlContent = fs.readFileSync(htmlPath, 'utf-8');
+  assert.ok(htmlContent.includes('viewport-fit=cover'), 'index.html doit déclarer viewport-fit=cover pour les zones sûres');
+  assert.ok(!htmlContent.includes('interactive-widget=resizes-content'), 'Ne doit pas inclure interactive-widget=resizes-content pour préserver les gestes iOS');
+
+  // 2.2 Hook useVisualViewportHeight
+  const hookPath = path.join(rootDir, 'src', 'hooks', 'useVisualViewportHeight.ts');
+  assert.ok(fs.existsSync(hookPath), 'src/hooks/useVisualViewportHeight.ts doit exister');
+  const hookContent = fs.readFileSync(hookPath, 'utf-8');
+  assert.ok(hookContent.includes('export function useVisualViewportHeight'), 'Doit exporter useVisualViewportHeight');
+  assert.ok(hookContent.includes('window.visualViewport'), 'Doit écouter window.visualViewport');
+  assert.ok(hookContent.includes('requestAnimationFrame'), 'Les mises à jour doivent être cadencées par requestAnimationFrame');
+  assert.ok(hookContent.includes('--app-height'), 'Doit piloter la variable CSS --app-height');
+  assert.ok(hookContent.includes('scrollIntoView'), 'Doit ramener le champ actif dans la vue au focus');
+
+  // 2.3 Intégration dans ZyriconAppShell.tsx
+  const shellPath = path.join(rootDir, 'src', 'components', 'layout', 'ZyriconAppShell.tsx');
+  const shellContent = fs.readFileSync(shellPath, 'utf-8');
+  assert.ok(shellContent.includes('useVisualViewportHeight()'), 'ZyriconAppShell doit appeler useVisualViewportHeight');
+  assert.ok(shellContent.includes('--app-height'), 'ZyriconAppShell doit appliquer var(--app-height, 100dvh)');
+  assert.ok(shellContent.includes('safe-area-inset-top'), 'ZyriconAppShell doit gérer safe-area-inset-top');
+  assert.ok(shellContent.includes('safe-area-inset-bottom'), 'ZyriconAppShell doit gérer safe-area-inset-bottom');
+  assert.ok(shellContent.includes('safe-area-inset-left'), 'ZyriconAppShell doit gérer safe-area-inset-left pour le paysage');
+  assert.ok(shellContent.includes('safe-area-inset-right'), 'ZyriconAppShell doit gérer safe-area-inset-right pour le paysage');
+});
+

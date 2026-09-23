@@ -7,6 +7,8 @@
 
 /* ─── Claude UI Tokens (Sampled directly from captures) ─── */
 :root {
+  --app-height: 100dvh;
+
   /* Radii tokens (editable in one line or overridden) */
   --radius-composer: 16px;
   --radius-modal: 16px;
