@@ -16,6 +16,7 @@
     "test:strict": "node --import ./tests/setup_test_env.js --import tsx --test --test-timeout=60000 tests/*.test.mjs",
     "e2e": "node --import ./tests/setup_test_env.js --test tests/e2e/*.test.mjs",
     "lint:tokens": "node scripts/lint_tokens.mjs",
+    "lint:fr": "node scripts/lint_fr.mjs",
     "ui:check": "node scripts/ui_check.mjs",
     "audit:a11y": "node tools/audit/audit_a11y.mjs",
     "audit:perf": "node tools/audit/audit_perf.mjs",

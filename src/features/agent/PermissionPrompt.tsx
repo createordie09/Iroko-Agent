@@ -39,7 +39,7 @@ export function PermissionPrompt({ request, onRespond }: PermissionPromptProps) 
       {/* Corps */}
       <div className="p-4 space-y-3">
         <div className="flex items-center gap-2 text-[12px] text-[var(--text-secondary)]">
-          <span>Outil :</span>
+          <span>Outil{'\u00A0'}:</span>
           <span className="font-mono text-[var(--text-primary)] bg-[var(--bg-surface)] px-1.5 py-0.5 rounded border border-[var(--bg-active)]">
             {request.tool}
           </span>
@@ -59,7 +59,7 @@ export function PermissionPrompt({ request, onRespond }: PermissionPromptProps) 
             )}
             {request.details.path && (
               <div>
-                <span className="text-[var(--text-placeholder)]">Cible : </span>
+                <span className="text-[var(--text-placeholder)]">Cible{'\u00A0'}: </span>
                 <span className="text-[var(--text-primary)]">{request.details.path}</span>
               </div>
             )}

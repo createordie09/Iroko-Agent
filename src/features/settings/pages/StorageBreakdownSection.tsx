@@ -30,7 +30,7 @@ export function StorageBreakdownSection({
         <div className="text-[13px] text-[var(--text-primary)]">Espace disque</div>
         {storageBreakdown && (
           <span className="text-[12px] font-mono text-[var(--text-secondary)]">
-            Total : {formatStorageSize(storageBreakdown.totalBytes)}
+            Total{'\u00A0'}: {formatStorageSize(storageBreakdown.totalBytes)}
           </span>
         )}
       </div>
@@ -80,7 +80,7 @@ export function StorageBreakdownSection({
       {confirmCleanCategory && (
         <div className="mt-3 bg-[var(--bg-surface)] border border-[var(--border-modal)] rounded-[6px] p-3 space-y-2">
           <div className="text-[12px] text-[var(--text-primary)] font-medium">
-            Confirmer le {confirmCleanCategory.id === 'database' ? 'compactage' : 'nettoyage'} de « {confirmCleanCategory.label} » ?
+            Confirmer le {confirmCleanCategory.id === 'database' ? 'compactage' : 'nettoyage'} de «{'\u00A0'}{confirmCleanCategory.label}{'\u00A0'}»{'\u00A0'}?
           </div>
           <p className="text-[11px] text-[var(--text-secondary)]">
             {confirmCleanCategory.id === 'database'

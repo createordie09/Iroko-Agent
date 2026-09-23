@@ -227,7 +227,7 @@ export function ProvidersPage() {
             {activeImageProvider && activeImageProvider !== 'mock' && (
               <div>
                 <label className="text-[11px] text-[var(--text-secondary)] uppercase tracking-wider block mb-1">
-                  Clé d'API ou Jeton {imageHasKey && <span className="text-[var(--text-muted)] normal-case">(Actuellement : {imageMaskedKey || 'enregistrée'})</span>}
+                  Clé d'API ou Jeton {imageHasKey && <span className="text-[var(--text-muted)] normal-case">(Actuellement{'\u00A0'}: {imageMaskedKey || 'enregistrée'})</span>}
                 </label>
                 <input
                   type="password"
@@ -311,7 +311,7 @@ export function ProvidersPage() {
             {activeVideoProvider && activeVideoProvider !== 'mock' && (
               <div>
                 <label className="text-[11px] text-[var(--text-secondary)] uppercase tracking-wider block mb-1">
-                  Clé d'API ou Jeton {videoHasKey && <span className="text-[var(--text-muted)] normal-case">(Actuellement : {videoMaskedKey || 'enregistrée'})</span>}
+                  Clé d'API ou Jeton {videoHasKey && <span className="text-[var(--text-muted)] normal-case">(Actuellement{'\u00A0'}: {videoMaskedKey || 'enregistrée'})</span>}
                 </label>
                 <input
                   type="password"

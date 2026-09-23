@@ -193,7 +193,7 @@ export function usePrivacySettings() {
       if (dlgData.canceled || !dlgData.selectedPath) return;
       setRestoreConfirmPath(dlgData.selectedPath);
     } catch (err: any) {
-      setBackupErrorMessage('Impossible d\'ouvrir le sélecteur de fichier : ' + (err.message || 'Erreur'));
+      setBackupErrorMessage('Impossible d\'ouvrir le sélecteur de fichier\u00A0: ' + (err.message || 'Erreur'));
     }
   };
 

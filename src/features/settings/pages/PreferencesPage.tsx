@@ -324,7 +324,7 @@ export function PreferencesPage() {
             onChange={(e) => setCustomInstructions(e.target.value)}
             rows={4}
             maxLength={4000}
-            placeholder="Exemple : Réponds toujours de façon concise, privilégie le typage strict en TypeScript, évite le superflu..."
+            placeholder={`Exemple\u00A0: Réponds toujours de façon concise, privilégie le typage strict en TypeScript, évite le superflu…`}
             className="w-full bg-[var(--bg-app)] border border-[var(--bg-active)] focus:border-[var(--border-focus)] rounded-[6px] p-3 text-[13px] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] resize-y outline-none"
           />
           <div className="flex items-center justify-between text-[11px] text-[var(--text-secondary)]">

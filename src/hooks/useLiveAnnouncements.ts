@@ -58,12 +58,12 @@ export function useLiveAnnouncements(): UseLiveAnnouncementsReturn {
 
         case 'error':
           currentPhaseRef.current = 'idle';
-          setAlertAnnouncement(`Erreur : ${event.message || 'Une erreur est survenue.'}`);
+          setAlertAnnouncement(`Erreur\u00A0: ${event.message || 'Une erreur est survenue.'}`);
           break;
 
         case 'permission_required':
           if (event.request?.description || event.request?.tool) {
-            setAlertAnnouncement(`Autorisation requise : ${event.request.description || event.request.tool}`);
+            setAlertAnnouncement(`Autorisation requise\u00A0: ${event.request.description || event.request.tool}`);
           }
           break;
       }

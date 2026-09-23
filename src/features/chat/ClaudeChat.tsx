@@ -957,7 +957,7 @@ export function ClaudeChat() {
                 return (
                   <article key={msg.id || idx} aria-labelledby={headingId} className="w-full">
                     <h3 id={headingId} className="sr-only">
-                      {isUser ? 'Vous avez dit :' : 'Iroko a dit :'}
+                      {isUser ? 'Vous avez dit\u00A0:' : 'Iroko a dit\u00A0:'}
                     </h3>
                     {isUser ? (
                       /* Message utilisateur : bloc gris discret arrondi à droite (Capture 4) */
@@ -1220,7 +1220,7 @@ export function ClaudeChat() {
             {/* Réponse en streaming en direct */}
             {chatStatus === 'loading' && (
               <article aria-labelledby="assistant-stream-heading" className="space-y-2">
-                <h3 id="assistant-stream-heading" className="sr-only">Iroko a dit :</h3>
+                <h3 id="assistant-stream-heading" className="sr-only">Iroko a dit{'\u00A0'}:</h3>
                 <div className="flex items-center gap-2 text-[13px] text-[var(--text-secondary)] animate-pulse">
                   <span>Réflexion en cours…</span>
                 </div>

@@ -145,7 +145,7 @@ export function PrivacyPage() {
           {/* Confirmation Suppression Discussions */}
           {showClearConversationsConfirm && (
             <div className="mt-3 bg-[var(--bg-surface)] border border-[var(--border-modal)] rounded-[6px] p-3 space-y-2">
-              <div className="text-[12px] text-[var(--text-primary)] font-medium">Confirmer la suppression de toutes les discussions ?</div>
+              <div className="text-[12px] text-[var(--text-primary)] font-medium">Confirmer la suppression de toutes les discussions{'\u00A0'}?</div>
               <p className="text-[11px] text-[var(--text-secondary)]">
                 L'historique complet des discussions et des messages sera supprimé. La mémoire et les clés restent conservées.
               </p>
@@ -171,7 +171,7 @@ export function PrivacyPage() {
           {/* Confirmation Suppression Mémoire */}
           {showClearMemoryConfirmInPrivacy && (
             <div className="mt-3 bg-[var(--bg-surface)] border border-[var(--border-modal)] rounded-[6px] p-3 space-y-2">
-              <div className="text-[12px] text-[var(--text-primary)] font-medium">Confirmer la suppression de toute la mémoire ?</div>
+              <div className="text-[12px] text-[var(--text-primary)] font-medium">Confirmer la suppression de toute la mémoire{'\u00A0'}?</div>
               <p className="text-[11px] text-[var(--text-secondary)]">
                 Tous les faits et décisions mémorisés seront supprimés. Les discussions et les clés restent conservées.
               </p>
@@ -197,7 +197,7 @@ export function PrivacyPage() {
           {/* Confirmation Suppression Clés */}
           {showClearKeysConfirm && (
             <div className="mt-3 bg-[var(--bg-surface)] border border-[var(--border-modal)] rounded-[6px] p-3 space-y-2">
-              <div className="text-[12px] text-[var(--text-primary)] font-medium">Confirmer la suppression de toutes les clés d'API ?</div>
+              <div className="text-[12px] text-[var(--text-primary)] font-medium">Confirmer la suppression de toutes les clés d'API{'\u00A0'}?</div>
               <p className="text-[11px] text-[var(--text-secondary)]">
                 Toutes les clés d'API enregistrées seront définitivement effacées du trousseau local. Vous devrez les ressaisir pour utiliser les modèles.
               </p>
@@ -263,9 +263,9 @@ export function PrivacyPage() {
 
           {restoreConfirmPath && (
             <div className="mt-3 bg-[var(--bg-surface)] border border-[var(--border-modal)] rounded-[6px] p-3 space-y-2">
-              <div className="text-[12px] text-[var(--text-primary)] font-medium">Confirmer la restauration de la base ?</div>
+              <div className="text-[12px] text-[var(--text-primary)] font-medium">Confirmer la restauration de la base{'\u00A0'}?</div>
               <p className="text-[11px] text-[var(--text-secondary)]">
-                Fichier sélectionné : <span className="font-mono text-[var(--text-primary)]">{restoreConfirmPath}</span>
+                Fichier sélectionné{'\u00A0'}: <span className="font-mono text-[var(--text-primary)]">{restoreConfirmPath}</span>
               </p>
               <p className="text-[11px] text-[var(--text-secondary)]">
                 La base actuelle sera remplacée. Une copie de secours automatique (.pre-restore.bak) sera créée avant le remplacement.
@@ -284,7 +284,7 @@ export function PrivacyPage() {
                   disabled={isRestoring}
                   className="px-3 py-1 bg-[var(--bg-active)] border border-[var(--border-modal)] text-[var(--text-primary)] hover:bg-[var(--bg-surface-hover)] text-xs font-medium rounded-[6px] cursor-pointer"
                 >
-                  {isRestoring ? 'Restauration en cours...' : 'Confirmer la restauration'}
+                  {isRestoring ? 'Restauration en cours…' : 'Confirmer la restauration'}
                 </button>
               </div>
             </div>
@@ -304,7 +304,7 @@ export function PrivacyPage() {
               {diagnosticCopied ? (
                 <>
                   <Check className="w-3 h-3 text-[var(--text-primary)]" />
-                  <span>Copié !</span>
+                  <span>Copié{'\u00A0'}!</span>
                 </>
               ) : (
                 <>
@@ -321,19 +321,19 @@ export function PrivacyPage() {
           <div className="bg-[var(--bg-app)] border border-[var(--border-subtle)] rounded-[6px] p-3 text-[11px] font-mono text-[var(--text-secondary)] space-y-1 select-text overflow-x-auto">
             {diagnosticData ? (
               <>
-                <div><span className="text-[var(--text-primary)]">Iroko :</span> v{diagnosticData.appVersion} | Node {diagnosticData.nodeVersion}</div>
-                <div><span className="text-[var(--text-primary)]">Plateforme :</span> {diagnosticData.platform}</div>
-                <div><span className="text-[var(--text-primary)]">Port runtime :</span> {diagnosticData.runtimePort}</div>
-                <div><span className="text-[var(--text-primary)]">Base SQLite :</span> Schéma v{diagnosticData.database?.schemaVersion} ({Math.round((diagnosticData.database?.sizeBytes || 0) / 1024)} Ko)</div>
-                <div><span className="text-[var(--text-primary)]">Dossier données :</span> {diagnosticData.dataDir}</div>
-                <div><span className="text-[var(--text-primary)]">Fournisseurs configurés :</span> {diagnosticData.connectedProviders?.join(', ') || 'aucun'}</div>
-                <div><span className="text-[var(--text-primary)]">Serveurs MCP :</span> {diagnosticData.mcpServers?.length || 0} configuré(s)</div>
+                <div><span className="text-[var(--text-primary)]">Iroko{'\u00A0'}:</span> v{diagnosticData.appVersion} | Node {diagnosticData.nodeVersion}</div>
+                <div><span className="text-[var(--text-primary)]">Plateforme{'\u00A0'}:</span> {diagnosticData.platform}</div>
+                <div><span className="text-[var(--text-primary)]">Port runtime{'\u00A0'}:</span> {diagnosticData.runtimePort}</div>
+                <div><span className="text-[var(--text-primary)]">Base SQLite{'\u00A0'}:</span> Schéma v{diagnosticData.database?.schemaVersion} ({Math.round((diagnosticData.database?.sizeBytes || 0) / 1024)} Ko)</div>
+                <div><span className="text-[var(--text-primary)]">Dossier données{'\u00A0'}:</span> {diagnosticData.dataDir}</div>
+                <div><span className="text-[var(--text-primary)]">Fournisseurs configurés{'\u00A0'}:</span> {diagnosticData.connectedProviders?.join(', ') || 'aucun'}</div>
+                <div><span className="text-[var(--text-primary)]">Serveurs MCP{'\u00A0'}:</span> {diagnosticData.mcpServers?.length || 0} configuré(s)</div>
                 {diagnosticData.recentErrors && diagnosticData.recentErrors.length > 0 ? (
                   <div className="pt-1 text-[var(--text-muted)]">
-                    Dernière erreur : {diagnosticData.recentErrors[0].message}
+                    Dernière erreur{'\u00A0'}: {diagnosticData.recentErrors[0].message}
                   </div>
                 ) : (
-                  <div><span className="text-[var(--text-primary)]">Erreurs récentes :</span> 0</div>
+                  <div><span className="text-[var(--text-primary)]">Erreurs récentes{'\u00A0'}:</span> 0</div>
                 )}
               </>
             ) : (
@@ -355,13 +355,13 @@ export function PrivacyPage() {
         {/* 4. Notes d'information réelles */}
         <div className="pt-3 space-y-2">
           <div className="text-[12px] text-[var(--text-secondary)]">
-            <span className="text-[var(--text-primary)] font-medium">Zéro télémétrie :</span> Aucune télémétrie ni donnée d'utilisation ne quitte cette machine. Vos données restent exclusivement sur votre disque.
+            <span className="text-[var(--text-primary)] font-medium">Zéro télémétrie{'\u00A0'}:</span> Aucune télémétrie ni donnée d'utilisation ne quitte cette machine. Vos données restent exclusivement sur votre disque.
           </div>
           <div className="text-[12px] text-[var(--text-secondary)]">
-            <span className="text-[var(--text-primary)] font-medium">Services vocaux :</span> La dictée et la lecture audio utilisent l'API Web Speech native de votre navigateur, pouvant faire appel au moteur vocal du système hôte.
+            <span className="text-[var(--text-primary)] font-medium">Services vocaux{'\u00A0'}:</span> La dictée et la lecture audio utilisent l'API Web Speech native de votre navigateur, pouvant faire appel au moteur vocal du système hôte.
           </div>
           <div className="text-[12px] text-[var(--text-secondary)]">
-            <span className="text-[var(--text-primary)] font-medium">Destinations réseau :</span> Seuls les fournisseurs configurés et serveurs MCP locaux sont sollicités. Consultez la documentation complète dans <code className="text-[var(--text-primary)]">docs/NETWORK.md</code>.
+            <span className="text-[var(--text-primary)] font-medium">Destinations réseau{'\u00A0'}:</span> Seuls les fournisseurs configurés et serveurs MCP locaux sont sollicités. Consultez la documentation complète dans <code className="text-[var(--text-primary)]">docs/NETWORK.md</code>.
           </div>
         </div>
       </div>

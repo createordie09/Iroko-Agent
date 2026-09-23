@@ -42,7 +42,7 @@ export function SkillsPage() {
           )}
         </div>
         <p className="text-[12px] text-[var(--text-secondary)] leading-normal">
-          Compétences modulaires (`SKILL.md`). Les descriptions sont incluses dans le catalogue du prompt système ; les instructions complètes ne sont chargées qu'à la demande (§13).
+          Compétences modulaires (`SKILL.md`). Les descriptions sont incluses dans le catalogue du prompt système{'\u00A0'}; les instructions complètes ne sont chargées qu'à la demande (§13).
         </p>
       </div>
 

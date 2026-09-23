@@ -71,7 +71,7 @@ export function CodePage() {
             <div className="mt-2 text-[12px] text-[var(--text-secondary)]">
               {permissionMode === 'ask' && 'Demande systématique de confirmation avant toute action modificatrice ou commande.'}
               {permissionMode === 'auto_edit' && 'Autorise automatiquement les modifications de fichiers, sollicite l\'accord pour les commandes.'}
-              {permissionMode === 'read_only' && 'Mode sécurisé strict : aucune écriture de fichier ni commande modificatrice autorisée.'}
+              {permissionMode === 'read_only' && 'Mode sécurisé strict\u00A0: aucune écriture de fichier ni commande modificatrice autorisée.'}
             </div>
           </div>
 

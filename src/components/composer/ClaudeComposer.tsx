@@ -281,7 +281,7 @@ export function ClaudeComposer({
     if (fileArray.length === 0) return;
 
     if (attachments.length + fileArray.length > 10) {
-      setAttachmentError('Limite dépassée : 10 fichiers maximum par message.');
+      setAttachmentError('Limite dépassée\u00A0: 10 fichiers maximum par message.');
       return;
     }
 
@@ -500,11 +500,11 @@ export function ClaudeComposer({
     if ((!hasText && !hasAttachments && !hasImageChip && !hasVideoChip) || isLoading || !hasModels || !allReady) return;
     let text = input.trim();
     if (hasImageChip) {
-      text = `[Demande de création d'image : utilisez l'outil generate_image pour produire l'image demandée]\n${text}`;
+      text = `[Demande de création d'image\u00A0: utilisez l'outil generate_image pour produire l'image demandée]\n${text}`;
       setHasImageChip(false);
     }
     if (hasVideoChip) {
-      text = `[Demande de création de vidéo : utilisez l'outil generate_video pour produire la vidéo demandée]\n${text}`;
+      text = `[Demande de création de vidéo\u00A0: utilisez l'outil generate_video pour produire la vidéo demandée]\n${text}`;
       setHasVideoChip(false);
     }
     const readyAttachmentIds = attachments.filter(a => a.id).map(a => a.id!);
@@ -536,7 +536,7 @@ export function ClaudeComposer({
 
   const defaultPlaceholder = isConversation
     ? "Écrivez un message..."
-    : "Comment puis-je vous aider aujourd'hui ?";
+    : "Comment puis-je vous aider aujourd'hui\u00A0?";
 
   const maxWidth = isConversation ? 720 : 576;
 

@@ -275,7 +275,7 @@ export function ArtifactInspector({
         {/* Barre de version & Restauration */}
         <div className="flex items-center justify-between gap-2 pt-1 border-t border-[var(--border-subtle)] text-[11px]">
           <div className="flex items-center gap-1.5">
-            <span className="text-[var(--text-secondary)]">Version :</span>
+            <span className="text-[var(--text-secondary)]">Version{'\u00A0'}:</span>
             <select
               value={selectedVersion}
               onChange={e => setSelectedVersion(Number(e.target.value))}
@@ -361,14 +361,14 @@ export function ArtifactInspector({
               <div className="p-3 bg-[var(--bg-sidebar)] border border-[var(--border-subtle)] rounded-[8px] space-y-1.5 text-[12px]">
                 {activeArtifact.metadata.prompt && (
                   <div>
-                    <span className="text-[var(--text-secondary)] block text-[11px]">Prompt :</span>
+                    <span className="text-[var(--text-secondary)] block text-[11px]">Prompt{'\u00A0'}:</span>
                     <span className="text-[var(--text-primary)] leading-normal">{activeArtifact.metadata.prompt}</span>
                   </div>
                 )}
                 <div className="flex flex-wrap gap-3 pt-1 text-[11px] font-mono text-[var(--text-secondary)] border-t border-[var(--border-separator)]">
-                  {activeArtifact.metadata.model && <span>Modèle: {activeArtifact.metadata.model}</span>}
-                  {activeArtifact.metadata.aspectRatio && <span>Ratio: {activeArtifact.metadata.aspectRatio}</span>}
-                  {activeArtifact.metadata.seed !== undefined && <span>Seed: {activeArtifact.metadata.seed}</span>}
+                  {activeArtifact.metadata.model && <span>Modèle{'\u00A0'}: {activeArtifact.metadata.model}</span>}
+                  {activeArtifact.metadata.aspectRatio && <span>Ratio{'\u00A0'}: {activeArtifact.metadata.aspectRatio}</span>}
+                  {activeArtifact.metadata.seed !== undefined && <span>Seed{'\u00A0'}: {activeArtifact.metadata.seed}</span>}
                 </div>
               </div>
             )}
