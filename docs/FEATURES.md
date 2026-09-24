@@ -10,7 +10,7 @@ Ce registre recense chaque contrôle, vue et fonctionnalité de l'application av
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Topbar** | Déclencheur réduction/expansion Sidebar | **Réel** | `ClaudeTopbar.tsx`, `ClaudeSidebar.tsx` | Rien (état React `isSidebarCollapsed` connecté) | Clic sur l'icône réduit/ouvre la sidebar avec animation fluide |
 | **Topbar** | Titre de conversation dynamique | **Réel** | `ClaudeTopbar.tsx` | Rien (relié à `history[0]?.topic` ou 'Nouvelle discussion') | Affiche le nom de la conversation active sans débordement |
-| **Topbar** | Bouton "Partager" la conversation | **Désactivé** | `ClaudeTopbar.tsx` | Endpoint serveur d'export ou partage local | Désactivé accessible (`disabled`, `cursor-not-allowed`) |
+| **Topbar** | Bouton "Partager" la conversation | **Supprimé** | `ClaudeTopbar.tsx` | N/A (supprimé en M8.1 — aucun compte ni serveur distant de partage) | Aucun contrôle simulé ni bouton inopérant dans la barre supérieure |
 | **Topbar** | Bouton raccourci "Paramètres" (engrenage) | **Réel** | `ClaudeTopbar.tsx` | Rien (relié à `setIsSettingsOpen(true)`) | Ouvre la modale de paramètres au clic |
 | **Sidebar** | Bouton "+ Nouveau" | **Réel** | `ClaudeSidebar.tsx`, `AppContext.tsx` | Rien (réinitialise la discussion active et bascule sur la vue d'accueil 'home' avec ClaudeHero centré) | Crée un nouveau fil de discussion propre et réaffiche l'accueil sobre |
 | **Sidebar** | Bouton "Code" | **Supprimé** | `ClaudeSidebar.tsx` | N/A (unifié dans le sélecteur [ Chat \| Code ] du composer) | L'agent de code s'exécute directement dans le chat |
