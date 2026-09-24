@@ -193,11 +193,6 @@ export function ChatMessageItem({
             <FormattedMessage content={msg.content} />
           </div>
 
-          {/* Sources de recherche citées (Mission N4) [À VALIDER] */}
-          {msg.metadata?.sources && msg.metadata.sources.length > 0 && (
-            <MessageSources sources={msg.metadata.sources} />
-          )}
-
           {/* Artéfacts générés dans cette réponse */}
           {msg.metadata?.artifacts && msg.metadata.artifacts.length > 0 && (
             <div className="flex flex-col gap-2 pt-2">
@@ -211,6 +206,11 @@ export function ChatMessageItem({
                 />
               ))}
             </div>
+          )}
+
+          {/* Sources de recherche citées (Mission N4) [À VALIDER] */}
+          {msg.metadata?.sources && msg.metadata.sources.length > 0 && (
+            <MessageSources sources={msg.metadata.sources} />
           )}
 
           {/* Actions au survol sous la réponse (Copier, Régénérer, Supprimer) [À VALIDER] */}

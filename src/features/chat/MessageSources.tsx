@@ -13,8 +13,8 @@ export function MessageSources({ sources }: MessageSourcesProps) {
     return null;
   }
 
-  const hasMore = sources.length > 3;
-  const displayedSources = hasMore && !isExpanded ? sources.slice(0, 3) : sources;
+  const hasMore = sources.length > 4;
+  const displayedSources = hasMore && !isExpanded ? sources.slice(0, 4) : sources;
 
   return (
     <div className="pt-2 pb-1 space-y-1.5" data-message-sources="true">
@@ -57,7 +57,11 @@ export function MessageSources({ sources }: MessageSourcesProps) {
           ) : (
             <>
               <ChevronRight className="w-3.5 h-3.5 shrink-0 text-[var(--text-secondary)]" />
-              <span>Afficher les {sources.length - 3} autres sources</span>
+              <span>
+                {sources.length - 4 === 1
+                  ? 'Afficher la 1 autre source'
+                  : `Afficher les ${sources.length - 4} autres sources`}
+              </span>
             </>
           )}
         </button>

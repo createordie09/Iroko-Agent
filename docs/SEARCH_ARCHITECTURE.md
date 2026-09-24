@@ -125,11 +125,11 @@ Pour toute réponse assistant ayant exploité l'outil `web_search` :
 - **Extraction sélective** : Seules les sources effectivement citées dans le texte final sont retenues (`{ url, title, domain }`).
 - **Persistance** : Stockées dans le champ `metadata.sources` de la table `messages` SQLite.
 - **Affichage sobre (`MessageSources`)** :
-  - Placée directement sous le corps de texte du message assistant.
+  - Placée tout en bas après le corps de texte et les cartes d'artéfacts.
   - Libellé sobre `Sources :` avec typographie discrète (`12px`).
   - Chaque source est un lien direct `target="_blank"` avec `rel="noopener noreferrer"`.
   - Accessible name complet via `aria-label={`${title} (${domain})`}`.
-  - Rendu visuel équilibré : titre tronqué à gauche, domaine à droite en typographie monospace tertiaire.
-  - Repli automatique au-delà de 3 sources avec bouton de bascule accessible `Afficher les N autres sources` / `Afficher moins`.
+  - Rendu visuel équilibré : titre tronqué à gauche, domaine à droite en typographie monospace tertiaire (sans préfixe `www.`).
+  - Repli automatique au-delà de 4 sources avec bouton de bascule accessible `Afficher les N autres sources` (ou `Afficher la 1 autre source`) / `Afficher moins`.
   - Cibles tactiles `min-h-[30px]` et classe `.tap-target-24` pour la conformité WCAG 2.2 AA.
 - **Suivi en direct** : Pendant l'exécution de l'outil, la ligne d'étape affiche fidèlement `Recherche : <requête>`.

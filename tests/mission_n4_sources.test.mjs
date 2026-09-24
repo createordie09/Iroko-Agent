@@ -141,7 +141,7 @@ la documentation Node.js sur https://nodejs.org/docs/latest/api/ pour plus de d�
     assert.equal(parsedPlainMeta.sources, undefined, 'Pas de sources pour un message simple');
   });
 
-  await t.test('5. UI : Le composant MessageSources gère le repli au-delà de 3 sources', () => {
+  await t.test('5. UI : Le composant MessageSources gère le repli au-delà de 4 sources', () => {
     const componentPath = path.resolve(process.cwd(), 'src/features/chat/MessageSources.tsx');
     assert.ok(fs.existsSync(componentPath), 'MessageSources.tsx doit exister');
     const code = fs.readFileSync(componentPath, 'utf8');
@@ -150,9 +150,9 @@ la documentation Node.js sur https://nodejs.org/docs/latest/api/ pour plus de d�
     assert.ok(code.includes('if (!sources || sources.length === 0)'), 'Doit retourner null si sources est vide');
     assert.ok(code.includes('return null;'), 'Doit renvoyer null sans afficher de bloc vide');
 
-    // Vérifier le seuil de 3 sources
-    assert.ok(code.includes('sources.length > 3'), 'Seuil de repli au-delà de 3 sources');
-    assert.ok(code.includes('sources.slice(0, 3)'), 'Affiche 3 sources par défaut');
+    // Vérifier le seuil de 4 sources
+    assert.ok(code.includes('sources.length > 4'), 'Seuil de repli au-delà de 4 sources');
+    assert.ok(code.includes('sources.slice(0, 4)'), 'Affiche 4 sources par défaut');
 
     // Vérifier la présence des libellés de bascule
     assert.ok(code.includes('Afficher moins'), 'Bouton pour replier');
@@ -188,12 +188,18 @@ la documentation Node.js sur https://nodejs.org/docs/latest/api/ pour plus de d�
     assert.ok(code.includes('te.input?.query'), 'Affiche la requête recherchée');
   });
 
-  await t.test('8. ChatMessageItem : Intègre MessageSources sous la réponse sans bloc vide', () => {
+  await t.test('8. ChatMessageItem : Intègre MessageSources sous les artéfacts sans bloc vide', () => {
     const itemPath = path.resolve(process.cwd(), 'src/features/chat/ChatMessageItem.tsx');
     const code = fs.readFileSync(itemPath, 'utf8');
 
     assert.ok(code.includes('MessageSources'), 'ChatMessageItem doit importer MessageSources');
     assert.ok(code.includes('msg.metadata?.sources'), 'Doit lire les sources dans msg.metadata');
     assert.ok(code.includes('msg.metadata.sources.length > 0'), 'Ne doit afficher MessageSources que s\'il y a des sources');
+
+    // Vérifier l'ordre : artéfacts avant sources
+    const artifactsIndex = code.indexOf('msg.metadata?.artifacts');
+    const sourcesIndex = code.indexOf('msg.metadata?.sources');
+    assert.ok(artifactsIndex !== -1 && sourcesIndex !== -1, 'Les blocs artéfacts et sources doivent exister');
+    assert.ok(artifactsIndex < sourcesIndex, 'Les artéfacts doivent être placés avant les sources');
   });
 });

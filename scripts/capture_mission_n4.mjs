@@ -28,6 +28,11 @@ const sampleSources = [
     url: 'https://tc39.es/ecma262/',
     title: 'ECMAScript Language Specification - TC39',
     domain: 'tc39.es'
+  },
+  {
+    url: 'https://v8.dev/features/modules',
+    title: 'JavaScript modules - V8 Dev Guide',
+    domain: 'v8.dev'
   }
 ];
 
@@ -87,7 +92,23 @@ async function capture() {
             content: 'Les modules ECMAScript (ESM) constituent le standard officiel pour structurer le code en JavaScript et TypeScript. Ils reposent sur les directives `import` et `export`, avec une résolution asynchrone des dépendances et un chargement optimisé par le runtime.\n\nPour en savoir plus, consultez la documentation officielle [MDN Modules](https://developer.mozilla.org/fr/docs/Web/JavaScript/Guide/Modules) ainsi que les spécifications sur https://nodejs.org/api/esm.html.',
             created_at: new Date().toISOString(),
             thinking_logs: null,
-            metadata: includeSources ? JSON.stringify({ sources: sampleSources }) : null
+            metadata: includeSources ? JSON.stringify({
+              artifacts: [
+                {
+                  id: 'art-guide-esm',
+                  conversationId: 'conv-sources',
+                  name: 'guide_modules_esm.md',
+                  title: 'Guide des Modules ESM',
+                  mimeType: 'text/markdown',
+                  size: 1420,
+                  currentVersion: 1,
+                  createdAt: new Date().toISOString(),
+                  updatedAt: new Date().toISOString(),
+                  versions: []
+                }
+              ],
+              sources: sampleSources
+            }) : null
           }
         ]
       })
@@ -137,12 +158,14 @@ async function capture() {
     });
   };
 
-  // 1. Capture Desktop (1920x1080) avec sources (repli par défaut à 3)
+  // 1. Capture Desktop (1920x1080) avec sources (repli par défaut à 4)
   const deskCtx = await browser.newContext({ viewport: { width: 1920, height: 1080 } });
   await setupMockRoute(deskCtx, true);
   const deskPage = await deskCtx.newPage();
-  await deskPage.goto('http://localhost:5173/conversations/conv-sources');
-  await deskPage.waitForSelector('[data-message-sources="true"]', { timeout: 8000 }).catch(() => {});
+  await deskPage.goto('http://localhost:5173/');
+  const convBtn = await deskPage.waitForSelector('button:has-text("Modules ECMAScript")', { timeout: 8000 });
+  await convBtn.click();
+  await deskPage.waitForSelector('[data-message-sources="true"]', { timeout: 8000 });
   await deskPage.waitForTimeout(600);
 
   const pathDeskReplie = path.join(artifactsDir, 'n4_1920_reponse_avec_sources_replie.png');
@@ -150,13 +173,15 @@ async function capture() {
   console.log(`Capture enregistrée : ${pathDeskReplie}`);
 
   // 2. Dépliage des sources sur desktop
-  const expandBtn = await deskPage.$('button:has-text("autres sources")');
+  const expandBtn = await deskPage.waitForSelector('[data-message-sources="true"] button', { timeout: 5000 }).catch(() => null);
   if (expandBtn) {
     await expandBtn.click();
-    await deskPage.waitForTimeout(300);
+    await deskPage.waitForTimeout(400);
     const pathDeskDeplie = path.join(artifactsDir, 'n4_1920_reponse_avec_sources_deplie.png');
     await deskPage.screenshot({ path: pathDeskDeplie });
     console.log(`Capture enregistrée : ${pathDeskDeplie}`);
+  } else {
+    console.warn('Bouton de repli non trouvé !');
   }
   await deskCtx.close();
 
@@ -164,8 +189,10 @@ async function capture() {
   const deskNoSourcesCtx = await browser.newContext({ viewport: { width: 1920, height: 1080 } });
   await setupMockRoute(deskNoSourcesCtx, false);
   const deskNoSourcesPage = await deskNoSourcesCtx.newPage();
-  await deskNoSourcesPage.goto('http://localhost:5173/conversations/conv-sources');
-  await deskNoSourcesPage.waitForSelector('article', { timeout: 8000 }).catch(() => {});
+  await deskNoSourcesPage.goto('http://localhost:5173/');
+  const convBtnNoSources = await deskNoSourcesPage.waitForSelector('button:has-text("Modules ECMAScript")', { timeout: 8000 });
+  await convBtnNoSources.click();
+  await deskNoSourcesPage.waitForSelector('article', { timeout: 8000 });
   await deskNoSourcesPage.waitForTimeout(600);
 
   const pathDeskNoSources = path.join(artifactsDir, 'n4_1920_reponse_sans_sources_avant.png');
@@ -177,8 +204,12 @@ async function capture() {
   const mobCtx = await browser.newContext({ viewport: { width: 375, height: 812 }, isMobile: true });
   await setupMockRoute(mobCtx, true);
   const mobPage = await mobCtx.newPage();
-  await mobPage.goto('http://localhost:5173/conversations/conv-sources');
-  await mobPage.waitForSelector('[data-message-sources="true"]', { timeout: 8000 }).catch(() => {});
+  await mobPage.goto('http://localhost:5173/');
+  const drawerBtn = await mobPage.waitForSelector('button[title="Ouvrir le menu"]', { timeout: 8000 });
+  await drawerBtn.click();
+  const mobConvBtn = await mobPage.waitForSelector('button:has-text("Modules ECMAScript")', { timeout: 5000 });
+  await mobConvBtn.click();
+  await mobPage.waitForSelector('[data-message-sources="true"]', { timeout: 8000 });
   await mobPage.waitForTimeout(600);
 
   const pathMob = path.join(artifactsDir, 'n4_375_reponse_avec_sources_mobile.png');
