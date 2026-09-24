@@ -192,6 +192,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setChatStatus('idle');
     setComposerModeState('chat');
     setActiveWorkspace(null);
+    setActiveView('home');
     if (typeof window !== 'undefined' && window.location.pathname.startsWith('/conversations/')) {
       window.history.pushState(null, '', '/');
     }
@@ -204,13 +205,29 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data.messages)) {
-          const mapped: Message[] = data.messages.map((m: any) => ({
-            id: m.id,
-            role: m.role,
-            content: m.content,
-            timestamp: m.created_at ? new Date(m.created_at).getTime() : Date.now(),
-            metadata: typeof m.metadata === 'string' ? JSON.parse(m.metadata) : m.metadata
-          }));
+          const mapped: Message[] = data.messages.map((m: any) => {
+            let parsedThinking: string | undefined = undefined;
+            if (m.thinking_logs) {
+              try {
+                const logs = typeof m.thinking_logs === 'string' ? JSON.parse(m.thinking_logs) : m.thinking_logs;
+                if (Array.isArray(logs) && logs.length > 0) {
+                  parsedThinking = logs.join('');
+                } else if (typeof logs === 'string') {
+                  parsedThinking = logs;
+                }
+              } catch {}
+            }
+            const metadata = typeof m.metadata === 'string' ? JSON.parse(m.metadata) : m.metadata;
+            const thinking = parsedThinking || metadata?.thinking;
+            return {
+              id: m.id,
+              role: m.role,
+              content: m.content,
+              timestamp: m.created_at ? new Date(m.created_at).getTime() : Date.now(),
+              thinking,
+              metadata
+            };
+          });
           setMessages(mapped);
         }
         if (data.conversation) {
@@ -249,6 +266,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (event.type === 'status') {
         setRuntimeStatus(event.status);
         if (event.message) setRuntimeMessage(event.message);
+      } else if (event.type === ('conversations_cleared' as any)) {
+        setHistory([]);
+        localStorage.removeItem('iroko_history');
+        resetChat();
       } else if (event.type === 'completed') {
         tokenService.fetch('/api/conversations')
           .then(res => res.json())
@@ -339,7 +360,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
-          return parsed.filter((h: any) => h && !h.id?.startsWith('h-'));
+          return parsed.filter((h: any) => h && !h.id?.startsWith('h-') && !h.id?.startsWith('test-') && !h.topic?.includes('Test'));
         }
       }
     } catch (e) {}
@@ -381,17 +402,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }
 
         // Migration unique depuis localStorage si runtime vide
+        const migrationDone = localStorage.getItem('iroko_migration_done');
         const saved = localStorage.getItem('iroko_history');
-        if (saved) {
+        if (!migrationDone && saved) {
           const parsed = JSON.parse(saved);
           if (Array.isArray(parsed) && parsed.length > 0) {
-            const validConversations = parsed.filter((h: any) => h && !h.id?.startsWith('h-'));
+            const validConversations = parsed.filter((h: any) => h && !h.id?.startsWith('h-') && !h.id?.startsWith('test-') && !h.topic?.includes('Test'));
             if (validConversations.length > 0) {
               const migRes = await tokenService.fetch('/api/migration/from-localstorage', {
                 method: 'POST',
                 body: JSON.stringify({ conversations: validConversations })
               });
               if (migRes.ok) {
+                localStorage.setItem('iroko_migration_done', 'true');
                 const refreshed = await tokenService.fetch('/api/conversations');
                 if (refreshed.ok) {
                   const refData = await refreshed.json();
@@ -409,6 +432,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
                   }
                 }
               }
+            } else {
+              localStorage.removeItem('iroko_history');
+              localStorage.setItem('iroko_migration_done', 'true');
             }
           }
         }

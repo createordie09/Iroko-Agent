@@ -19,7 +19,7 @@ export interface IrokoSettings {
 
 const DEFAULT_SETTINGS: IrokoSettings = {
   theme: 'dark',
-  conversationFont: 'serif',
+  conversationFont: 'sans',
   animations: 'system',
   voiceLang: 'Français',
   voiceURI: '',
@@ -43,7 +43,8 @@ export function useSettings() {
     if (typeof window === 'undefined') return DEFAULT_SETTINGS;
     try {
       const theme = (localStorage.getItem(STORAGE_KEYS.theme) as ThemeMode) || DEFAULT_SETTINGS.theme;
-      const conversationFont = (localStorage.getItem(STORAGE_KEYS.conversationFont) as ConversationFont) || DEFAULT_SETTINGS.conversationFont;
+      const storedFont = localStorage.getItem(STORAGE_KEYS.conversationFont);
+      const conversationFont = (storedFont === 'serif' ? 'sans' : (storedFont as ConversationFont)) || DEFAULT_SETTINGS.conversationFont;
       const animations = (localStorage.getItem(STORAGE_KEYS.animations) as AnimationsMode) || DEFAULT_SETTINGS.animations;
       const voiceLang = localStorage.getItem(STORAGE_KEYS.voiceLang) || DEFAULT_SETTINGS.voiceLang;
       const voiceURI = localStorage.getItem(STORAGE_KEYS.voiceURI) || DEFAULT_SETTINGS.voiceURI;
@@ -77,12 +78,20 @@ export function useSettings() {
       })
       .then(data => {
         if (!isMounted) return;
-        if (data && data.settings && typeof data.settings === 'object') {
+        if (data && data.settings) {
           const s = data.settings;
+          if (s.conversationFont === 'serif') {
+            tokenService.fetch('/api/settings/conversationFont', {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ value: 'sans' })
+            }).catch(() => {});
+          }
           setSettings(prev => {
+            const effectiveFont: ConversationFont = (s.conversationFont === 'serif' ? 'sans' : (s.conversationFont as ConversationFont)) || prev.conversationFont;
             const next: IrokoSettings = {
               theme: s.theme || prev.theme,
-              conversationFont: s.conversationFont || prev.conversationFont,
+              conversationFont: effectiveFont,
               animations: s.animations || prev.animations,
               voiceLang: s.voiceLang || prev.voiceLang,
               voiceURI: s.voiceURI !== undefined ? s.voiceURI : prev.voiceURI,

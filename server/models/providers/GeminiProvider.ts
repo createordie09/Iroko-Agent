@@ -4,19 +4,23 @@ import { ErrorClassifier } from '../errors/ErrorClassifier';
 export class GeminiProvider implements AIProvider {
   public id = 'gemini';
   public name = 'Google Gemini';
-  private defaultModel = 'gemini-2.0-flash';
+  private defaultModel = 'gemini-2.5-flash';
 
   public async listModels(): Promise<string[]> {
     return [
-      'gemini-2.0-flash',
-      'gemini-2.0-pro-exp-02-05',
-      'gemini-1.5-pro',
-      'gemini-1.5-flash'
+      'gemini-2.5-pro',
+      'gemini-2.5-flash',
+      'gemini-2.0-flash'
     ];
   }
 
   public async *generateStream(request: ModelRequest, apiKey: string): AsyncIterable<StreamChunk> {
-    const model = request.modelId || this.defaultModel;
+    let model = request.modelId || this.defaultModel;
+    if (model.startsWith('gemini/')) {
+      model = model.slice('gemini/'.length);
+    } else if (model.startsWith('google/')) {
+      model = model.slice('google/'.length);
+    }
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse&key=${apiKey}`;
 
     const systemMessage = request.messages.find(m => m.role === 'system');

@@ -262,10 +262,9 @@ Quatre statuts stricts sont attribués :
 3. **Dépendances `package.json` vs imports réels** :  
    - Toutes les dépendances listées (`docx`, `exceljs`, `lucide-react`, `mammoth`, `pdf-lib`, `pdfjs-dist`, `pptxgenjs`, `react`, `react-dom`, `zod`) sont effectivement importées et utilisées dans le code serveur ou client. Aucune dépendance fantôme détectée.
 4. **Fichiers de plus de 400 lignes contenant de la logique métier** :  
-   14 fichiers dépassent le seuil recommandé de 400 lignes et mériteraient un découpage ultérieur :
+   13 fichiers dépassent le seuil recommandé de 400 lignes (`ClaudeChat.tsx` a été modularisé avec succès de 1 482 à 356 lignes avec 7 sous-composants et 2 hooks autonomes < 400 lignes) :
    - `server/index.ts` : 2 343 lignes (serveur HTTP/WS unifié, routage et endpoints)
    - `server/storage/RuntimeDatabase.ts` : 2 322 lignes (requêtes SQLite, schémas et migrations)
-   - `src/features/chat/ClaudeChat.tsx` : 1 482 lignes (composant principal de discussion)
    - `src/components/composer/ClaudeComposer.tsx` : 1 173 lignes (barre de saisie multi-modes)
    - `server/runtime/AgentLoop.ts` : 657 lignes (boucle autonome d'exécution)
    - `server/artifacts/ArtifactManager.ts` : 578 lignes (gestionnaire de stockage d'artéfacts)

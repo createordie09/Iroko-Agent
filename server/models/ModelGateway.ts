@@ -38,7 +38,7 @@ export class ModelGateway {
   public getAvailableProviders(): ProviderInfo[] {
     return this.router.getAllProviders().map(p => {
       const keys = this.keyPool.getKeysByProvider(p.id);
-      const activeKeys = keys.filter(k => k.enabled && k.status === 'ACTIVE').length;
+      const activeKeys = keys.filter(k => k.enabled && k.status !== 'INVALID' && k.status !== 'QUOTA_EXHAUSTED').length;
       const preset = getProviderPreset(p.id);
       const catalogModels = this.catalog.getModels({ provider: p.id, view: 'all' });
 
@@ -54,7 +54,7 @@ export class ModelGateway {
         status = 'READY';
       } else if (keys.some(k => k.status === 'RATE_LIMITED')) {
         status = 'RATE_LIMITED';
-      } else if (keys.some(k => k.status === 'INVALID' || k.status === 'ERROR')) {
+      } else if (keys.every(k => k.status === 'INVALID' || k.status === 'QUOTA_EXHAUSTED' || !k.enabled)) {
         status = 'ERROR';
       } else {
         status = 'CONFIGURED';

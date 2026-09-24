@@ -206,7 +206,15 @@ test('Mission M3 - 6. Changement de projet & Blocage si tâche en cours (409 Con
   // Nettoyage
   if (fs.existsSync(testDir)) fs.rmdirSync(testDir);
   if (fs.existsSync(nextDir)) fs.rmdirSync(nextDir);
-  runtimeDatabase.deleteConversation(convId);
+  await fetch(`${BASE_URL}/api/conversations/${convId}`, {
+    method: 'DELETE',
+    headers: {
+      'Host': '127.0.0.1:3001',
+      'Authorization': `Bearer ${token}`,
+      'X-Iroko-Request': '1',
+      'Origin': 'http://localhost:5173'
+    }
+  });
 });
 
 test('Mission M3 - 7. Réinitialisation des permissions lors d\'un changement de projet', () => {

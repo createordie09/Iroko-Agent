@@ -97,8 +97,16 @@ export class ModelRouter {
     // 1. Déterminer la liste ordonnée des providers à essayer
     const providerQueue: string[] = [];
 
-    if (preferredProviderId && this.providers.has(preferredProviderId)) {
-      providerQueue.push(preferredProviderId);
+    let targetProvider = preferredProviderId;
+    if (!targetProvider && request.modelId && request.modelId.includes('/')) {
+      const p = request.modelId.split('/')[0];
+      if (this.providers.has(p)) {
+        targetProvider = p;
+      }
+    }
+
+    if (targetProvider && this.providers.has(targetProvider)) {
+      providerQueue.push(targetProvider);
     }
 
     if (this.fallbackPolicy.enabled && this.fallbackPolicy.allowCrossProviderFallback) {
@@ -109,8 +117,9 @@ export class ModelRouter {
       }
     }
 
-    // Garder le mock en dernier recours si présent
-    if (!providerQueue.includes('mock')) {
+    // Le mock ne doit intervenir en dernier recours QUE si l'utilisateur n'a configuré aucune clé
+    const hasConfiguredKeys = this.poolManager.getAllKeys().some(k => k.enabled && k.status !== 'INVALID' && k.status !== 'QUOTA_EXHAUSTED');
+    if (!hasConfiguredKeys && !providerQueue.includes('mock')) {
       providerQueue.push('mock');
     }
 

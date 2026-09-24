@@ -21,10 +21,8 @@ export class ModelCatalogManager {
 
     this.loadFromDatabase();
 
-    // Si la base est encore vide (premier lancement), charger les modèles initiaux issus des presets
-    if (this.cache.size === 0) {
-      this.seedFromPresets();
-    }
+    // Synchroniser systématiquement les presets pour garantir que les modèles 2026 sont à jour
+    this.seedFromPresets();
 
     this.isInitialized = true;
     this.startBackgroundRefresh();
@@ -74,18 +72,21 @@ export class ModelCatalogManager {
   }
 
   /**
-   * Peuple le catalogue initialement avec les modèles déclarés dans les presets de fournisseurs
+   * Peuple ou actualise le catalogue avec les modèles déclarés dans les presets de fournisseurs
    */
   public seedFromPresets(): void {
     const presets = getAllProviderPresets();
     const seeds: ModelInfo[] = [];
+    const activeCuratedPresetIds = new Set<string>();
 
     for (const preset of presets) {
       if (!preset.curatedModels || preset.curatedModels.length === 0) continue;
 
       for (const cm of preset.curatedModels) {
         const fullId = cm.id.includes('/') ? cm.id : `${preset.id}/${cm.id}`;
+        activeCuratedPresetIds.add(fullId);
         const formatted = formatModelLabel(fullId, preset.name);
+        const existing = this.cache.get(fullId);
 
         const modelInfo: ModelInfo = {
           id: fullId,
@@ -99,13 +100,21 @@ export class ModelCatalogManager {
           capabilities: cm.capabilities || getModelCapabilities(cm.id),
           priceTier: cm.priceTier || 'standard',
           isCurated: true,
-          isFavorite: false,
-          isHidden: false,
+          isFavorite: existing ? existing.isFavorite : false,
+          isHidden: existing ? existing.isHidden : false,
           lastSeenAt: Date.now()
         };
 
         seeds.push(modelInfo);
         this.cache.set(modelInfo.id, modelInfo);
+      }
+    }
+
+    // Dé-curer les anciens modèles qui ne font plus partie des presets
+    for (const [id, cached] of this.cache.entries()) {
+      if (cached.isCurated && !activeCuratedPresetIds.has(id)) {
+        cached.isCurated = false;
+        seeds.push(cached);
       }
     }
 

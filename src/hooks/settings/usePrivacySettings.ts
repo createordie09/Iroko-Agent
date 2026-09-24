@@ -120,6 +120,8 @@ export function usePrivacySettings() {
     try {
       await tokenService.fetch('/api/privacy/conversations', { method: 'DELETE' });
       clearAllDrafts();
+      localStorage.removeItem('iroko_history');
+      localStorage.setItem('iroko_migration_done', 'true');
       setShowClearConversationsConfirm(false);
       setPrivacySuccessMessage('Toutes les discussions ont été supprimées.');
       fetchPrivacyData();

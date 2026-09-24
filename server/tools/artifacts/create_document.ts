@@ -1,6 +1,15 @@
 import { IrokoTool, ToolContext, ToolResult } from '../types';
 import { DocumentGenerators, SupportedFormat } from '../../artifacts/DocumentGenerators';
 import { artifactManager } from '../../artifacts/ArtifactManager';
+import { skillManager } from '../../skills/SkillManager';
+
+const FALLBACK_INSTRUCTIONS: Record<SupportedFormat, string> = {
+  docx: 'Format DOCX (docx) : racine { title: string, description?: string, sections: [{ heading?: string, paragraphs?: string[], bulletPoints?: string[], table?: { headers: string[], rows: any[][] } }] }.',
+  xlsx: 'Format XLSX (exceljs) : racine { title?: string, sheets: [{ name: string (max 31 car), headers?: string[], rows: any[][] }] }.',
+  pptx: 'Format PPTX (pptxgenjs) : racine { title: string, author?: string, slides: [{ title?: string, subtitle?: string, bullets?: string[], textBlocks?: string[], table?: { headers?: string[], rows: any[][] } }] }.',
+  pdf: 'Format PDF (pdf-lib) : racine { title: string, author?: string, pages: [{ title?: string, paragraphs?: string[], lines?: string[], bulletPoints?: string[] }] }.',
+  zip: 'Format ZIP (jszip) : racine { entries: [{ name: string, content?: string, sourcePath?: string }] }.'
+};
 
 export class CreateDocumentTool implements IrokoTool {
   public readonly name = 'create_document';
@@ -62,6 +71,28 @@ export class CreateDocumentTool implements IrokoTool {
 
     const conversationId = context.conversationId || 'default_conversation';
 
+    // Lecture de la compétence associée au format (Mission N2)
+    const skill = skillManager.getSkill(format);
+    let skillWarning: string | undefined;
+
+    if (skill) {
+      if (skill.enabled) {
+        context.emitEvent({
+          type: 'skill_invoked' as any,
+          skillName: skill.name,
+          format
+        });
+      } else {
+        skillWarning = `La compétence système "${format}" est désactivée. Génération effectuée avec les instructions minimales intégrées.`;
+        context.emitEvent({
+          type: 'skill_fallback' as any,
+          skillName: skill.name,
+          format,
+          warning: skillWarning
+        });
+      }
+    }
+
     try {
       // 1. Génération du buffer binaire avec validation Zod
       const { buffer, mimeType } = await DocumentGenerators.generate(
@@ -92,6 +123,9 @@ export class CreateDocumentTool implements IrokoTool {
         }
       });
 
+      const baseMessage = `Document "${artifact.name}" (${format.toUpperCase()}) généré avec succès (${(artifact.size / 1024).toFixed(1)} Ko).`;
+      const finalMessage = skillWarning ? `${skillWarning} ${baseMessage}` : baseMessage;
+
       return {
         success: true,
         data: {
@@ -101,13 +135,17 @@ export class CreateDocumentTool implements IrokoTool {
           mimeType: artifact.mimeType,
           version: artifact.currentVersion,
           size: artifact.size,
-          message: `Document "${artifact.name}" (${format.toUpperCase()}) généré avec succès (${(artifact.size / 1024).toFixed(1)} Ko).`
+          skillUsed: skill ? skill.name : undefined,
+          skillEnabled: skill ? skill.enabled : undefined,
+          warning: skillWarning || undefined,
+          message: finalMessage
         }
       };
     } catch (err: any) {
+      const fallbackHint = FALLBACK_INSTRUCTIONS[format] || '';
       return {
         success: false,
-        error: err.message || 'Erreur lors de la génération du document.'
+        error: `Erreur lors de la génération du document ${format.toUpperCase()} : ${err.message}. ${fallbackHint ? `Instructions minimales : ${fallbackHint}` : ''}`
       };
     }
   }

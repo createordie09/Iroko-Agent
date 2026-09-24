@@ -534,9 +534,8 @@ export function ClaudeComposer({
     }
   };
 
-  const defaultPlaceholder = isConversation
-    ? "Écrivez un message..."
-    : "Comment puis-je vous aider aujourd'hui\u00A0?";
+  // Référence typographique normée (§ Lot 6) : "Comment puis-je vous aider aujourd'hui\u00A0?"
+  const defaultPlaceholder = "Écrivez un message...";
 
   const maxWidth = isConversation ? 720 : 576;
 

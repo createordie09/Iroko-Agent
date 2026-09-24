@@ -45,75 +45,56 @@ export class SkillManager {
     return this.skillsDir;
   }
 
+  private discoverInDirectory(dir: string, isSystem: boolean): void {
+    if (!fs.existsSync(dir)) return;
+    try {
+      const entries = fs.readdirSync(dir, { withFileTypes: true });
+      for (const entry of entries) {
+        if (entry.isDirectory()) {
+          const skillPath = path.join(dir, entry.name);
+          const skillMd = path.join(skillPath, 'SKILL.md');
+          if (fs.existsSync(skillMd)) {
+            try {
+              const parsed = SkillScanner.parseSkillMd(skillMd, skillPath);
+              const existing = runtimeDatabase.getSkill(parsed.name);
+              if (!existing) {
+                runtimeDatabase.saveSkill({
+                  name: parsed.name,
+                  description: parsed.description,
+                  dirPath: skillPath,
+                  instructions: parsed.instructions,
+                  enabled: true,
+                  isSystem,
+                  metadata: parsed.metadata
+                });
+              }
+            } catch {}
+          }
+        }
+      }
+    } catch {}
+  }
+
   /**
    * Initialise le catalogue de compétences depuis la base de données
-   * et découvre les compétences du workspace (.agents/skills)
+   * et découvre les compétences système et du workspace (.agents/skills)
    */
   public async init(workspacePath = process.cwd()): Promise<void> {
     if (this.initialized) return;
     this.initialized = true;
 
-    // 1. Découverte des compétences système (dans skills/system/ si existant)
-    const systemSkillsDir = path.join(this.skillsDir, 'system');
-    if (fs.existsSync(systemSkillsDir)) {
-      try {
-        const entries = fs.readdirSync(systemSkillsDir, { withFileTypes: true });
-        for (const entry of entries) {
-          if (entry.isDirectory()) {
-            const skillPath = path.join(systemSkillsDir, entry.name);
-            const skillMd = path.join(skillPath, 'SKILL.md');
-            if (fs.existsSync(skillMd)) {
-              try {
-                const parsed = SkillScanner.parseSkillMd(skillMd, skillPath);
-                const existing = runtimeDatabase.getSkill(parsed.name);
-                if (!existing) {
-                  runtimeDatabase.saveSkill({
-                    name: parsed.name,
-                    description: parsed.description,
-                    dirPath: skillPath,
-                    instructions: parsed.instructions,
-                    enabled: true,
-                    isSystem: true,
-                    metadata: parsed.metadata
-                  });
-                }
-              } catch {}
-            }
-          }
-        }
-      } catch {}
+    // 1. Découverte des compétences système (dans server/skills/system et skills/system/)
+    const codeSystemDir = path.resolve(process.cwd(), 'server', 'skills', 'system');
+    this.discoverInDirectory(codeSystemDir, true);
+
+    const runtimeSystemDir = path.join(this.skillsDir, 'system');
+    if (runtimeSystemDir !== codeSystemDir) {
+      this.discoverInDirectory(runtimeSystemDir, true);
     }
 
     // 2. Découverte des compétences dans le workspace (.agents/skills)
     const workspaceSkillsDir = path.join(workspacePath, '.agents', 'skills');
-    if (fs.existsSync(workspaceSkillsDir)) {
-      try {
-        const entries = fs.readdirSync(workspaceSkillsDir, { withFileTypes: true });
-        for (const entry of entries) {
-          if (entry.isDirectory()) {
-            const skillPath = path.join(workspaceSkillsDir, entry.name);
-            const skillMd = path.join(skillPath, 'SKILL.md');
-            if (fs.existsSync(skillMd)) {
-              try {
-                const parsed = SkillScanner.parseSkillMd(skillMd, skillPath);
-                const existing = runtimeDatabase.getSkill(parsed.name);
-                if (!existing) {
-                  runtimeDatabase.saveSkill({
-                    name: parsed.name,
-                    description: parsed.description,
-                    dirPath: skillPath,
-                    instructions: parsed.instructions,
-                    enabled: true,
-                    isSystem: false,
-                    metadata: parsed.metadata
-                  });
-                }
-              } catch {}
-            }
-          }
-        }
-      } catch {}
-    }
+    this.discoverInDirectory(workspaceSkillsDir, false);
   }
 
   /**
@@ -220,9 +201,13 @@ export class SkillManager {
   }
 
   /**
-   * Supprime une compétence
+   * Supprime une compétence (interdit pour les compétences système)
    */
   public deleteSkill(name: string): boolean {
+    const existing = this.getSkill(name);
+    if (existing?.isSystem) {
+      throw new Error(`Impossible de supprimer la compétence système "${name}". Elle peut uniquement être désactivée.`);
+    }
     return runtimeDatabase.deleteSkill(name);
   }
 
@@ -348,22 +333,17 @@ export class SkillManager {
   }
 
   /**
-   * Chargement à la demande (§13 - Niveau 2) :
-   * Renvoie les instructions complètes UNIQUEMENT si la requête de l'utilisateur
-   * mentionne expressément ou concerne la compétence.
-   * RÈGLE NIVEAU 3 : Les dossiers references/, scripts/ et assets/ ne sont JAMAIS chargés automatiquement ici.
+   * Retourne la liste des compétences actives pertinentes pour un prompt donné (§13 - Niveau 2)
    */
-  public getRelevantSkillInstructions(userPrompt: string): string | null {
-    if (!userPrompt || typeof userPrompt !== 'string') return null;
+  public getRelevantSkills(userPrompt: string): SkillInfo[] {
+    if (!userPrompt || typeof userPrompt !== 'string') return [];
 
     const skills = runtimeDatabase.listSkills().filter(s => s.enabled);
     const relevantSkills: SkillInfo[] = [];
-
     const normalizedPrompt = userPrompt.toLowerCase();
 
     for (const skill of skills) {
       const skillName = skill.name.toLowerCase();
-      // Correspondance sur le nom exact de la compétence ou mot-clé préfixé
       if (
         normalizedPrompt.includes(skillName) ||
         normalizedPrompt.includes(skillName.replace(/-/g, ' ')) ||
@@ -373,6 +353,17 @@ export class SkillManager {
       }
     }
 
+    return relevantSkills;
+  }
+
+  /**
+   * Chargement à la demande (§13 - Niveau 2) :
+   * Renvoie les instructions complètes UNIQUEMENT si la requête de l'utilisateur
+   * mentionne expressément ou concerne la compétence.
+   * RÈGLE NIVEAU 3 : Les dossiers references/, scripts/ et assets/ ne sont JAMAIS chargés automatiquement ici.
+   */
+  public getRelevantSkillInstructions(userPrompt: string): string | null {
+    const relevantSkills = this.getRelevantSkills(userPrompt);
     if (relevantSkills.length === 0) return null;
 
     const blocks = relevantSkills.map(s => {

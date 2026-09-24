@@ -151,7 +151,7 @@ export function ClaudeSidebar({ onOpenPersonalize }: ClaudeSidebarProps) {
 
   const handleNewChat = () => {
     resetChat();
-    setActiveView('chat');
+    setActiveView('home');
     setIsMobileSidebarOpen(false);
   };
 

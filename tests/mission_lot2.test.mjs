@@ -60,8 +60,9 @@ test('Mission Lot 2 - 4. Sidebar repliée rendue inerte', () => {
 });
 
 test('Mission Lot 2 - 5. Actions de messages non restreintes au hover seul', () => {
-  const filePath = path.join(rootDir, 'src', 'features', 'chat', 'ClaudeChat.tsx');
-  const content = fs.readFileSync(filePath, 'utf-8');
+  const itemPath = path.join(rootDir, 'src', 'features', 'chat', 'ChatMessageItem.tsx');
+  const chatPath = path.join(rootDir, 'src', 'features', 'chat', 'ClaudeChat.tsx');
+  const content = fs.existsSync(itemPath) ? fs.readFileSync(itemPath, 'utf-8') : fs.readFileSync(chatPath, 'utf-8');
 
   assert.ok(
     content.includes('data-message-actions="true"'),

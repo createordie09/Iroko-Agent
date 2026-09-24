@@ -9,17 +9,56 @@ export class OpenRouterProvider implements AIProvider {
 
   public async listModels(): Promise<string[]> {
     return [
+      'anthropic/claude-3.7-sonnet',
       'anthropic/claude-3.5-sonnet',
-      'openai/gpt-4o',
-      'google/gemini-2.0-flash-001',
-      'deepseek/deepseek-chat',
-      'qwen/qwen-2.5-coder-32b-instruct',
-      'meta-llama/llama-3.3-70b-instruct'
+      'openai/gpt-4.5-preview',
+      'openai/o3-mini',
+      'google/gemini-2.5-pro',
+      'deepseek/deepseek-r1',
+      'deepseek/deepseek-chat'
     ];
   }
 
   public async *generateStream(request: ModelRequest, apiKey: string): AsyncIterable<StreamChunk> {
-    const model = request.modelId || this.defaultModel;
+    let model = request.modelId || this.defaultModel;
+    if (model.startsWith('openrouter/')) {
+      model = model.slice('openrouter/'.length);
+    }
+
+    // Normalisation des slugs vers les identifiants officiels OpenRouter
+    const OPENROUTER_SLUG_MAP: Record<string, string> = {
+      'deepseek/deepseek-reasoner': 'deepseek/deepseek-r1',
+      'deepseek-reasoner': 'deepseek/deepseek-r1',
+      'deepseek/deepseek-chat': 'deepseek/deepseek-chat',
+      'deepseek-chat': 'deepseek/deepseek-chat',
+      'anthropic/claude-3-7-sonnet-latest': 'anthropic/claude-3.7-sonnet',
+      'claude-3-7-sonnet-latest': 'anthropic/claude-3.7-sonnet',
+      'anthropic/claude-3-5-sonnet-latest': 'anthropic/claude-3.5-sonnet',
+      'claude-3-5-sonnet-latest': 'anthropic/claude-3.5-sonnet',
+      'anthropic/claude-3-5-haiku-latest': 'anthropic/claude-3.5-haiku',
+      'claude-3-5-haiku-latest': 'anthropic/claude-3.5-haiku',
+      'openai/gpt-4.5-preview': 'openai/gpt-4.5-preview',
+      'gpt-4.5-preview': 'openai/gpt-4.5-preview',
+      'openai/o3-mini': 'openai/o3-mini',
+      'o3-mini': 'openai/o3-mini',
+      'openai/o1': 'openai/o1',
+      'o1': 'openai/o1',
+      'openai/gpt-4o': 'openai/gpt-4o',
+      'gpt-4o': 'openai/gpt-4o',
+      'openai/gpt-4o-mini': 'openai/gpt-4o-mini',
+      'gpt-4o-mini': 'openai/gpt-4o-mini',
+      'gemini/gemini-2.5-flash': 'google/gemini-2.5-flash',
+      'gemini-2.5-flash': 'google/gemini-2.5-flash',
+      'gemini/gemini-2.5-pro': 'google/gemini-2.5-pro',
+      'gemini-2.5-pro': 'google/gemini-2.5-pro',
+      'groq/llama-3.3-70b-versatile': 'meta-llama/llama-3.3-70b-instruct',
+      'llama-3.3-70b-versatile': 'meta-llama/llama-3.3-70b-instruct',
+      'llama-3.3-70b': 'meta-llama/llama-3.3-70b-instruct'
+    };
+
+    if (OPENROUTER_SLUG_MAP[model]) {
+      model = OPENROUTER_SLUG_MAP[model];
+    }
 
     const payload: Record<string, any> = {
       model,
@@ -58,11 +97,20 @@ export class OpenRouterProvider implements AIProvider {
       }));
     }
 
+    // Exclusion des paramètres interdits sur les modèles de raisonnement
+    const isReasoner = model.includes('r1') || model.includes('reasoner') || model.includes('o1') || model.includes('o3');
+    if (isReasoner) {
+      delete payload.temperature;
+    }
+    if (model.includes('r1') || model.includes('reasoner')) {
+      delete payload.tools;
+    }
+
     if (request.thinkingLevel && request.thinkingLevel !== 'disabled') {
       payload.reasoning = { effort: request.thinkingLevel };
     }
 
-    const response = await fetch(`${this.baseUrl}/chat/completions`, {
+    let response = await fetch(`${this.baseUrl}/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -73,6 +121,22 @@ export class OpenRouterProvider implements AIProvider {
       body: JSON.stringify(payload),
       signal: request.abortSignal
     });
+
+    if (!response.ok && response.status === 404 && model === 'anthropic/claude-3.7-sonnet') {
+      // Re-tentative automatique vers anthropic/claude-3.5-sonnet si l'endpoint 3.7 n'est pas disponible (404)
+      payload.model = 'anthropic/claude-3.5-sonnet';
+      response = await fetch(`${this.baseUrl}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+          'HTTP-Referer': 'https://iroko-agent.local',
+          'X-Title': 'Iroko Code Agent'
+        },
+        body: JSON.stringify(payload),
+        signal: request.abortSignal
+      });
+    }
 
     if (!response.ok) {
       const errText = await response.text();

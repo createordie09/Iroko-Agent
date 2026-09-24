@@ -190,6 +190,13 @@ export class KeyPoolManager {
   }
 
   /**
+   * Retourne la collection brute des clés
+   */
+  public getAllKeys(): ProviderCredential[] {
+    return Array.from(this.credentials.values());
+  }
+
+  /**
    * Retourne les clés d'un provider
    */
   public getKeysByProvider(providerId: string): ProviderCredential[] {
@@ -327,17 +334,22 @@ export class KeyPoolManager {
     // Dégradation du score de santé
     cred.healthScore = Math.max(0, cred.healthScore - (classification.category === 'AUTH_ERROR' ? 100 : 25));
 
-    // Règle 401/403 : clé désactivée immédiatement sans tentative future
-    if (classification.shouldDisableKey || classification.category === 'AUTH_ERROR') {
-      cred.status = classification.category === 'QUOTA_EXHAUSTED' ? 'QUOTA_EXHAUSTED' : 'INVALID';
+    // Règle 401/403 : clé désactivée immédiatement sans tentative future uniquement si invalidité authentique confirmée
+    if (classification.category === 'AUTH_ERROR' && (classification.statusCode === 401 || (classification.message && classification.message.toLowerCase().includes('invalid api key')))) {
+      cred.status = 'INVALID';
       cred.enabled = false;
       logger.warn(`Clé ${cred.id} (${cred.label}) désactivée définitivement : ${classification.message}`);
+    } else if (classification.category === 'QUOTA_EXHAUSTED' || classification.statusCode === 402) {
+      cred.status = 'QUOTA_EXHAUSTED';
+      cred.enabled = false;
+      logger.warn(`Clé ${cred.id} (${cred.label}) quota épuisé : ${classification.message}`);
     } else if (classification.shouldCooldown && classification.cooldownSeconds) {
       cred.status = 'COOLDOWN';
       cred.cooldownUntil = Date.now() + classification.cooldownSeconds * 1000;
       logger.warn(`Clé ${cred.id} (${cred.label}) placée en COOLDOWN (${classification.cooldownSeconds}s)`);
     } else {
-      cred.status = 'ERROR';
+      // Pour les erreurs temporaires d'exécution (400, 500, timeout, paramètres incompatibles...), la clé reste utilisable
+      cred.status = 'ACTIVE';
     }
 
     this.saveToStorage();

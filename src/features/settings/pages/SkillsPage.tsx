@@ -216,14 +216,16 @@ export function SkillsPage() {
                   >
                     <Edit2 className="w-3.5 h-3.5" />
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => handleDeleteSkill(skill.name)}
-                    className="p-1 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
-                    title="Supprimer la compétence"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                  {!skill.isSystem && (
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteSkill(skill.name)}
+                      className="p-1 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+                      title="Supprimer la compétence"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                 </div>
               </div>
               <p className="text-[12px] text-[var(--text-secondary)] leading-relaxed">

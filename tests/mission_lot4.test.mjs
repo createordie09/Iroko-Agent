@@ -32,16 +32,19 @@ test('Mission Lot 4 - 1. Regroupement des tokens (useStreamBuffer & <= 20 fps)',
 
 test('Mission Lot 4 - 2. Blocs mémoïsés et découpage de premier niveau (règle UX U7)', () => {
   const chatPath = path.join(rootDir, 'src', 'features', 'chat', 'ClaudeChat.tsx');
+  const fmtPath = path.join(rootDir, 'src', 'features', 'chat', 'FormattedMessage.tsx');
   const chatContent = fs.readFileSync(chatPath, 'utf-8');
+  const fmtContent = fs.existsSync(fmtPath) ? fs.readFileSync(fmtPath, 'utf-8') : '';
+  const content = chatContent + '\n' + fmtContent;
 
   // Vérification de la présence de MemoizedBlock avec React.memo
-  assert.ok(chatContent.includes('const MemoizedBlock = React.memo'), 'MemoizedBlock doit être enveloppé dans React.memo');
-  assert.ok(chatContent.includes('const FormattedMessage = React.memo'), 'FormattedMessage doit être enveloppé dans React.memo');
-  assert.ok(chatContent.includes('isOpen={isBlockOpen}'), 'Doit transmettre isOpen au bloc terminal');
-  assert.ok(chatContent.includes('const isLast = bIdx === blocks.length - 1'), 'Doit identifier le dernier bloc comme seul bloc susceptible d\'être ouvert');
+  assert.ok(content.includes('const MemoizedBlock = React.memo'), 'MemoizedBlock doit être enveloppé dans React.memo');
+  assert.ok(content.includes('const FormattedMessage = React.memo'), 'FormattedMessage doit être enveloppé dans React.memo');
+  assert.ok(content.includes('isOpen={isBlockOpen}'), 'Doit transmettre isOpen au bloc terminal');
+  assert.ok(content.includes('const isLast = bIdx === blocks.length - 1'), 'Doit identifier le dernier bloc comme seul bloc susceptible d\'être ouvert');
 
   // Clé React conforme : index + contenu
-  assert.ok(chatContent.includes('key={`${bIdx}-${contentKey}`}') || chatContent.includes('contentKey'), 'La clé de bloc doit inclure index + contenu');
+  assert.ok(content.includes('key={`${bIdx}-${contentKey}`}') || content.includes('contentKey'), 'La clé de bloc doit inclure index + contenu');
 
   // Construction non fermée affichée en texte brut sans erreur
   resetMarkdownStreamCache();

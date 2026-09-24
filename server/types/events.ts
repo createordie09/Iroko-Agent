@@ -57,11 +57,13 @@ export type AgentEvent = BaseEvent & (
   | { type: 'video_job_updated'; job: any }
   | { type: 'context_usage'; usage: { inputTokens: number; outputTokens: number; totalTokens: number; contextWindow: number; isEstimate: boolean; ratio: number } }
   | { type: 'context_summarized'; message: string; usage?: { inputTokens: number; outputTokens: number; totalTokens: number; contextWindow: number; isEstimate: boolean; ratio: number } }
-  | { type: 'completed'; summary: string; filesChanged: string[] }
+  | { type: 'completed'; summary: string; filesChanged: string[]; thinking?: string }
   | { type: 'error'; message: string; fatal: boolean }
   | { type: 'providers_changed'; providers?: any[]; timestamp?: string }
   | { type: 'catalog_updated'; total?: number; byProvider?: Record<string, number>; timestamp?: string }
   | { type: 'agent_status_changed'; activeConversationIds: string[]; runningCount: number; timestamp?: string; conversationId?: string; status?: string }
+  | { type: 'skill_invoked'; skillName: string; format?: string; timestamp?: string }
+  | { type: 'skill_fallback'; skillName: string; format?: string; warning?: string; timestamp?: string }
 );
 
 export type ClientMessage =

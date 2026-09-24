@@ -4,18 +4,21 @@ import { ErrorClassifier } from '../errors/ErrorClassifier';
 export class AnthropicProvider implements AIProvider {
   public id = 'anthropic';
   public name = 'Anthropic Claude';
-  private defaultModel = 'claude-3-5-sonnet-latest';
+  private defaultModel = 'claude-3-7-sonnet-latest';
 
   public async listModels(): Promise<string[]> {
     return [
+      'claude-3-7-sonnet-latest',
       'claude-3-5-sonnet-latest',
-      'claude-3-5-haiku-latest',
-      'claude-3-opus-latest'
+      'claude-3-5-haiku-latest'
     ];
   }
 
   public async *generateStream(request: ModelRequest, apiKey: string): AsyncIterable<StreamChunk> {
-    const model = request.modelId || this.defaultModel;
+    let model = request.modelId || this.defaultModel;
+    if (model.startsWith('anthropic/')) {
+      model = model.slice('anthropic/'.length);
+    }
 
     const systemMessage = request.messages.find(m => m.role === 'system');
     const conversationMessages = request.messages

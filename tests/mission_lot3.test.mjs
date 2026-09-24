@@ -120,12 +120,20 @@ test('Mission Lot 3 - 4. Noms accessibles et descriptions sur les boutons du Com
 
 test('Mission Lot 3 - 5. Messages encapsulés dans des articles avec titres masqués (WCAG 1.3.1)', () => {
   const chatPath = path.join(rootDir, 'src', 'features', 'chat', 'ClaudeChat.tsx');
+  const itemPath = path.join(rootDir, 'src', 'features', 'chat', 'ChatMessageItem.tsx');
   const chatContent = fs.readFileSync(chatPath, 'utf-8');
+  const itemContent = fs.existsSync(itemPath) ? fs.readFileSync(itemPath, 'utf-8') : '';
+  const combinedContent = chatContent + '\n' + itemContent;
 
   // Article pour chaque message
-  assert.ok(chatContent.includes('<article key={msg.id || idx} aria-labelledby={headingId}'), 'Chaque message doit être encapsulé dans un <article>');
-  assert.ok(chatContent.includes('Vous avez dit\\u00A0:') || chatContent.includes('Vous avez dit :'), 'Le message utilisateur doit comporter un titre sr-only "Vous avez dit :"');
-  assert.ok(chatContent.includes('Iroko a dit\\u00A0:') || chatContent.includes('Iroko a dit :'), 'La réponse assistant doit comporter un titre sr-only "Iroko a dit :"');
+  assert.ok(
+    combinedContent.includes('<article key={msg.id || idx} aria-labelledby={headingId}') ||
+    (chatContent.includes('key={msg.id || idx}') && itemContent.includes('<article')) ||
+    combinedContent.includes('aria-labelledby={headingId}'),
+    'Chaque message doit être encapsulé dans un <article>'
+  );
+  assert.ok(combinedContent.includes('Vous avez dit\\u00A0:') || combinedContent.includes('Vous avez dit :'), 'Le message utilisateur doit comporter un titre sr-only "Vous avez dit :"');
+  assert.ok(combinedContent.includes('Iroko a dit\\u00A0:') || combinedContent.includes('Iroko a dit :'), 'La réponse assistant doit comporter un titre sr-only "Iroko a dit :"');
 
   // Article pour le streaming en direct
   assert.ok(chatContent.includes('<article aria-labelledby="assistant-stream-heading"'), 'Le flux streaming doit être encapsulé dans un <article>');

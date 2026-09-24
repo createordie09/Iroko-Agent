@@ -135,7 +135,16 @@ export class AgentLoop {
     );
     const memorySnippet = projectMemoryManager.formatMemoriesForPrompt(relevantMemories);
     const skillCatalog = skillManager.getSkillsCatalogForPrompt();
+    const relevantSkills = skillManager.getRelevantSkills(userPrompt);
     const activeSkillInstructions = skillManager.getRelevantSkillInstructions(userPrompt);
+
+    // Émission d'événement pour chaque compétence active invoquée
+    for (const skill of relevantSkills) {
+      context.emitEvent({
+        type: 'skill_invoked' as any,
+        skillName: skill.name
+      });
+    }
 
     const customInstructions = (runtimeDatabase.getSetting('custom_instructions') as string) || '';
 
@@ -250,6 +259,8 @@ export class AgentLoop {
 
     let iteration = 0;
     let finalAssistantText = '';
+    let accumulatedThinking = '';
+    let loopError: Error | null = null;
 
     context.emitEvent({
       type: 'status',
@@ -290,10 +301,12 @@ export class AgentLoop {
       let currentToolCall: { id: string; name: string; argumentsJson: string } | null = null;
 
       try {
+        const isReasonerWithoutTools = options.modelId && (options.modelId.includes('deepseek-reasoner') || (options.modelId.includes('r1') && !options.modelId.includes('distill')));
         for await (const chunk of modelGateway.generateStream(
           {
+            modelId: options.modelId,
             messages,
-            tools,
+            tools: isReasonerWithoutTools ? undefined : tools,
             temperature: 0.1,
             abortSignal: options.abortSignal,
             thinkingLevel: options.thinkingLevel,
@@ -304,6 +317,7 @@ export class AgentLoop {
           if (options.abortSignal?.aborted) break;
 
           if (chunk.type === 'thinking_delta') {
+            accumulatedThinking += chunk.text;
             context.emitEvent({ type: 'thinking', content: chunk.text });
           } else if (chunk.type === 'text_delta') {
             iterationText += chunk.text;
@@ -390,7 +404,8 @@ export class AgentLoop {
             context.emitEvent({
               type: 'completed',
               summary: finalAssistantText,
-              filesChanged: Array.from(filesChanged)
+              filesChanged: Array.from(filesChanged),
+              thinking: accumulatedThinking || undefined
             });
           }
           context.emitEvent({ type: 'status', status: 'idle', message: 'Tâche annulée par l\'utilisateur.' });
@@ -591,6 +606,7 @@ export class AgentLoop {
 
       } catch (err: any) {
         console.error(`[AgentLoop] Erreur critique à l'itération ${iteration} :`, err);
+        loopError = err;
         context.emitEvent({
           type: 'error',
           message: err.message || 'Erreur inattendue dans la boucle agentique',
@@ -673,12 +689,22 @@ export class AgentLoop {
       });
     } catch {}
 
+    if (loopError && !finalAssistantText) {
+      context.emitEvent({
+        type: 'status',
+        status: 'error',
+        message: loopError.message || 'La tâche a échoué en raison d\'une erreur du modèle.'
+      });
+      throw loopError;
+    }
+
     const finalSummary = (finalAssistantText || 'Tâche terminée.') + verificationNote;
 
     context.emitEvent({
       type: 'completed',
       summary: finalSummary,
-      filesChanged: changedArray
+      filesChanged: changedArray,
+      thinking: accumulatedThinking || undefined
     });
 
     context.emitEvent({

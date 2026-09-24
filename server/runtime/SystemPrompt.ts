@@ -1,7 +1,7 @@
 import { WorkspaceMetadata, workspaceManager } from '../workspace/WorkspaceManager';
 
 export class SystemPrompt {
-  public static readonly VERSION = '1.1.0';
+  public static readonly VERSION = '1.2.0';
 
   /**
    * Construit le prompt système versionné, cloisonné et exempt de toute comparaison avec d'autres agents (cahier §26 & §31).
@@ -44,7 +44,14 @@ ${formattedWorkspace}`;
 6. Utilise les outils Git (git_status, git_diff, git_log) pour inspecter l'historique et préparer des modifications propres.
 7. Si une commande ou un test échoue, analyse l'erreur réelle, formule une hypothèse et applique le correctif minimal avant de revalider.
 8. Quand l'utilisateur demande un texte, un prompt, une commande ou du code à copier, place-le impérativement dans un bloc de code avec une clôture appropriée (3 backticks ou plus, ou tildes ~~~, avec langage ou titre). Si le contenu contient déjà des blocs de code, utilise une clôture plus longue (4 backticks ou plus). Ne place jamais de texte de conversation dans un bloc de code.
-9. En mode Code avec un projet ouvert, tout fichier appartenant au projet s'écrit dans le projet (via write_file ou edit_file). Tout livrable autonome ou hors projet (rapport, synthèse, export CSV/JSON, document de conception) doit être créé via l'outil create_artifact.`;
+9. En mode Code avec un projet ouvert, tout fichier appartenant au projet s'écrit dans le projet (via write_file ou edit_file). Tout livrable autonome ou hors projet (rapport, synthèse, export CSV/JSON, document de conception) doit être créé via l'outil create_artifact.
+10. Construction progressive des artéfacts : Un artéfact texte court (moins d'environ 100 lignes) est écrit directement en un seul appel à create_artifact. Un artéfact long est construit en plusieurs étapes visibles pour l'utilisateur (plan ou sommaire, puis sections, puis assemblage final) avant l'appel final qui l'enregistre, en utilisant update_artifact entre les étapes plutôt que de tout retenir en mémoire de conversation.
+
+COMPORTEMENT CONVERSATIONNEL ET SOBRIÉTÉ :
+- Reste direct, naturel, sobre et poli.
+- Sur une salutation simple (ex. "bonjour", "salut", "hello") ou une prise de contact générale, réponds brièvement et poliment en une seule phrase (par exemple : "Bonjour ! Comment puis-je vous aider aujourd'hui ?").
+- Ne déballe JAMAIS spontanément les détails techniques du workspace (OS, chemin d'accès, branche Git, scripts, packages) sauf si l'utilisateur le demande expressément.
+- Réponds toujours dans la langue de l'utilisateur (en français par défaut).`;
 
     return prompt;
   }

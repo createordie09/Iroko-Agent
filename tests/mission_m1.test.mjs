@@ -115,6 +115,17 @@ test('Mission M1 - 3. Gestion et persistance du mode conversation via API REST',
   const fetched = await getRes.json();
   const conv = fetched.conversation || fetched;
   assert.strictEqual(conv.mode, 'code', 'Le mode persisté doit être code');
+
+  // Nettoyage de la conversation de test
+  await fetch(`${BASE_URL}/api/conversations/${created.id}`, {
+    method: 'DELETE',
+    headers: {
+      'Host': '127.0.0.1:3001',
+      'Authorization': `Bearer ${token}`,
+      'X-Iroko-Request': '1',
+      'Origin': 'http://localhost:5173'
+    }
+  });
 });
 
 test('Mission M1 - 4. Filtrage strict des outils selon le mode (ToolRegistry)', async () => {

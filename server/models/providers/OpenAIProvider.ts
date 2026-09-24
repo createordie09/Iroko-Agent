@@ -14,16 +14,19 @@ export class OpenAIProvider implements AIProvider {
 
   public async listModels(): Promise<string[]> {
     return [
-      'gpt-4o',
-      'gpt-4o-mini',
-      'o1',
+      'gpt-4.5-preview',
       'o3-mini',
-      'gpt-4-turbo'
+      'o1',
+      'gpt-4o',
+      'gpt-4o-mini'
     ];
   }
 
   public async *generateStream(request: ModelRequest, apiKey: string): AsyncIterable<StreamChunk> {
-    const model = request.modelId || this.defaultModel;
+    let model = request.modelId || this.defaultModel;
+    if (model.startsWith(this.id + '/')) {
+      model = model.slice(this.id.length + 1);
+    }
 
     const payload: Record<string, any> = {
       model,
@@ -51,7 +54,11 @@ export class OpenAIProvider implements AIProvider {
       })
     };
 
-    if (request.tools && request.tools.length > 0) {
+    // Modèles de raisonnement (o1, o3, DeepSeek-R1)
+    const isReasoningModel = model.startsWith('o1') || model.startsWith('o3') || model.includes('reasoner') || (model.includes('r1') && !model.includes('distill'));
+    const supportsTools = !model.includes('reasoner') && !(model.includes('r1') && !model.includes('distill'));
+
+    if (supportsTools && request.tools && request.tools.length > 0) {
       payload.tools = request.tools.map(t => ({
         type: 'function',
         function: {
@@ -62,12 +69,13 @@ export class OpenAIProvider implements AIProvider {
       }));
     }
 
+    if (isReasoningModel) {
+      delete payload.temperature;
+    }
+
     // Paliers de réflexion OpenAI (o1, o3-mini) (§22, §37)
-    if (request.thinkingLevel && request.thinkingLevel !== 'disabled') {
+    if (request.thinkingLevel && request.thinkingLevel !== 'disabled' && (model.startsWith('o1') || model.startsWith('o3'))) {
       payload.reasoning_effort = request.thinkingLevel;
-      if (model.startsWith('o1') || model.startsWith('o3')) {
-        delete payload.temperature;
-      }
     }
 
     const response = await fetch(`${this.baseUrl}/chat/completions`, {

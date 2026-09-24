@@ -15,11 +15,19 @@ test('Mission Lot 7 - 1. Optimisation content-visibility: auto sur les messages 
   assert.ok(indexCss.includes('content-visibility: auto'), 'La classe doit spécifier content-visibility: auto');
   assert.ok(indexCss.includes('contain-intrinsic-size: auto 120px'), 'La classe doit spécifier contain-intrinsic-size: auto 120px');
 
-  // 1.2 Application conditionnelle dans ClaudeChat.tsx (sauf les 6 derniers messages)
-  const chatCode = fs.readFileSync(path.join(rootDir, 'src', 'features', 'chat', 'ClaudeChat.tsx'), 'utf-8');
-  assert.ok(chatCode.includes('idx < activeMessages.length - 6'), 'ClaudeChat doit exclure les 6 derniers messages');
-  assert.ok(chatCode.includes('message-content-visibility'), 'ClaudeChat doit appliquer la classe message-content-visibility');
-  assert.ok(chatCode.includes('data-message-id='), 'Les messages doivent disposer d\'un identifiant d\'ancrage');
+  // 1.2 Application conditionnelle dans ClaudeChat.tsx / ChatMessageItem.tsx (sauf les 6 derniers messages)
+  const chatPath = path.join(rootDir, 'src', 'features', 'chat', 'ClaudeChat.tsx');
+  const itemPath = path.join(rootDir, 'src', 'features', 'chat', 'ChatMessageItem.tsx');
+  const chatCode = fs.readFileSync(chatPath, 'utf-8');
+  const itemCode = fs.existsSync(itemPath) ? fs.readFileSync(itemPath, 'utf-8') : '';
+  const combined = chatCode + '\n' + itemCode;
+  assert.ok(
+    combined.includes('idx < activeMessages.length - 6') ||
+    combined.includes('idx < messages.length - 6'),
+    'ClaudeChat / ChatMessageItem doit exclure les 6 derniers messages'
+  );
+  assert.ok(combined.includes('message-content-visibility'), 'ClaudeChat / ChatMessageItem doit appliquer la classe message-content-visibility');
+  assert.ok(combined.includes('data-message-id='), 'Les messages doivent disposer d\'un identifiant d\'ancrage');
 });
 
 test('Mission Lot 7 - 2. Mesures de performance 200 et 1000 messages & proposition de conception (Point 2)', async () => {

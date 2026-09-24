@@ -26,14 +26,17 @@ export interface FormattedModel {
  */
 export function formatModelLabel(modelId: string, providerName?: string): FormattedModel {
   const parts = modelId.split('/');
-  const rawModel = parts.length > 1 ? parts[1] : parts[0];
+  const rawModel = parts.length > 1 ? parts[parts.length - 1] : parts[0];
   const providerId = parts.length > 1 ? parts[0] : (providerName || 'modèle').toLowerCase();
 
   let name = rawModel;
   let note = providerName || providerId;
 
   // Normalisation des libellés sans marque visible
-  if (rawModel.includes('claude-3-5-sonnet') || rawModel.includes('claude-3.5-sonnet')) {
+  if (rawModel.includes('claude-3-7-sonnet') || rawModel.includes('claude-3.7-sonnet')) {
+    name = 'Sonnet 3.7';
+    note = 'Anthropic';
+  } else if (rawModel.includes('claude-3-5-sonnet') || rawModel.includes('claude-3.5-sonnet')) {
     name = 'Sonnet 3.5';
     note = 'Anthropic';
   } else if (rawModel.includes('claude-3-5-haiku') || rawModel.includes('claude-3.5-haiku')) {
@@ -42,18 +45,42 @@ export function formatModelLabel(modelId: string, providerName?: string): Format
   } else if (rawModel.includes('claude-3-opus')) {
     name = 'Opus 3';
     note = 'Anthropic';
+  } else if (rawModel.includes('gpt-4.5-preview') || rawModel.includes('gpt-4.5')) {
+    name = 'GPT-4.5 Preview';
+    note = 'OpenAI';
+  } else if (rawModel.includes('o3-mini')) {
+    name = 'o3-mini';
+    note = 'OpenAI';
+  } else if (rawModel === 'o1' || rawModel.startsWith('o1-')) {
+    name = 'o1';
+    note = 'OpenAI';
   } else if (rawModel === 'gpt-4o') {
     name = 'GPT-4o';
     note = 'OpenAI';
   } else if (rawModel === 'gpt-4o-mini') {
     name = 'GPT-4o mini';
     note = 'OpenAI';
+  } else if (rawModel.includes('gemini-2.5-pro')) {
+    name = 'Gemini 2.5 Pro';
+    note = 'Google';
+  } else if (rawModel.includes('gemini-2.5-flash')) {
+    name = 'Gemini 2.5 Flash';
+    note = 'Google';
   } else if (rawModel.includes('gemini-2.0-flash')) {
     name = 'Gemini 2.0 Flash';
     note = 'Google';
   } else if (rawModel.includes('gemini-1.5-pro')) {
     name = 'Gemini 1.5 Pro';
     note = 'Google';
+  } else if (rawModel.includes('deepseek-reasoner') || rawModel === 'deepseek-r1') {
+    name = 'DeepSeek-R1';
+    note = 'DeepSeek';
+  } else if (rawModel.includes('deepseek-chat') || rawModel === 'deepseek-v3') {
+    name = 'DeepSeek-V3';
+    note = 'DeepSeek';
+  } else if (rawModel.includes('llama-3.3-70b')) {
+    name = 'Llama 3.3 70B';
+    note = 'Meta';
   } else if (rawModel === 'auto') {
     name = 'Rotation automatique';
     note = 'OpenRouter';

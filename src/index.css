@@ -7,6 +7,8 @@
 
 /* ─── Claude UI Tokens (Sampled directly from captures) ─── */
 :root {
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-serif: "Newsreader", "Source Serif 4", Georgia, serif;
   --app-height: 100dvh;
 
   /* Radii tokens (editable in one line or overridden) */

@@ -64,13 +64,7 @@ export interface VideoJobData {
 
 class MediaService {
   private async fetchWithAuth(url: string, options: RequestInit = {}): Promise<Response> {
-    const headers = new Headers(options.headers || {});
-    headers.set('X-Iroko-Request', '1');
-    const token = tokenService.getToken();
-    if (token) {
-      headers.set('Authorization', `Bearer ${token}`);
-    }
-    return fetch(url, { ...options, headers });
+    return tokenService.fetch(url, options);
   }
 
   public async getProviders(): Promise<ImageProviderOption[]> {

@@ -2176,6 +2176,10 @@ export class RuntimeDatabase {
   }
 
   public deleteSkill(name: string): boolean {
+    const existing = this.getSkill(name);
+    if (existing?.isSystem) {
+      throw new Error(`Impossible de supprimer la compétence système "${name}". Elle peut uniquement être désactivée.`);
+    }
     const res = this.db.prepare('DELETE FROM skills WHERE name = ?').run(name);
     return Number(res.changes) > 0;
   }

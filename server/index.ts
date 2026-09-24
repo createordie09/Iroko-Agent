@@ -1462,9 +1462,14 @@ const server = http.createServer(async (req, res) => {
 
     if (pathname.startsWith('/api/skills/') && req.method === 'DELETE') {
       const name = decodeURIComponent(pathname.replace('/api/skills/', '').trim());
-      const success = skillManager.deleteSkill(name);
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ success }));
+      try {
+        const success = skillManager.deleteSkill(name);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success }));
+      } catch (err: any) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, error: err.message }));
+      }
       return;
     }
 

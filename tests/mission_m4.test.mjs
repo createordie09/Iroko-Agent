@@ -380,8 +380,8 @@ test('Mission M4 - D1. Endpoints REST : consultation, versions et téléchargeme
 // PARTIE E : PROMPT SYSTÈME v1.1.0
 // ─────────────────────────────────────────────────────────────
 
-test('Mission M4 - E1. Prompt système : version 1.1.0 et directives de copie / artéfacts', () => {
-  assert.strictEqual(SystemPrompt.VERSION, '1.1.0');
+test('Mission M4 - E1. Prompt système : version versionnée et directives de copie / artéfacts', () => {
+  assert.ok(SystemPrompt.VERSION >= '1.1.0', `La version du prompt système (${SystemPrompt.VERSION}) doit être >= 1.1.0`);
   const fakeMeta = {
     path: 'C:\\test\\workspace',
     name: 'test',

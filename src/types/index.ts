@@ -13,7 +13,9 @@ export type Message = {
   role: 'user' | 'assistant' | 'system';
   content: string;
   timestamp: number;
+  thinking?: string;
   metadata?: {
+    thinking?: string;
     attachmentIds?: string[];
     attachments?: Array<{
       id: string;

@@ -11,7 +11,7 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     isLocal: false,
     requiresKey: true,
     docsUrl: 'https://openrouter.ai/keys',
-    defaultModel: 'anthropic/claude-3.5-sonnet',
+    defaultModel: 'openrouter/anthropic/claude-3.5-sonnet',
     modelsEndpoint: '/models',
     validation: {
       endpoint: '/auth/key',
@@ -30,6 +30,16 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     },
     curatedModels: [
       {
+        id: 'openrouter/anthropic/claude-3.7-sonnet',
+        name: 'Sonnet 3.7',
+        publisher: 'Anthropic',
+        contextWindow: 200000,
+        maxOutputTokens: 64000,
+        priceTier: 'premium',
+        capabilities: { vision: true, nativePdf: true, audio: false, video: false, tools: true, reasoning: true },
+        description: 'Modèle de référence pour le raisonnement hybride et le code.'
+      },
+      {
         id: 'openrouter/anthropic/claude-3.5-sonnet',
         name: 'Sonnet 3.5',
         publisher: 'Anthropic',
@@ -37,34 +47,54 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
         maxOutputTokens: 8192,
         priceTier: 'standard',
         capabilities: { vision: true, nativePdf: true, audio: false, video: false, tools: true, reasoning: true },
-        description: 'Modèle de référence pour le raisonnement et le code.'
+        description: 'Modèle équilibré et rapide.'
       },
       {
-        id: 'openrouter/openai/gpt-4o',
-        name: 'GPT-4o',
+        id: 'openrouter/openai/gpt-4.5-preview',
+        name: 'GPT-4.5 Preview',
         publisher: 'OpenAI',
         contextWindow: 128000,
-        maxOutputTokens: 4096,
-        priceTier: 'standard',
+        maxOutputTokens: 16384,
+        priceTier: 'premium',
         capabilities: { vision: true, nativePdf: false, audio: false, video: false, tools: true, reasoning: true },
-        description: 'Modèle multimodal équilibré et rapide.'
+        description: 'Nouveau modèle phare multimodal d\'OpenAI.'
       },
       {
-        id: 'openrouter/google/gemini-2.0-flash-001',
-        name: 'Gemini 2.0 Flash',
+        id: 'openrouter/openai/o3-mini',
+        name: 'o3-mini',
+        publisher: 'OpenAI',
+        contextWindow: 200000,
+        maxOutputTokens: 65536,
+        priceTier: 'budget',
+        capabilities: { vision: false, nativePdf: false, audio: false, video: false, tools: true, reasoning: true },
+        description: 'Raisonnement rapide orienté logique et code.'
+      },
+      {
+        id: 'openrouter/google/gemini-2.5-pro',
+        name: 'Gemini 2.5 Pro',
         publisher: 'Google',
-        contextWindow: 1000000,
+        contextWindow: 2000000,
+        maxOutputTokens: 65536,
+        priceTier: 'standard',
+        capabilities: { vision: true, nativePdf: true, audio: true, video: true, tools: true, reasoning: true },
+        description: 'Fenêtre de contexte de 2 millions de jetons.'
+      },
+      {
+        id: 'openrouter/deepseek/deepseek-r1',
+        name: 'DeepSeek-R1',
+        publisher: 'DeepSeek',
+        contextWindow: 64000,
         maxOutputTokens: 8192,
         priceTier: 'budget',
-        capabilities: { vision: true, nativePdf: true, audio: true, video: true, tools: true, reasoning: true },
-        description: 'Grande fenêtre de contexte et rapidité.'
+        capabilities: { vision: false, nativePdf: false, audio: false, video: false, tools: false, reasoning: true },
+        description: 'Modèle de raisonnement ouvert d\'élite.'
       },
       {
         id: 'openrouter/deepseek/deepseek-chat',
         name: 'DeepSeek-V3',
         publisher: 'DeepSeek',
         contextWindow: 64000,
-        maxOutputTokens: 4096,
+        maxOutputTokens: 8192,
         priceTier: 'budget',
         capabilities: { vision: false, nativePdf: false, audio: false, video: false, tools: true, reasoning: false },
         description: 'Excellente efficacité générale et coût minime.'
@@ -74,7 +104,7 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
   {
     id: 'openai',
     name: 'OpenAI',
-    description: 'Modèles GPT-4o, GPT-4o mini, o1 et o3-mini.',
+    description: 'Modèles GPT-4.5 Preview, o3-mini, o1, GPT-4o et GPT-4o mini.',
     baseUrl: 'https://api.openai.com/v1',
     isLocal: false,
     requiresKey: true,
@@ -95,21 +125,12 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     },
     curatedModels: [
       {
-        id: 'openai/gpt-4o',
-        name: 'GPT-4o',
+        id: 'openai/gpt-4.5-preview',
+        name: 'GPT-4.5 Preview',
         publisher: 'OpenAI',
         contextWindow: 128000,
-        maxOutputTokens: 4096,
-        priceTier: 'standard',
-        capabilities: { vision: true, nativePdf: false, audio: false, video: false, tools: true, reasoning: true }
-      },
-      {
-        id: 'openai/gpt-4o-mini',
-        name: 'GPT-4o mini',
-        publisher: 'OpenAI',
-        contextWindow: 128000,
-        maxOutputTokens: 4096,
-        priceTier: 'budget',
+        maxOutputTokens: 16384,
+        priceTier: 'premium',
         capabilities: { vision: true, nativePdf: false, audio: false, video: false, tools: true, reasoning: true }
       },
       {
@@ -120,18 +141,45 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
         maxOutputTokens: 65536,
         priceTier: 'budget',
         capabilities: { vision: false, nativePdf: false, audio: false, video: false, tools: true, reasoning: true }
+      },
+      {
+        id: 'openai/o1',
+        name: 'o1',
+        publisher: 'OpenAI',
+        contextWindow: 200000,
+        maxOutputTokens: 100000,
+        priceTier: 'premium',
+        capabilities: { vision: true, nativePdf: false, audio: false, video: false, tools: true, reasoning: true }
+      },
+      {
+        id: 'openai/gpt-4o',
+        name: 'GPT-4o',
+        publisher: 'OpenAI',
+        contextWindow: 128000,
+        maxOutputTokens: 16384,
+        priceTier: 'standard',
+        capabilities: { vision: true, nativePdf: false, audio: false, video: false, tools: true, reasoning: true }
+      },
+      {
+        id: 'openai/gpt-4o-mini',
+        name: 'GPT-4o mini',
+        publisher: 'OpenAI',
+        contextWindow: 128000,
+        maxOutputTokens: 16384,
+        priceTier: 'budget',
+        capabilities: { vision: true, nativePdf: false, audio: false, video: false, tools: true, reasoning: true }
       }
     ]
   },
   {
     id: 'anthropic',
     name: 'Anthropic',
-    description: 'Modèles Sonnet 3.5, Haiku 3.5 et Opus 3.',
+    description: 'Modèles Sonnet 3.7, Sonnet 3.5 et Haiku 3.5.',
     baseUrl: 'https://api.anthropic.com/v1',
     isLocal: false,
     requiresKey: true,
     docsUrl: 'https://console.anthropic.com/settings/keys',
-    defaultModel: 'claude-3-5-sonnet-20241022',
+    defaultModel: 'claude-3-7-sonnet-latest',
     modelsEndpoint: '/models',
     validation: {
       endpoint: '/models',
@@ -150,7 +198,16 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     },
     curatedModels: [
       {
-        id: 'anthropic/claude-3-5-sonnet-20241022',
+        id: 'anthropic/claude-3-7-sonnet-latest',
+        name: 'Sonnet 3.7',
+        publisher: 'Anthropic',
+        contextWindow: 200000,
+        maxOutputTokens: 64000,
+        priceTier: 'premium',
+        capabilities: { vision: true, nativePdf: true, audio: false, video: false, tools: true, reasoning: true }
+      },
+      {
+        id: 'anthropic/claude-3-5-sonnet-latest',
         name: 'Sonnet 3.5',
         publisher: 'Anthropic',
         contextWindow: 200000,
@@ -159,7 +216,7 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
         capabilities: { vision: true, nativePdf: true, audio: false, video: false, tools: true, reasoning: true }
       },
       {
-        id: 'anthropic/claude-3-5-haiku-20241022',
+        id: 'anthropic/claude-3-5-haiku-latest',
         name: 'Haiku 3.5',
         publisher: 'Anthropic',
         contextWindow: 200000,
@@ -172,12 +229,12 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
   {
     id: 'gemini',
     name: 'Google Gemini',
-    description: 'Modèles Gemini 2.0 Flash, Gemini 1.5 Pro et Flash.',
+    description: 'Modèles Gemini 2.5 Pro, Gemini 2.5 Flash et Gemini 2.0 Flash.',
     baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
     isLocal: false,
     requiresKey: true,
     docsUrl: 'https://aistudio.google.com/app/apikey',
-    defaultModel: 'gemini-2.0-flash',
+    defaultModel: 'gemini-2.5-flash',
     modelsEndpoint: '/models',
     validation: {
       endpoint: '/models',
@@ -193,21 +250,30 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     },
     curatedModels: [
       {
+        id: 'gemini/gemini-2.5-pro',
+        name: 'Gemini 2.5 Pro',
+        publisher: 'Google',
+        contextWindow: 2000000,
+        maxOutputTokens: 65536,
+        priceTier: 'standard',
+        capabilities: { vision: true, nativePdf: true, audio: true, video: true, tools: true, reasoning: true }
+      },
+      {
+        id: 'gemini/gemini-2.5-flash',
+        name: 'Gemini 2.5 Flash',
+        publisher: 'Google',
+        contextWindow: 1000000,
+        maxOutputTokens: 65536,
+        priceTier: 'budget',
+        capabilities: { vision: true, nativePdf: true, audio: true, video: true, tools: true, reasoning: true }
+      },
+      {
         id: 'gemini/gemini-2.0-flash',
         name: 'Gemini 2.0 Flash',
         publisher: 'Google',
         contextWindow: 1000000,
         maxOutputTokens: 8192,
         priceTier: 'budget',
-        capabilities: { vision: true, nativePdf: true, audio: true, video: true, tools: true, reasoning: true }
-      },
-      {
-        id: 'gemini/gemini-1.5-pro',
-        name: 'Gemini 1.5 Pro',
-        publisher: 'Google',
-        contextWindow: 2000000,
-        maxOutputTokens: 8192,
-        priceTier: 'standard',
         capabilities: { vision: true, nativePdf: true, audio: true, video: true, tools: true, reasoning: true }
       }
     ]
@@ -258,7 +324,7 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
   {
     id: 'groq',
     name: 'Groq',
-    description: 'Inférence ultra-rapide sur architecture LPU (Llama 3.3, Mixtral, Qwen).',
+    description: 'Inférence ultra-rapide sur architecture LPU (Llama 3.3, DeepSeek-R1 Distill).',
     baseUrl: 'https://api.groq.com/openai/v1',
     isLocal: false,
     requiresKey: true,
@@ -286,13 +352,31 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
         maxOutputTokens: 8192,
         priceTier: 'budget',
         capabilities: { vision: false, nativePdf: false, audio: false, video: false, tools: true, reasoning: false }
+      },
+      {
+        id: 'groq/deepseek-r1-distill-llama-70b',
+        name: 'DeepSeek-R1 Distill 70B',
+        publisher: 'DeepSeek',
+        contextWindow: 128000,
+        maxOutputTokens: 8192,
+        priceTier: 'budget',
+        capabilities: { vision: false, nativePdf: false, audio: false, video: false, tools: true, reasoning: true }
+      },
+      {
+        id: 'groq/llama-3.1-8b-instant',
+        name: 'Llama 3.1 8B Instant',
+        publisher: 'Meta',
+        contextWindow: 128000,
+        maxOutputTokens: 8192,
+        priceTier: 'budget',
+        capabilities: { vision: false, nativePdf: false, audio: false, video: false, tools: true, reasoning: false }
       }
     ]
   },
   {
     id: 'deepseek',
     name: 'DeepSeek',
-    description: 'Modèles DeepSeek-V3 et DeepSeek-R1 (raisonnement avancé).',
+    description: 'Modèles DeepSeek-V3 et DeepSeek-R1 (raisonnement pur).',
     baseUrl: 'https://api.deepseek.com',
     isLocal: false,
     requiresKey: true,
@@ -317,7 +401,7 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
         name: 'DeepSeek-V3',
         publisher: 'DeepSeek',
         contextWindow: 64000,
-        maxOutputTokens: 4096,
+        maxOutputTokens: 8192,
         priceTier: 'budget',
         capabilities: { vision: false, nativePdf: false, audio: false, video: false, tools: true, reasoning: false }
       },
@@ -328,7 +412,7 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
         contextWindow: 64000,
         maxOutputTokens: 8192,
         priceTier: 'budget',
-        capabilities: { vision: false, nativePdf: false, audio: false, video: false, tools: true, reasoning: true }
+        capabilities: { vision: false, nativePdf: false, audio: false, video: false, tools: false, reasoning: true }
       }
     ]
   },

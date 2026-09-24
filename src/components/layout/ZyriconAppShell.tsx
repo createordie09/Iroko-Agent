@@ -20,13 +20,15 @@ export function ZyriconAppShell() {
     messages,
     setMessages,
     setChatStatus,
+    setHistory,
     isMobileSidebarOpen,
     setIsMobileSidebarOpen,
     isSettingsOpen,
     setIsSettingsOpen,
     setActiveSettingsTab,
     composerMode,
-    setComposerMode
+    setComposerMode,
+    activeModel
   } = useApp();
 
   const mobileDrawerRef = useRef<HTMLDivElement>(null);
@@ -41,14 +43,36 @@ export function ZyriconAppShell() {
   // Régions d'annonces en direct conformes WCAG 4.1.3 & Règle U6
   const { statusAnnouncement, alertAnnouncement } = useLiveAnnouncements();
 
-  const handleHeroSendMessage = (text: string, options?: { mode: 'chat' | 'code'; tools?: string[] }) => {
-    setMessages([{ role: 'user', content: text, timestamp: Date.now() }]);
-    setChatStatus('loading');
+  const handleHeroSendMessage = (text: string, options?: { mode: 'chat' | 'code'; tools?: string[]; attachmentIds?: string[] }) => {
+    const newConvId = crypto.randomUUID();
     const targetMode = options?.mode || composerMode;
     if (options?.mode) {
       setComposerMode(options.mode);
     }
-    agentClient.sendPrompt(text, { mode: targetMode });
+    const firstLine = text.split('\n')[0].replace(/^[#*\- ]+/, '').trim();
+    const topic = firstLine.length > 45 ? firstLine.slice(0, 45) + '…' : (firstLine || 'Nouvelle discussion');
+    const newConvItem = {
+      id: newConvId,
+      topic,
+      result: '',
+      timestamp: Date.now(),
+      mode: targetMode,
+      workspace_id: null
+    };
+    setHistory(prev => [newConvItem, ...prev.filter(h => h.id !== newConvId)]);
+    setMessages([{ role: 'user', content: text, timestamp: Date.now() }]);
+    setChatStatus('loading');
+    let preferredProviderId: string | undefined = undefined;
+    if (activeModel && activeModel.includes('/')) {
+      preferredProviderId = activeModel.split('/')[0];
+    }
+    agentClient.sendPrompt(text, {
+      conversationId: newConvId,
+      mode: targetMode,
+      modelId: activeModel,
+      preferredProviderId,
+      attachmentIds: options?.attachmentIds
+    });
     setActiveView('chat');
   };
 
@@ -127,7 +151,7 @@ export function ZyriconAppShell() {
         <ClaudeTopbar />
 
         <main id="main-content" tabIndex={-1} className="flex-1 min-h-0 flex flex-col overflow-hidden relative outline-none">
-          {activeView === 'home' && messages.length === 0 ? (
+          {activeView === 'home' ? (
             <ClaudeHero onSendMessage={handleHeroSendMessage} />
           ) : (
             <Suspense fallback={<div className="flex-1 bg-[var(--bg-app)]" />}>
