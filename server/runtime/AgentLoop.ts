@@ -20,6 +20,7 @@ import { attachmentManager } from '../attachments/AttachmentManager';
 import { AttachmentReader } from '../attachments/AttachmentReader';
 import { getModelCapabilities } from '../models/types';
 import { searchTracker } from '../search/SearchTracker';
+import { SearchResultItem, MessageSource } from '../search/types';
 
 export interface AgentLoopOptions {
   maxIterations?: number;
@@ -53,7 +54,7 @@ export class AgentLoop {
     context: ToolContext,
     planner: Planner,
     options: AgentLoopOptions = {}
-  ): Promise<{ success: boolean; summary: string; filesChanged: string[] }> {
+  ): Promise<{ success: boolean; summary: string; filesChanged: string[]; sources?: MessageSource[] }> {
     const maxTours = options.maxIterations || this.maxIterations;
     const MAX_EXECUTION_MS = 5 * 60 * 1000; // 5 minutes max de temps effectif
     const MAX_MESSAGES = 40; // seuil de compression du contexte
@@ -267,6 +268,7 @@ export class AgentLoop {
     let finalAssistantText = '';
     let accumulatedThinking = '';
     let loopError: Error | null = null;
+    const collectedSearchResults: SearchResultItem[] = [];
 
     context.emitEvent({
       type: 'status',
@@ -499,13 +501,22 @@ export class AgentLoop {
             }
           }
 
+          const toolExecMessage = tc.name === 'web_search' && (tc.arguments as any)?.query
+            ? `Recherche\u00A0: ${(tc.arguments as any).query}`
+            : `Exécution de l'outil "${tc.name}"...`;
+
           context.emitEvent({
             type: 'status',
             status: 'executing_tool',
-            message: `Exécution de l'outil "${tc.name}"...`
+            message: toolExecMessage
           });
 
           const result = await toolRegistry.executeTool(tc.name, tc.arguments, context, tc.id);
+
+          // Mission N4 : Collecte des résultats de web_search
+          if (tc.name === 'web_search' && result.success && result.data && Array.isArray((result.data as any).results)) {
+            collectedSearchResults.push(...(result.data as any).results);
+          }
 
           // Détection d'outil qui échoue en boucle : 3 échecs identiques consécutifs
           if (!result.success) {
@@ -705,12 +716,14 @@ export class AgentLoop {
     }
 
     const finalSummary = (finalAssistantText || 'Tâche terminée.') + verificationNote;
+    const usedSources = this.extractUsedSources(finalSummary, collectedSearchResults);
 
     context.emitEvent({
       type: 'completed',
       summary: finalSummary,
       filesChanged: changedArray,
-      thinking: accumulatedThinking || undefined
+      thinking: accumulatedThinking || undefined,
+      sources: usedSources.length > 0 ? usedSources : undefined
     });
 
     context.emitEvent({
@@ -722,7 +735,8 @@ export class AgentLoop {
     return {
       success: true,
       summary: finalSummary,
-      filesChanged: changedArray
+      filesChanged: changedArray,
+      sources: usedSources.length > 0 ? usedSources : undefined
     };
   }
 
@@ -771,5 +785,56 @@ export class AgentLoop {
     }
 
     return newMessages;
+  }
+
+  /**
+   * Identifie les sources de recherche effectivement citées ou référencées dans la réponse finale.
+   * Mission N4 : Seules les sources réellement utilisées par le modèle sont conservées.
+   */
+  public extractUsedSources(text: string, results: SearchResultItem[]): MessageSource[] {
+    if (!text || !results || results.length === 0) return [];
+    const used: MessageSource[] = [];
+    const seenUrls = new Set<string>();
+
+    for (const item of results) {
+      if (!item.url || seenUrls.has(item.url)) continue;
+
+      let domain = '';
+      try {
+        domain = new URL(item.url).hostname.replace(/^www\./, '');
+      } catch {
+        domain = item.url;
+      }
+
+      const baseItemUrl = item.url.replace(/\/$/, '');
+
+      // 1. Inclusion textuelle directe (URL brute ou sans slash final)
+      const isDirectMatch = text.includes(item.url) || text.includes(baseItemUrl);
+
+      // 2. Recherche parmi les URLs extraites du texte
+      let isUrlMatch = isDirectMatch;
+      if (!isUrlMatch) {
+        const urlRegex = /https?:\/\/[^\s)\]>"'’`]+/gi;
+        const urlsInText = text.match(urlRegex) || [];
+        for (const rawUrl of urlsInText) {
+          const cleanRaw = rawUrl.replace(/\/$/, '');
+          if (cleanRaw === baseItemUrl || cleanRaw.startsWith(baseItemUrl) || baseItemUrl.startsWith(cleanRaw)) {
+            isUrlMatch = true;
+            break;
+          }
+        }
+      }
+
+      if (isUrlMatch) {
+        seenUrls.add(item.url);
+        used.push({
+          url: item.url,
+          title: item.title || domain,
+          domain
+        });
+      }
+    }
+
+    return used;
   }
 }

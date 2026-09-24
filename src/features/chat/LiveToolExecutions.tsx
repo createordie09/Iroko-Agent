@@ -21,12 +21,23 @@ export function LiveToolExecutions({ executions }: LiveToolExecutionsProps) {
       {executions.map(te => (
         <div key={te.callId} className="flex items-center gap-2 text-[12px] text-[var(--text-secondary)]">
           <Terminal className="w-3 h-3 shrink-0" />
-          <span className="font-mono text-[var(--text-primary)]">{te.tool}</span>
-          {te.input?.path && (
-            <span className="font-mono text-[var(--text-secondary)] truncate max-w-xs">{te.input.path}</span>
-          )}
-          {te.input?.command && (
-            <span className="font-mono text-[var(--text-secondary)] truncate max-w-xs">{te.input.command}</span>
+          {te.tool === 'web_search' ? (
+            <>
+              <span className="font-mono text-[var(--text-primary)]">Recherche{'\u00A0'}:</span>
+              {te.input?.query && (
+                <span className="font-mono text-[var(--text-secondary)] truncate max-w-xs">{te.input.query}</span>
+              )}
+            </>
+          ) : (
+            <>
+              <span className="font-mono text-[var(--text-primary)]">{te.tool}</span>
+              {te.input?.path && (
+                <span className="font-mono text-[var(--text-secondary)] truncate max-w-xs">{te.input.path}</span>
+              )}
+              {te.input?.command && (
+                <span className="font-mono text-[var(--text-secondary)] truncate max-w-xs">{te.input.command}</span>
+              )}
+            </>
           )}
           <span className="text-[11px]">
             {te.success === true ? '✓' : te.success === false ? '✗' : '…'}

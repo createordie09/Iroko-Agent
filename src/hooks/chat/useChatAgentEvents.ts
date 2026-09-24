@@ -183,7 +183,7 @@ export function useChatAgentEvents({
     return turnArtifacts;
   };
 
-  const commitAssistantMessage = (content: string, turnThinking?: string) => {
+  const commitAssistantMessage = (content: string, turnThinking?: string, turnSources?: any[]) => {
     const turnArtifacts = extractTurnArtifacts();
     setMessages(prev => [
       ...prev,
@@ -205,6 +205,7 @@ export function useChatAgentEvents({
               metadata: a.metadata
             }))
           } : {}),
+          ...(turnSources && turnSources.length > 0 ? { sources: turnSources } : {}),
           ...(turnThinking ? { thinking: turnThinking } : {})
         }
       }
@@ -354,8 +355,9 @@ export function useChatAgentEvents({
         case 'completed': {
           const finishedContent = flushStreamImmediately();
           const turnThinking = ((event as any).thinking !== undefined && (event as any).thinking) ? (event as any).thinking : currentThinkingRef.current;
+          const turnSources = (event as any).sources;
           if (finishedContent) {
-            commitAssistantMessage(finishedContent, turnThinking);
+            commitAssistantMessage(finishedContent, turnThinking, turnSources);
           }
           setChatStatus('success');
           if (notificationsEnabled) {

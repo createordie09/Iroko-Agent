@@ -6,6 +6,12 @@ export interface SearchResultItem {
   source: string;
 }
 
+export interface MessageSource {
+  url: string;
+  title: string;
+  domain: string;
+}
+
 export interface SearchQueryOptions {
   count?: number;
 }

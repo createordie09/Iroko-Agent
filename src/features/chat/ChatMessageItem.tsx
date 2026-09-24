@@ -6,6 +6,7 @@ import {
 import { AttachmentPublicInfo } from '../../services/attachments/AttachmentService';
 import { FormattedMessage } from './FormattedMessage';
 import { ArtifactCard } from './ArtifactCard';
+import { MessageSources } from './MessageSources';
 
 export interface ChatMessageItemProps {
   key?: any;
@@ -191,6 +192,11 @@ export function ChatMessageItem({
           >
             <FormattedMessage content={msg.content} />
           </div>
+
+          {/* Sources de recherche citées (Mission N4) [À VALIDER] */}
+          {msg.metadata?.sources && msg.metadata.sources.length > 0 && (
+            <MessageSources sources={msg.metadata.sources} />
+          )}
 
           {/* Artéfacts générés dans cette réponse */}
           {msg.metadata?.artifacts && msg.metadata.artifacts.length > 0 && (

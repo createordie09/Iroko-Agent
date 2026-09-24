@@ -2493,14 +2493,19 @@ wss.on('connection', (ws: WebSocket) => {
           });
         }
 
-        // Persistance du message assistant à la complétion (§21, §29)
+        // Persistance du message assistant à la complétion (§21, §29, Mission N4)
         if (event.type === 'completed' && activeConvId && event.summary) {
+          const metadata: Record<string, any> = {};
+          if (event.sources && Array.isArray(event.sources) && event.sources.length > 0) {
+            metadata.sources = event.sources;
+          }
           runtimeDatabase.addMessage({
             id: crypto.randomUUID(),
             conversationId: activeConvId,
             role: 'assistant',
             content: event.summary,
-            thinkingLogs: event.thinking ? [event.thinking] : undefined
+            thinkingLogs: event.thinking ? [event.thinking] : undefined,
+            metadata: Object.keys(metadata).length > 0 ? metadata : undefined
           });
         }
       } catch {}

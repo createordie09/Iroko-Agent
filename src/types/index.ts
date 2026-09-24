@@ -8,6 +8,12 @@ export type HistoryItem = {
   pinned?: boolean;
 };
 
+export interface MessageSource {
+  url: string;
+  title: string;
+  domain: string;
+}
+
 export type Message = {
   id?: string;
   role: 'user' | 'assistant' | 'system';
@@ -16,6 +22,7 @@ export type Message = {
   thinking?: string;
   metadata?: {
     thinking?: string;
+    sources?: MessageSource[];
     attachmentIds?: string[];
     attachments?: Array<{
       id: string;
