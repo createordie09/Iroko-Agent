@@ -1,13 +1,39 @@
 import { useState, useEffect } from 'react';
 import { tokenService } from '../../services/security/TokenService';
 
+export interface SkillScanSummary {
+  scripts: string[];
+  networkCalls: string[];
+  commandExecutions: string[];
+  urls: string[];
+  pathTraversals: string[];
+  hasSuspiciousActivity: boolean;
+}
+
+export interface SkillItem {
+  name: string;
+  description: string;
+  dirPath: string;
+  instructions: string;
+  enabled: boolean;
+  isSystem: boolean;
+  metadata?: Record<string, any>;
+  warnings?: string[];
+  scanReport?: SkillScanSummary;
+}
+
 export function useSkillsSettings() {
-  const [skillsList, setSkillsList] = useState<any[]>([]);
+  const [skillsList, setSkillsList] = useState<SkillItem[]>([]);
   const [showImportSkillForm, setShowImportSkillForm] = useState(false);
   const [importSkillPath, setImportSkillPath] = useState('');
   const [skillError, setSkillError] = useState<string | null>(null);
-  const [editingSkill, setEditingSkill] = useState<any | null>(null);
+  const [editingSkill, setEditingSkill] = useState<SkillItem | null>(null);
   const [editSkillInstructions, setEditSkillInstructions] = useState('');
+  const [importResult, setImportResult] = useState<{
+    skill: SkillItem;
+    scanReport?: SkillScanSummary;
+    warnings?: string[];
+  } | null>(null);
 
   const fetchSkillsData = async () => {
     try {
@@ -49,10 +75,20 @@ export function useSkillsSettings() {
 
       setShowImportSkillForm(false);
       setImportSkillPath('');
+      setImportResult({
+        skill: data.skill,
+        scanReport: data.scanReport,
+        warnings: data.warnings
+      });
       fetchSkillsData();
     } catch (err: any) {
       setSkillError(err.message || 'Erreur réseau.');
     }
+  };
+
+  const handleConfirmActivation = async (name: string) => {
+    await handleToggleSkill(name, false);
+    setImportResult(null);
   };
 
   const handleSaveSkillEdit = async () => {
@@ -93,6 +129,9 @@ export function useSkillsSettings() {
     handleToggleSkill,
     handleImportSkill,
     handleSaveSkillEdit,
-    handleDeleteSkill
+    handleDeleteSkill,
+    importResult,
+    setImportResult,
+    handleConfirmActivation
   };
 }

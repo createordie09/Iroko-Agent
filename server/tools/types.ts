@@ -14,7 +14,8 @@ export type ToolCategory =
   | 'subagent'
   | 'attachments'
   | 'artifacts'
-  | 'media';
+  | 'media'
+  | 'skills';
 
 export interface ToolContext {
   workspacePath: string;

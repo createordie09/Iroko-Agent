@@ -639,6 +639,21 @@ export class RuntimeDatabase {
         INSERT INTO schema_migrations (version, applied_at) VALUES (13, '${new Date().toISOString()}');
       `);
     }
+
+    if (currentVersion < 14) {
+      // Mission N1 : Compétences Niveau 3 (is_system, metadata_json)
+      const skillsTableInfo = this.db.prepare("PRAGMA table_info(skills)").all() as Array<{ name: string }>;
+      const hasIsSystem = skillsTableInfo.some(c => c.name === 'is_system');
+      const hasMetadata = skillsTableInfo.some(c => c.name === 'metadata_json');
+      if (!hasIsSystem) {
+        this.db.exec("ALTER TABLE skills ADD COLUMN is_system INTEGER NOT NULL DEFAULT 0;");
+      }
+      if (!hasMetadata) {
+        this.db.exec("ALTER TABLE skills ADD COLUMN metadata_json TEXT;");
+      }
+
+      this.db.exec(`INSERT INTO schema_migrations (version, applied_at) VALUES (14, '${new Date().toISOString()}');`);
+    }
   }
 
   // --- Conversations ---
@@ -2076,13 +2091,15 @@ export class RuntimeDatabase {
     return Number(res.changes) > 0;
   }
 
-  // --- Compétences / Skills (Cahier §13, §15, Mission L14) ---
+  // --- Compétences / Skills (Cahier §13, §15, Mission L14, N1) ---
   public listSkills(): any[] {
     const rows = this.db.prepare('SELECT * FROM skills ORDER BY name ASC').all() as any[];
     return rows.map(r => ({
       ...r,
       dirPath: r.dir_path,
-      enabled: Boolean(r.enabled)
+      enabled: Boolean(r.enabled),
+      isSystem: Boolean(r.is_system),
+      metadata: r.metadata_json ? (() => { try { return JSON.parse(r.metadata_json); } catch { return {}; } })() : {}
     }));
   }
 
@@ -2092,7 +2109,9 @@ export class RuntimeDatabase {
     return {
       ...row,
       dirPath: row.dir_path,
-      enabled: Boolean(row.enabled)
+      enabled: Boolean(row.enabled),
+      isSystem: Boolean(row.is_system),
+      metadata: row.metadata_json ? (() => { try { return JSON.parse(row.metadata_json); } catch { return {}; } })() : {}
     };
   }
 
@@ -2104,29 +2123,41 @@ export class RuntimeDatabase {
     dir_path?: string;
     instructions: string;
     enabled?: boolean;
+    isSystem?: boolean;
+    is_system?: boolean | number;
+    metadata?: Record<string, any>;
+    metadata_json?: string;
   }): any {
     const now = new Date().toISOString();
     const id = skill.id || crypto.randomUUID();
     const existing = this.getSkill(skill.name);
     const resolvedDirPath = skill.dirPath || skill.dir_path || existing?.dirPath || '';
+    const isSys = skill.isSystem !== undefined
+      ? (skill.isSystem ? 1 : 0)
+      : (skill.is_system !== undefined ? (skill.is_system ? 1 : 0) : (existing?.isSystem ? 1 : 0));
+    const metaJson = skill.metadata_json !== undefined
+      ? skill.metadata_json
+      : (skill.metadata !== undefined ? JSON.stringify(skill.metadata) : (existing?.metadata ? JSON.stringify(existing.metadata) : null));
 
     if (existing) {
       this.db.prepare(`
         UPDATE skills
-        SET description = ?, dir_path = ?, instructions = ?, enabled = ?, updated_at = ?
+        SET description = ?, dir_path = ?, instructions = ?, enabled = ?, is_system = ?, metadata_json = ?, updated_at = ?
         WHERE name = ?
       `).run(
         skill.description !== undefined ? skill.description : existing.description,
         resolvedDirPath,
         skill.instructions !== undefined ? skill.instructions : existing.instructions,
         skill.enabled !== undefined ? (skill.enabled ? 1 : 0) : (existing.enabled ? 1 : 0),
+        isSys,
+        metaJson,
         now,
         skill.name
       );
     } else {
       this.db.prepare(`
-        INSERT INTO skills (id, name, description, dir_path, instructions, enabled, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO skills (id, name, description, dir_path, instructions, enabled, is_system, metadata_json, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
         id,
         skill.name,
@@ -2134,6 +2165,8 @@ export class RuntimeDatabase {
         resolvedDirPath,
         skill.instructions,
         skill.enabled !== false ? 1 : 0,
+        isSys,
+        metaJson,
         now,
         now
       );

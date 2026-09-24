@@ -1,10 +1,11 @@
 // server/skills/SkillManager.ts
-// Cahier §13, §15 : Gestionnaire de Compétences (Skills) & Chargement à la Demande
+// Cahier §13, §15, Mission N1 : Gestionnaire de Compétences (Skills) Niveau 3
 
 import path from 'path';
 import fs from 'fs';
 import os from 'os';
 import { runtimeDatabase } from '../storage/RuntimeDatabase';
+import { SkillScanner, SkillSecurityScan, SkillParseResult } from './SkillScanner';
 
 export interface SkillInfo {
   id?: string;
@@ -13,6 +14,10 @@ export interface SkillInfo {
   dirPath: string;
   instructions: string;
   enabled: boolean;
+  isSystem: boolean;
+  metadata?: Record<string, any>;
+  warnings?: string[];
+  scanReport?: SkillSecurityScan;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -36,6 +41,10 @@ export class SkillManager {
     }
   }
 
+  public getSkillsDir(): string {
+    return this.skillsDir;
+  }
+
   /**
    * Initialise le catalogue de compétences depuis la base de données
    * et découvre les compétences du workspace (.agents/skills)
@@ -44,7 +53,38 @@ export class SkillManager {
     if (this.initialized) return;
     this.initialized = true;
 
-    // Découverte des compétences dans le workspace (.agents/skills)
+    // 1. Découverte des compétences système (dans skills/system/ si existant)
+    const systemSkillsDir = path.join(this.skillsDir, 'system');
+    if (fs.existsSync(systemSkillsDir)) {
+      try {
+        const entries = fs.readdirSync(systemSkillsDir, { withFileTypes: true });
+        for (const entry of entries) {
+          if (entry.isDirectory()) {
+            const skillPath = path.join(systemSkillsDir, entry.name);
+            const skillMd = path.join(skillPath, 'SKILL.md');
+            if (fs.existsSync(skillMd)) {
+              try {
+                const parsed = SkillScanner.parseSkillMd(skillMd, skillPath);
+                const existing = runtimeDatabase.getSkill(parsed.name);
+                if (!existing) {
+                  runtimeDatabase.saveSkill({
+                    name: parsed.name,
+                    description: parsed.description,
+                    dirPath: skillPath,
+                    instructions: parsed.instructions,
+                    enabled: true,
+                    isSystem: true,
+                    metadata: parsed.metadata
+                  });
+                }
+              } catch {}
+            }
+          }
+        }
+      } catch {}
+    }
+
+    // 2. Découverte des compétences dans le workspace (.agents/skills)
     const workspaceSkillsDir = path.join(workspacePath, '.agents', 'skills');
     if (fs.existsSync(workspaceSkillsDir)) {
       try {
@@ -55,8 +95,7 @@ export class SkillManager {
             const skillMd = path.join(skillPath, 'SKILL.md');
             if (fs.existsSync(skillMd)) {
               try {
-                const parsed = this.parseSkillFile(skillMd, skillPath);
-                // Si la compétence n'est pas encore enregistrée en base, la persister
+                const parsed = SkillScanner.parseSkillMd(skillMd, skillPath);
                 const existing = runtimeDatabase.getSkill(parsed.name);
                 if (!existing) {
                   runtimeDatabase.saveSkill({
@@ -64,7 +103,9 @@ export class SkillManager {
                     description: parsed.description,
                     dirPath: skillPath,
                     instructions: parsed.instructions,
-                    enabled: true
+                    enabled: true,
+                    isSystem: false,
+                    metadata: parsed.metadata
                   });
                 }
               } catch {}
@@ -76,36 +117,17 @@ export class SkillManager {
   }
 
   /**
-   * Parse un fichier SKILL.md avec frontmatter YAML basique et corps Markdown
+   * Parse un fichier SKILL.md avec validation frontmatter (agentskills.io)
    */
-  public parseSkillFile(filePath: string, dirPath: string): { name: string; description: string; instructions: string } {
-    const content = fs.readFileSync(filePath, 'utf-8');
-    let name = path.basename(dirPath);
-    let description = '';
-    let instructions = content;
+  public parseSkillFile(filePath: string, dirPath: string): SkillParseResult {
+    return SkillScanner.parseSkillMd(filePath, dirPath);
+  }
 
-    // Analyse du frontmatter YAML entre deux '---'
-    const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n([\s\S]*)$/);
-    if (match) {
-      const frontmatter = match[1];
-      instructions = match[2].trim();
-
-      const nameMatch = frontmatter.match(/^name:\s*([^\r\n]+)/m);
-      if (nameMatch) {
-        name = nameMatch[1].trim().replace(/^['"]|['"]$/g, '');
-      }
-
-      const descMatch = frontmatter.match(/^description:\s*([^\r\n]+(?:\r?\n\s+[^\r\n]+)*)/m);
-      if (descMatch) {
-        description = descMatch[1].replace(/\r?\n\s+/g, ' ').trim().replace(/^['"]|['"]$/g, '');
-      }
-    }
-
-    return {
-      name,
-      description: description || `Compétence ${name}`,
-      instructions
-    };
+  /**
+   * Scanne la sécurité d'un dossier de compétence
+   */
+  public scanSkillDirectory(dirPath: string): SkillSecurityScan {
+    return SkillScanner.scanDirectory(dirPath);
   }
 
   /**
@@ -116,10 +138,15 @@ export class SkillManager {
   }
 
   /**
-   * Récupère une compétence par son nom
+   * Récupère une compétence par son nom ou son id
    */
-  public getSkill(name: string): SkillInfo | null {
-    return runtimeDatabase.getSkill(name);
+  public getSkill(nameOrId: string): SkillInfo | null {
+    if (!nameOrId) return null;
+    const direct = runtimeDatabase.getSkill(nameOrId);
+    if (direct) return direct;
+
+    const all = this.listSkills();
+    return all.find(s => s.id === nameOrId || s.name.toLowerCase() === nameOrId.toLowerCase()) || null;
   }
 
   /**
@@ -131,8 +158,15 @@ export class SkillManager {
 
   /**
    * Importe une compétence depuis un dossier contenant un fichier SKILL.md
+   * Règles Mission N1 :
+   * - Validation stricte du frontmatter (agentskills.io).
+   * - Scan de sécurité avant activation.
+   * - Désactivée par défaut pour les compétences non-système (enabled: false).
    */
-  public async importSkillFromDirectory(dirPath: string): Promise<SkillInfo> {
+  public async importSkillFromDirectory(
+    dirPath: string,
+    options?: { isSystem?: boolean; autoEnable?: boolean }
+  ): Promise<SkillInfo & { scanReport?: SkillSecurityScan; warnings: string[] }> {
     const resolvedPath = path.resolve(dirPath);
     const skillMd = path.join(resolvedPath, 'SKILL.md');
 
@@ -140,17 +174,33 @@ export class SkillManager {
       throw new Error(`Le dossier spécifié ne contient aucun fichier SKILL.md (${dirPath})`);
     }
 
-    const parsed = this.parseSkillFile(skillMd, resolvedPath);
+    // 1. Analyse et validation stricte du frontmatter
+    const parsed = SkillScanner.parseSkillMd(skillMd, resolvedPath);
+
+    // 2. Scan de sécurité
+    const isSystem = Boolean(options?.isSystem);
+    const scanReport = SkillScanner.scanDirectory(resolvedPath);
+
+    // 3. Statut d'activation par défaut : désactivé pour compétence importée
+    const shouldEnable = options?.autoEnable !== undefined
+      ? Boolean(options.autoEnable)
+      : (options === undefined ? true : Boolean(options.isSystem));
 
     const saved = runtimeDatabase.saveSkill({
       name: parsed.name,
       description: parsed.description,
       dirPath: resolvedPath,
       instructions: parsed.instructions,
-      enabled: true
+      enabled: shouldEnable,
+      isSystem,
+      metadata: parsed.metadata
     });
 
-    return saved;
+    return {
+      ...saved,
+      scanReport,
+      warnings: parsed.warnings
+    };
   }
 
   /**
@@ -177,7 +227,116 @@ export class SkillManager {
   }
 
   /**
-   * Génère le catalogue descriptif pour le prompt système (§13).
+   * Vérifie si un fichier de référence est explicitement cité par son nom
+   * dans le corps de SKILL.md d'une compétence active (Niveau 3).
+   */
+  public isReferenceCited(skillNameOrPath: string, referenceFileName: string): boolean {
+    const skill = this.getSkill(skillNameOrPath) || this.listSkills().find(s => s.dirPath === skillNameOrPath);
+    if (!skill || !skill.instructions) return false;
+
+    const baseName = path.basename(referenceFileName);
+    const relRefName = `references/${baseName}`;
+    const backslashRefName = `references\\${baseName}`;
+
+    return (
+      skill.instructions.includes(baseName) ||
+      skill.instructions.includes(relRefName) ||
+      skill.instructions.includes(backslashRefName)
+    );
+  }
+
+  /**
+   * Détecte si un chemin pointe vers un fichier de référence d'une compétence
+   * et retourne le statut d'autorisation de lecture.
+   */
+  public checkReferenceAccess(targetFilePath: string): {
+    isSkillReference: boolean;
+    allowed: boolean;
+    skillName?: string;
+    resolvedPath?: string;
+    reason?: string;
+  } {
+    if (!targetFilePath || typeof targetFilePath !== 'string') {
+      return { isSkillReference: false, allowed: true };
+    }
+
+    const normPath = targetFilePath.replace(/\\/g, '/').replace(/\/+$/, '');
+
+    // 1. Tentative de lecture du dossier references/ complet
+    const dirMatch = normPath.match(/(?:^|\/)(?:\.agents\/skills\/|skills\/)([^/]+)\/references$/i);
+    if (dirMatch) {
+      return {
+        isSkillReference: true,
+        allowed: false,
+        skillName: dirMatch[1],
+        reason: 'Lecture du dossier references/ interdite. Seul un fichier de référence spécifique cité dans SKILL.md peut être lu.'
+      };
+    }
+
+    // 2. Détection via pattern de chemin relatif ou absolu
+    let skillName: string | undefined;
+    let refFileName: string | undefined;
+
+    const relMatch = normPath.match(/(?:^|\/)(?:\.agents\/skills\/|skills\/)([^/]+)\/references\/([^/]+)$/i);
+    if (relMatch) {
+      skillName = relMatch[1];
+      refFileName = relMatch[2];
+    } else {
+      // Vérification par rapport aux dirPath de compétences enregistrées
+      const resolvedTarget = path.resolve(targetFilePath).toLowerCase();
+      for (const s of this.listSkills()) {
+        const skillRefsDir = path.resolve(s.dirPath, 'references').toLowerCase();
+        if (resolvedTarget === skillRefsDir) {
+          return {
+            isSkillReference: true,
+            allowed: false,
+            skillName: s.name,
+            reason: 'Lecture du dossier references/ interdite. Seul un fichier de référence spécifique cité dans SKILL.md peut être lu.'
+          };
+        }
+        if (resolvedTarget.startsWith(skillRefsDir + path.sep)) {
+          skillName = s.name;
+          refFileName = path.basename(targetFilePath);
+          break;
+        }
+      }
+    }
+
+    if (!skillName || !refFileName) {
+      return { isSkillReference: false, allowed: true };
+    }
+
+    const skill = this.getSkill(skillName);
+    if (!skill) {
+      return {
+        isSkillReference: true,
+        allowed: false,
+        skillName,
+        reason: `Compétence introuvable ou inactive\u00A0: ${skillName}`
+      };
+    }
+
+    const cited = this.isReferenceCited(skill.name, refFileName);
+    if (!cited) {
+      return {
+        isSkillReference: true,
+        allowed: false,
+        skillName: skill.name,
+        reason: `La référence "${refFileName}" n'est pas citée dans le corps de SKILL.md de la compétence "${skill.name}". Aucune lecture automatique de tout le dossier.`
+      };
+    }
+
+    const resolvedPath = path.join(skill.dirPath, 'references', refFileName);
+    return {
+      isSkillReference: true,
+      allowed: true,
+      skillName: skill.name,
+      resolvedPath
+    };
+  }
+
+  /**
+   * Génère le catalogue descriptif pour le prompt système (§13 - Niveau 1).
    * RÈGLE STRICTE : Seule la description courte est incluse dans le catalogue.
    */
   public getSkillsCatalogForPrompt(): string {
@@ -189,10 +348,10 @@ export class SkillManager {
   }
 
   /**
-   * Chargement à la demande (§13) :
+   * Chargement à la demande (§13 - Niveau 2) :
    * Renvoie les instructions complètes UNIQUEMENT si la requête de l'utilisateur
    * mentionne expressément ou concerne la compétence.
-   * Les scripts de la compétence ne sont JAMAIS exécutés automatiquement.
+   * RÈGLE NIVEAU 3 : Les dossiers references/, scripts/ et assets/ ne sont JAMAIS chargés automatiquement ici.
    */
   public getRelevantSkillInstructions(userPrompt: string): string | null {
     if (!userPrompt || typeof userPrompt !== 'string') return null;

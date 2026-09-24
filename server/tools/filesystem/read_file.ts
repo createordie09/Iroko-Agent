@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { IrokoTool, ToolContext, ToolResult } from '../types';
 import { PathSanitizer } from '../../security/PathSanitizer';
+import { skillManager } from '../../skills/SkillManager';
 
 export interface ReadFileInput {
   filePath: string;
@@ -35,12 +36,44 @@ export class ReadFileTool implements IrokoTool<ReadFileInput> {
   };
 
   public async execute(input: ReadFileInput, context: ToolContext): Promise<ToolResult> {
-    const validation = PathSanitizer.validatePath(input.filePath, context.workspacePath);
-    if (!validation.valid || !validation.canonicalPath) {
-      return { success: false, error: validation.error || 'Chemin invalide.' };
-    }
+    let fullPath: string;
 
-    const fullPath = validation.canonicalPath;
+    // Vérification des références de compétences (Cahier §13, §15, Niveau 3)
+    const refCheck = skillManager.checkReferenceAccess(input.filePath);
+    if (refCheck.isSkillReference) {
+      if (!refCheck.allowed) {
+        return {
+          success: false,
+          error: refCheck.reason || `Accès refusé au fichier de référence "${input.filePath}".`
+        };
+      }
+      fullPath = refCheck.resolvedPath || path.resolve(context.workspacePath, input.filePath);
+    } else {
+      const validation = PathSanitizer.validatePath(input.filePath, context.workspacePath);
+      if (!validation.valid || !validation.canonicalPath) {
+        return { success: false, error: validation.error || 'Chemin invalide.' };
+      }
+
+      fullPath = validation.canonicalPath;
+
+      // 2. Traitement des fichiers sensibles (.env, clés privées, certificats)
+      if (validation.isSensitive) {
+        const approved = await context.permissionEngine.requestPermission(
+          this.name,
+          'HIGH',
+          `Lecture d'un fichier sensible contenant potentiellement des secrets : "${input.filePath}"`,
+          { path: input.filePath, isSensitive: true },
+          (req) => context.emitEvent({ type: 'permission_required', request: req })
+        );
+
+        if (!approved) {
+          return {
+            success: false,
+            error: `Action non autorisée : la lecture du fichier sensible "${input.filePath}" a été refusée par l'utilisateur.`
+          };
+        }
+      }
+    }
 
     if (!fs.existsSync(fullPath)) {
       return { success: false, error: `Fichier introuvable : ${input.filePath}` };
@@ -52,24 +85,6 @@ export class ReadFileTool implements IrokoTool<ReadFileInput> {
         success: false,
         error: `Le fichier "${input.filePath}" est un fichier binaire et ne peut être lu comme du texte.`
       };
-    }
-
-    // 2. Traitement des fichiers sensibles (.env, clés privées, certificats)
-    if (validation.isSensitive) {
-      const approved = await context.permissionEngine.requestPermission(
-        this.name,
-        'HIGH',
-        `Lecture d'un fichier sensible contenant potentiellement des secrets : "${input.filePath}"`,
-        { path: input.filePath, isSensitive: true },
-        (req) => context.emitEvent({ type: 'permission_required', request: req })
-      );
-
-      if (!approved) {
-        return {
-          success: false,
-          error: `Action non autorisée : la lecture du fichier sensible "${input.filePath}" a été refusée par l'utilisateur.`
-        };
-      }
     }
 
     try {

@@ -18,7 +18,10 @@ export function SkillsPage() {
     handleToggleSkill,
     handleImportSkill,
     handleSaveSkillEdit,
-    handleDeleteSkill
+    handleDeleteSkill,
+    importResult,
+    setImportResult,
+    handleConfirmActivation
   } = useSkillsSettings();
 
   return (
@@ -80,12 +83,65 @@ export function SkillsPage() {
         </div>
       )}
 
+      {/* Rapport et confirmation de sécurité après import */}
+      {importResult && (
+        <div className="p-3 bg-[var(--bg-app)] border border-[var(--border-modal)] rounded-[8px] space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="text-[13px] font-medium text-[var(--text-primary)]">
+              Rapport de sécurité{'\u00A0'}: {importResult.skill.name}
+            </div>
+            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[var(--bg-surface)] text-[var(--text-secondary)] border border-[var(--border-modal)]">
+              {importResult.skill.isSystem ? 'Système' : 'Importée'}
+            </span>
+          </div>
+          <p className="text-[12px] text-[var(--text-secondary)] leading-normal">
+            La compétence a été importée avec succès. Conformément aux règles de sécurité, elle reste désactivée par défaut tant que vous ne confirmez pas son activation.
+          </p>
+
+          {importResult.scanReport && (
+            <div className="p-2.5 bg-[var(--bg-surface)] rounded-[6px] border border-[var(--border-subtle)] space-y-1 text-[11px] font-mono text-[var(--text-secondary)]">
+              <div>Scripts détectés{'\u00A0'}: {importResult.scanReport.scripts.length}</div>
+              <div>Appels réseau{'\u00A0'}: {importResult.scanReport.networkCalls.length === 0 ? 'Aucun' : importResult.scanReport.networkCalls.join(', ')}</div>
+              <div>Exécutions de commandes{'\u00A0'}: {importResult.scanReport.commandExecutions.length === 0 ? 'Aucune' : importResult.scanReport.commandExecutions.join(', ')}</div>
+              <div>URLs distantes{'\u00A0'}: {importResult.scanReport.urls.length === 0 ? 'Aucune' : `${importResult.scanReport.urls.length} URL(s)`}</div>
+              <div>Traversées de chemin{'\u00A0'}: {importResult.scanReport.pathTraversals.length === 0 ? 'Aucune' : 'Détectées'}</div>
+            </div>
+          )}
+
+          {importResult.warnings && importResult.warnings.length > 0 && (
+            <div className="p-2.5 bg-[var(--bg-surface)] rounded-[6px] border border-[var(--border-subtle)] space-y-1 text-[11px] text-[var(--text-secondary)]">
+              <div className="font-semibold text-[var(--text-primary)]">Avertissements{'\u00A0'}:</div>
+              {importResult.warnings.map((w, idx) => (
+                <div key={idx}>• {w}</div>
+              ))}
+            </div>
+          )}
+
+          <div className="flex items-center justify-end gap-2 pt-1">
+            <button
+              type="button"
+              onClick={() => setImportResult(null)}
+              className="px-2.5 py-1 text-[12px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+            >
+              Laisser désactivée
+            </button>
+            <button
+              type="button"
+              onClick={() => handleConfirmActivation(importResult.skill.name)}
+              className="px-3 py-1 text-[12px] bg-[var(--bg-active)] text-[var(--text-primary)] hover:bg-[var(--bg-surface-hover)] rounded-[6px] transition-colors cursor-pointer"
+            >
+              Confirmer et activer
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Formulaire d'édition */}
       {editingSkill && (
         <div className="p-3 bg-[var(--bg-app)] border border-[var(--border-modal)] rounded-[8px] space-y-3">
           <div className="flex items-center justify-between">
             <div className="text-[13px] font-medium text-[var(--text-primary)]">
-              Modifier : {editingSkill.name}
+              Modifier{'\u00A0'}: {editingSkill.name}
             </div>
             <span className="text-[11px] font-mono text-[var(--text-tertiary)]">{editingSkill.dirPath}</span>
           </div>
@@ -118,7 +174,7 @@ export function SkillsPage() {
       )}
 
       {/* Liste des compétences */}
-      {skillsList.length === 0 && !showImportSkillForm && !editingSkill ? (
+      {skillsList.length === 0 && !showImportSkillForm && !editingSkill && !importResult ? (
         <p className="text-[13px] text-[var(--text-secondary)]">
           Aucune compétence configurée.
         </p>
@@ -132,6 +188,9 @@ export function SkillsPage() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className="font-mono text-[13px] font-medium text-[var(--text-primary)]">{skill.name}</span>
+                  <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[var(--bg-surface)] text-[var(--text-secondary)] border border-[var(--border-modal)]">
+                    {skill.isSystem ? 'Système' : 'Importée'}
+                  </span>
                   <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[var(--bg-surface)] text-[var(--text-secondary)] border border-[var(--border-modal)]">
                     {skill.enabled ? 'Activée' : 'Désactivée'}
                   </span>

@@ -546,7 +546,13 @@ const server = http.createServer(async (req, res) => {
 
     // 11. Paramètres & Réglages
     if (pathname === '/api/settings' && req.method === 'GET') {
+      if (runtimeDatabase.getSetting('conversationFont') === 'serif') {
+        runtimeDatabase.setSetting('conversationFont', 'sans');
+      }
       const settings = runtimeDatabase.getAllSettings();
+      if (!settings.conversationFont || settings.conversationFont === 'serif') {
+        settings.conversationFont = 'sans';
+      }
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ settings }));
       return;
@@ -607,11 +613,19 @@ const server = http.createServer(async (req, res) => {
       const convId = parsedUrl.searchParams.get('conversationId') || undefined;
 
       const availableProviders = modelGateway.getAvailableProviders();
-      const connectedCount = availableProviders.filter(p => p.id !== 'mock' && p.activeKeys > 0).length;
+      const connectedProviderIds = availableProviders.filter(p => p.id !== 'mock' && p.activeKeys > 0).map(p => p.id);
+      const connectedCount = connectedProviderIds.length;
 
       let models: any[];
       if (!providerParam && !qParam && connectedCount === 0 && viewParam === 'short') {
         models = [];
+      } else if (!providerParam && viewParam === 'short' && connectedCount > 0) {
+        // En vue courte (sélecteur rapide du Composer), n'exposer que les modèles des fournisseurs connectés
+        const allShort = modelGateway.getModels({
+          view: 'short',
+          q: qParam
+        });
+        models = allShort.filter(m => connectedProviderIds.includes(m.providerId));
       } else {
         models = modelGateway.getModels({
           provider: providerParam,
@@ -1154,6 +1168,9 @@ const server = http.createServer(async (req, res) => {
 
     if (pathname === '/api/privacy/conversations' && req.method === 'DELETE') {
       const result = runtimeDatabase.clearAllConversations();
+      broadcastWsEvent({
+        type: 'conversations_cleared'
+      } as any);
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ success: true, ...result }));
       return;
@@ -1400,12 +1417,33 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    if (pathname === '/api/skills/scan' && req.method === 'POST') {
+      const body = await readJson(64 * 1024);
+      try {
+        const scan = skillManager.scanSkillDirectory(body.dirPath);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true, scan }));
+      } catch (err: any) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: err.message }));
+      }
+      return;
+    }
+
     if (pathname === '/api/skills/import' && req.method === 'POST') {
       const body = await readJson(64 * 1024);
       try {
-        const skill = await skillManager.importSkillFromDirectory(body.dirPath);
+        const result = await skillManager.importSkillFromDirectory(body.dirPath, {
+          isSystem: Boolean(body.isSystem),
+          autoEnable: Boolean(body.autoEnable)
+        });
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ success: true, skill }));
+        res.end(JSON.stringify({
+          success: true,
+          skill: result,
+          scanReport: result.scanReport,
+          warnings: result.warnings
+        }));
       } catch (err: any) {
         res.writeHead(400, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: err.message }));
@@ -2349,7 +2387,8 @@ wss.on('connection', (ws: WebSocket) => {
             id: crypto.randomUUID(),
             conversationId: activeConvId,
             role: 'assistant',
-            content: event.summary
+            content: event.summary,
+            thinkingLogs: event.thinking ? [event.thinking] : undefined
           });
         }
       } catch {}
@@ -2425,7 +2464,7 @@ wss.on('connection', (ws: WebSocket) => {
           }
 
           activeTaskId = crypto.randomUUID();
-          activeConvId = message.conversationId;
+          activeConvId = message.conversationId || crypto.randomUUID();
           session.activeTaskId = activeTaskId;
           session.activeConvId = activeConvId;
           session.status = 'running';
@@ -2442,51 +2481,55 @@ wss.on('connection', (ws: WebSocket) => {
             if (parts.length > 1) preferredProviderId = parts[0];
           }
 
-          if (activeConvId) {
-            try {
-              runtimeDatabase.addMessage({
-                id: crypto.randomUUID(),
-                conversationId: activeConvId,
-                role: 'user',
-                content: message.prompt
-              });
+          let convMode: 'chat' | 'code' = message.mode === 'code' ? 'code' : 'chat';
 
-              // Titre automatique de la conversation dès le premier échange (§22)
-              const convData = runtimeDatabase.getConversation(activeConvId);
-              if (convData && (convData.conversation.title === 'Nouvelle discussion' || !convData.conversation.title)) {
-                const firstLine = message.prompt.split('\n')[0].replace(/^[#*\- ]+/, '').trim();
-                const autoTitle = firstLine.length > 45 ? firstLine.slice(0, 45) + '…' : firstLine;
-                if (autoTitle) {
-                  runtimeDatabase.saveConversation(activeConvId, autoTitle, convData.conversation.workspace_path || undefined);
-                }
-              }
-            } catch (convErr) {
-              logger.warn('Impossible d\'enregistrer le message utilisateur en base', convErr);
+          // S'assurer impérativement que la conversation existe en base avant toute insertion de message ou tâche (§21, §29)
+          let convData = runtimeDatabase.getConversation(activeConvId);
+          if (!convData) {
+            const firstLine = message.prompt.split('\n')[0].replace(/^[#*\- ]+/, '').trim();
+            const autoTitle = firstLine.length > 45 ? firstLine.slice(0, 45) + '…' : (firstLine || 'Nouvelle discussion');
+            runtimeDatabase.saveConversation(activeConvId, autoTitle, undefined, undefined, convMode);
+            convData = runtimeDatabase.getConversation(activeConvId);
+          } else {
+            if (message.mode && (message.mode === 'chat' || message.mode === 'code') && message.mode !== convData.conversation.mode) {
+              runtimeDatabase.updateConversationMode(activeConvId, message.mode);
+              convMode = message.mode;
+            } else {
+              convMode = convData.conversation.mode === 'code' ? 'code' : 'chat';
             }
           }
 
-          let convMode: 'chat' | 'code' = message.mode === 'code' ? 'code' : 'chat';
-          if (activeConvId) {
-            const convData = runtimeDatabase.getConversation(activeConvId);
-            if (convData) {
-              if (message.mode && (message.mode === 'chat' || message.mode === 'code') && message.mode !== convData.conversation.mode) {
-                runtimeDatabase.updateConversationMode(activeConvId, message.mode);
-                convMode = message.mode;
-              } else {
-                convMode = convData.conversation.mode === 'code' ? 'code' : 'chat';
-              }
+          try {
+            runtimeDatabase.addMessage({
+              id: crypto.randomUUID(),
+              conversationId: activeConvId,
+              role: 'user',
+              content: message.prompt
+            });
 
-              // Gestion du dossier de travail : dossier existant ou espace temporaire en mode Code
-              if (convData.conversation.workspace_path) {
-                session.workspacePath = convData.conversation.workspace_path;
-                session.runtime.workspacePath = convData.conversation.workspace_path;
-              } else if (convMode === 'code') {
-                const tempPath = tempWorkspaceManager.getOrCreateTempWorkspace(activeConvId);
-                session.workspacePath = tempPath;
-                session.runtime.workspacePath = tempPath;
-                runtimeDatabase.saveConversation(activeConvId, convData.conversation.title, tempPath, undefined, 'code', 'temp');
-                workspaceLockManager.acquireLock(tempPath, activeConvId);
+            // Titre automatique de la conversation dès le premier échange si générique (§22)
+            if (convData && (convData.conversation.title === 'Nouvelle discussion' || !convData.conversation.title)) {
+              const firstLine = message.prompt.split('\n')[0].replace(/^[#*\- ]+/, '').trim();
+              const autoTitle = firstLine.length > 45 ? firstLine.slice(0, 45) + '…' : firstLine;
+              if (autoTitle) {
+                runtimeDatabase.saveConversation(activeConvId, autoTitle, convData.conversation.workspace_path || undefined);
               }
+            }
+          } catch (convErr) {
+            logger.warn('Impossible d\'enregistrer le message utilisateur en base', convErr);
+          }
+
+          if (convData) {
+            // Gestion du dossier de travail : dossier existant ou espace temporaire en mode Code
+            if (convData.conversation.workspace_path) {
+              session.workspacePath = convData.conversation.workspace_path;
+              session.runtime.workspacePath = convData.conversation.workspace_path;
+            } else if (convMode === 'code') {
+              const tempPath = tempWorkspaceManager.getOrCreateTempWorkspace(activeConvId);
+              session.workspacePath = tempPath;
+              session.runtime.workspacePath = tempPath;
+              runtimeDatabase.saveConversation(activeConvId, convData.conversation.title, tempPath, undefined, 'code', 'temp');
+              workspaceLockManager.acquireLock(tempPath, activeConvId);
             }
           }
 

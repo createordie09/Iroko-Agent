@@ -18,8 +18,8 @@ L'application s'exécute en conteneur bord à bord occupant 100 % de l'écran (`
 │ • Header (48px)   │                                                    │
 │ • Navigation      │  • Accueil (activeView == 'home') :                │
 │   (Personnaliser) │    ClaudeHero (centré ~40% viewport, w-full)       │
-│ • Scroll liste    │    - Logo Iroko (astérisque svg 32px)              │
-│   (filtre Tout/   │    - Titre "Bonjour" (serif ~36px)                 │
+│ • Scroll liste    │    - Titre "Iroko Agent" (serif ~44px)             │
+│   (filtre Tout/   │    - Sous-titre ("Comment puis-je vous aider")     │
 │   Chat/Code/      │    - ClaudeComposer (max-w-[576px])                │
 │   Épinglées)      │                                                    │
 │ • Footer (36px,   │  • Conversation (activeView == 'chat') :           │
@@ -61,8 +61,15 @@ Tiroir mobile (≤768px) : Drawer latéral animé (slide-in) avec overlay sombre
 | **ClaudeTopbar** | `src/components/layout/ClaudeTopbar.tsx` | En-tête minimaliste (déclencheur sidebar, titre de discussion, action paramètres) | `ZyriconAppShell.tsx` |
 | **ClaudeSidebar** | `src/components/layout/ClaudeSidebar.tsx` | Navigation latérale (+ Nouveau, Personnaliser, Épinglés, Discussions avec filtre, champ de recherche FTS5 instantané, indicateur d'activité 8px des tâches en arrière-plan, Paramètres) | `ZyriconAppShell.tsx` |
 | **ClaudeComposer** | `src/components/composer/ClaudeComposer.tsx` | Zone de saisie universelle (textarea auto-grow, menu +, sélecteur unique [Chat/Code], sélecteur de modèle, puces Image/Vidéo/Projet, jauge textuelle de contexte discret dès 60%) | `ClaudeHero.tsx`, `ClaudeChat.tsx` |
-| **ClaudeHero** | `src/features/home/ClaudeHero.tsx` | Vue d'accueil épurée avec emblème astérisque Iroko et "Bonjour" | `ZyriconAppShell.tsx` |
-| **ClaudeChat** | `src/features/chat/ClaudeChat.tsx` | Vue conversationnelle unique (messages bulles avec actions au survol [copier, régénérer, supprimer, modifier/renvoyer], séparateur sobre de résumé de contexte, étapes d'outils et permissions in-chat, suivi des jobs vidéo, inspecteur) | `ZyriconAppShell.tsx` |
+| **ClaudeHero** | `src/features/home/ClaudeHero.tsx` | Vue d'accueil épurée avec titre "Iroko Agent" en serif et sous-titre "Comment puis-je vous aider aujourd'hui ?" | `ZyriconAppShell.tsx` |
+| **ClaudeChat** | `src/features/chat/ClaudeChat.tsx` | Vue conversationnelle unique (assemblage modulaire < 400 lignes : messages défilants, inspecteur latéral, suivi streaming, modales) | `ZyriconAppShell.tsx` |
+| **ChatMessageItem** | `src/features/chat/ChatMessageItem.tsx` | Bulle de message unitaire (`<article>`, `<h3>` masqué, actions au survol/focus, puces de pièces jointes, artéfacts intégrés) | `ClaudeChat.tsx` |
+| **FormattedMessage** | `src/features/chat/FormattedMessage.tsx` | Rendu Markdown mémoïsé de premier niveau (`MemoizedBlock`, `renderInline` sécurisé anti-XSS et anti-exfiltration) | `ChatMessageItem.tsx`, `ClaudeChat.tsx` |
+| **ChatInspectorPanel** | `src/features/chat/ChatInspectorPanel.tsx` | Tiroir d'inspection latéral droit (6 onglets : modifications, plan, terminal, tests, aperçu, artéfacts) | `ClaudeChat.tsx` |
+| **ActiveVideoJobCard** | `src/features/chat/ActiveVideoJobCard.tsx` | Carte de suivi in-chat des tâches vidéo en cours (durée, bouton d'arrêt sobre) | `ClaudeChat.tsx` |
+| **LiveToolExecutions** | `src/features/chat/LiveToolExecutions.tsx` | Affichage sobre en direct des étapes d'outils en cours d'exécution | `ClaudeChat.tsx` |
+| **DeleteMessageModal** | `src/features/chat/modals/DeleteMessageModal.tsx` | Boîte de dialogue accessible de confirmation de suppression de message | `ClaudeChat.tsx` |
+| **EditMessageModal** | `src/features/chat/modals/EditMessageModal.tsx` | Boîte de dialogue accessible de modification et renvoi avec analyse d'impact | `ClaudeChat.tsx` |
 | **ClaudeSettingsModal** | `src/features/settings/ClaudeSettingsModal.tsx` | Fenêtre modale des réglages découpée en 10 pages modulaires (`src/features/settings/pages/`) et 10 hooks spécialisés (`src/hooks/settings/`), toutes sous le plafond strict de 400 lignes. Section `StorageBreakdownSection` isolée pour l'audit et compactage VACUUM. | `ZyriconAppShell.tsx` |
 | **TasksWorkspace** | `src/features/tasks/TasksWorkspace.tsx` | Suivi des tâches et de la feuille de route du projet | `ZyriconAppShell.tsx` |
 | **DiffViewer** | `src/features/agent/DiffViewer.tsx` | Rendu visuel des diffs unifiés et fichiers modifiés | `ClaudeChat.tsx` |
@@ -72,6 +79,7 @@ Tiroir mobile (≤768px) : Drawer latéral animé (slide-in) avec overlay sombre
 | **ArtifactInspector** | `src/features/chat/ArtifactInspector.tsx` | Panneau inspecteur d'artéfacts (visualisation texte/code/markdown/csv/json, iframe sandboxée HTML sans réseau, image SVG isolée, images matricielles avec métadonnées, aperçus bureautiques docx/xlsx/pptx/pdf, historique de versions v1..vN, restauration, téléchargement unitaire et archive ZIP complète) | `ClaudeChat.tsx` |
 | **ModelSelectorMenu** | `src/components/composer/ModelSelectorMenu.tsx` | Menu déroulant accessible du sélecteur de modèles (sections Favoris, Récents limités à 3, Fournisseurs prêts et leurs tiers, tags sobres Gratuit/Vision/Raisonnement/Outils sans montant, champ de recherche en direct, lien vers Gérer les modèles, détection d'incompatibilité en temps réel, navigation clavier intégrale) | `ClaudeComposer.tsx` |
 | **ManageModelsSection** | `src/features/settings/pages/ManageModelsSection.tsx` | Panneau modulaire de gestion du catalogue de modèles dans Paramètres › Fournisseurs & Clés (recherche instantanée, étoiles de favoris, icônes de masquage, affichage des prix exacts de l'API en texte gris) | `ProvidersPage.tsx` |
+| **SkillsPage** | `src/features/settings/pages/SkillsPage.tsx` | Page modulaire des compétences (catalogue prompt vs instructions complètes §13, architecture Niveau 3, badges "Système" / "Importée", carte sobre de confirmation de sécurité affichant les scripts, URLs et appels réseau avant activation) | `ClaudeSettingsModal.tsx` |
 
 
 ---

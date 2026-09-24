@@ -153,7 +153,7 @@ function verifyWcagAA() {
       body: JSON.stringify({
         settings: {
           theme,
-          conversationFont: 'serif',
+          conversationFont: 'sans',
           animations: 'system',
           voiceLang: 'Français',
           voiceURI: '',
@@ -187,7 +187,7 @@ function verifyWcagAA() {
       localStorage.removeItem('iroko_projects');
       localStorage.removeItem('iroko_active_model');
       localStorage.removeItem('iroko_recent_models');
-      localStorage.setItem('iroko_font', 'serif');
+      localStorage.setItem('iroko_font', 'sans');
       localStorage.setItem('iroko_theme', t);
       localStorage.setItem('iroko_animations', 'system');
       localStorage.setItem('iroko_voice_lang', 'Français');
@@ -218,6 +218,7 @@ function verifyWcagAA() {
   const settingsBtn = await pageDesk.$('button[title="Paramètres"]');
   if (settingsBtn) {
     await settingsBtn.click();
+    await pageDesk.waitForSelector('text=Apparence', { timeout: 5000 }).catch(() => {});
     await pageDesk.waitForTimeout(400);
   }
   const pathDeskParam = path.join(tempDir, '1920_parametres.png');

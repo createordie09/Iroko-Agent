@@ -36,6 +36,7 @@ import { CreateDocumentTool } from './artifacts/create_document';
 import { RegisterArtifactTool } from './artifacts/register_artifact';
 import { GenerateImageTool } from './media/generate_image';
 import { GenerateVideoTool } from './media/generate_video';
+import { RunSkillScriptTool } from './skills/run_skill_script';
 import { mediaGateway } from '../media/MediaGateway';
 import { videoGateway } from '../media/VideoGateway';
 import { PermissionStore } from '../permissions/PermissionStore';
@@ -112,6 +113,9 @@ export class ToolRegistry {
     // Outils Médias & Images/Vidéos (Missions M6 & M7)
     this.register(new GenerateImageTool());
     this.register(new GenerateVideoTool());
+
+    // Outils Compétences Niveau 3 (Mission N1)
+    this.register(new RunSkillScriptTool());
 
     // Charger l'état d'activation persisté
     this.loadDisabledTools();
@@ -237,7 +241,8 @@ export class ToolRegistry {
         'list_dir', 'read_file', 'search_text', 'edit_file', 'write_file',
         'execute_command', 'start_process', 'stop_process', 'get_process_output', 'list_processes',
         'git_status', 'git_diff', 'git_log', 'git_add', 'git_commit', 'git_branch', 'git_create_branch',
-        'verify_project', 'get_diagnostics', 'find_definition', 'find_references', 'invoke_subagent'
+        'verify_project', 'get_diagnostics', 'find_definition', 'find_references', 'invoke_subagent',
+        'run_skill_script'
       ]);
       tools = tools.filter(t => !codeTools.has(t.name));
     }
@@ -263,7 +268,8 @@ export class ToolRegistry {
         'list_dir', 'read_file', 'search_text', 'edit_file', 'write_file',
         'execute_command', 'start_process', 'stop_process', 'get_process_output', 'list_processes',
         'git_status', 'git_diff', 'git_log', 'git_add', 'git_commit', 'git_branch', 'git_create_branch',
-        'verify_project', 'get_diagnostics', 'find_definition', 'find_references', 'invoke_subagent'
+        'verify_project', 'get_diagnostics', 'find_definition', 'find_references', 'invoke_subagent',
+        'run_skill_script'
       ]);
       if (codeTools.has(name)) {
         return {
