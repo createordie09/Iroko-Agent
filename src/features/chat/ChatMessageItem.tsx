@@ -208,7 +208,7 @@ export function ChatMessageItem({
             </div>
           )}
 
-          {/* Sources de recherche citées (Mission N4) [À VALIDER] */}
+          {/* Sources de recherche citées (Mission N4) [VALIDÉ] */}
           {msg.metadata?.sources && msg.metadata.sources.length > 0 && (
             <MessageSources sources={msg.metadata.sources} />
           )}
