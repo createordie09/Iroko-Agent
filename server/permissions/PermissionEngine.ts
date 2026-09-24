@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import { PermissionLevel, PermissionRequest } from '../types/events';
 import { PermissionStore, PermissionScope } from './PermissionStore';
 import { CommandRiskClassifier } from './CommandRiskClassifier';
+import { runtimeDatabase } from '../storage/RuntimeDatabase';
 
 export interface PendingPermission {
   request: PermissionRequest;
@@ -93,6 +94,31 @@ export class PermissionEngine {
     // 2. Les actions SAFE et LOW s'exécutent automatiquement
     if (level === 'SAFE' || level === 'LOW') {
       return true;
+    }
+
+    // 2.1 Réglage global pour les outils de recherche web (Cahier Mission N3)
+    if (tool === 'web_search' || tool === 'web_fetch') {
+      let searchPerm = 'ask';
+      try {
+        searchPerm = (runtimeDatabase.getSetting('web_search_permission') as string) || 'ask';
+      } catch {}
+      if (searchPerm === 'disabled') {
+        console.warn(`[PermissionEngine] Action "${tool}" rejetée car la recherche web est désactivée.`);
+        return false;
+      }
+      if (searchPerm === 'auto') {
+        this.store.logDecision({
+          tool,
+          description,
+          level,
+          approved: true,
+          scope: 'session',
+          canonicalWorkspace: this.store.getCanonicalWorkspace(this.workspacePath),
+          commandOrPath: details?.query || details?.url,
+          fingerprint
+        });
+        return true;
+      }
     }
 
     // 3. Mode "Modifications automatiques" pour les écritures/éditions de fichiers non critiques

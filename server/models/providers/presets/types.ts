@@ -26,6 +26,7 @@ export interface CuratedModelSeed {
 
 export interface ProviderPreset {
   id: string;
+  kind?: 'model' | 'search';
   name: string;
   description: string;
   baseUrl: string;

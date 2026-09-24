@@ -19,6 +19,7 @@ import { skillManager } from '../skills/SkillManager';
 import { attachmentManager } from '../attachments/AttachmentManager';
 import { AttachmentReader } from '../attachments/AttachmentReader';
 import { getModelCapabilities } from '../models/types';
+import { searchTracker } from '../search/SearchTracker';
 
 export interface AgentLoopOptions {
   maxIterations?: number;
@@ -148,12 +149,17 @@ export class AgentLoop {
 
     const customInstructions = (runtimeDatabase.getSetting('custom_instructions') as string) || '';
 
+    // Enregistrer les URLs du message utilisateur dans SearchTracker pour web_fetch
+    searchTracker.registerUrlsFromUserPrompt(userPrompt, options.conversationId);
+
+    const hasWebSearch = Boolean(toolRegistry.getTool('web_search'));
     let systemPromptContent = SystemPrompt.build(
       workspaceMeta,
       memorySnippet,
       skillCatalog,
       activeSkillInstructions,
-      customInstructions
+      customInstructions,
+      hasWebSearch
     );
     if (context.conversationMode === 'chat') {
       systemPromptContent += '\n\nMODE CHAT ACTIF : Vous êtes en mode discussion. Les outils de modification de fichiers, d\'exécution de commandes système, de git, de tests et de plan sont désactivés. Répondez aux questions, discutez du projet, analysez les documents ou pièces jointes. Pour modifier des fichiers ou exécuter du code, invitez sobrement l\'utilisateur à basculer en mode Code via le sélecteur [ Chat | Code ] du compositeur.';

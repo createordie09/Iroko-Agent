@@ -5,7 +5,9 @@ export function CapabilitiesPage() {
   const {
     toolsList,
     togglingToolName,
-    handleToggleTool
+    handleToggleTool,
+    webSearchPermission,
+    handleUpdateSearchPermission
   } = useCapabilitiesSettings();
 
   return (
@@ -75,6 +77,42 @@ export function CapabilitiesPage() {
               Aucun outil enregistré dans le Tool Registry.
             </div>
           )}
+        </div>
+
+        {/* ── Section Recherche web (Mission N3) ── */}
+        <div className="pt-6 mt-6 border-t border-[var(--border-subtle)]">
+          <h3 className="text-[14px] font-semibold text-[var(--text-primary)] mb-1">
+            Recherche web
+          </h3>
+          <p className="text-[12px] text-[var(--text-secondary)] mb-4">
+            Autorisation globale d'accès pour les outils de recherche (web_search) et de consultation de page (web_fetch).
+          </p>
+
+          <div className="space-y-2 bg-[var(--bg-surface)] border border-[var(--border-modal)] p-3.5 rounded-[var(--radius-item)]">
+            {[
+              { id: 'ask', label: 'Demander à chaque fois', desc: 'Confirmation interactive avant chaque recherche ou lecture (Défaut)' },
+              { id: 'auto', label: 'Autoriser automatiquement', desc: 'Exécution directe sans sollicitation (révocable à tout moment)' },
+              { id: 'disabled', label: 'Désactivée', desc: 'Bloque formellement tout appel réseau sortant de ces outils' }
+            ].map(opt => (
+              <label
+                key={opt.id}
+                className="flex items-start gap-2.5 p-2 rounded-[6px] hover:bg-[var(--bg-active)] cursor-pointer transition-colors"
+              >
+                <input
+                  type="radio"
+                  name="web_search_permission"
+                  value={opt.id}
+                  checked={webSearchPermission === opt.id}
+                  onChange={() => handleUpdateSearchPermission(opt.id as any)}
+                  className="mt-0.5 accent-[var(--text-primary)] cursor-pointer"
+                />
+                <div className="text-[12px]">
+                  <div className="font-medium text-[var(--text-primary)]">{opt.label}</div>
+                  <div className="text-[var(--text-secondary)] text-[11px]">{opt.desc}</div>
+                </div>
+              </label>
+            ))}
+          </div>
         </div>
       </div>
     </div>

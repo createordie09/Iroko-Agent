@@ -27,6 +27,7 @@ import { tempWorkspaceManager } from './workspace/TempWorkspaceManager';
 import { artifactManager } from './artifacts/ArtifactManager';
 import { mediaGateway } from './media/MediaGateway';
 import { videoGateway } from './media/VideoGateway';
+import { searchGateway } from './search/SearchGateway';
 import { networkGuard } from './security/NetworkGuard';
 import { PrivacyFilter } from './security/PrivacyFilter';
 import { logger } from './utils/logger';
@@ -724,6 +725,9 @@ const server = http.createServer(async (req, res) => {
         body.priority || 1
       );
 
+      // Synchroniser les outils de recherche au cas où c'est un fournisseur de recherche
+      toolRegistry.syncSearchTools();
+
       // Diffuser le changement de provider
       broadcastWsEvent({
         type: 'providers_changed',
@@ -763,10 +767,63 @@ const server = http.createServer(async (req, res) => {
         rawKey = modelGateway.keyPool.getDecryptedKey(body.id);
       }
 
-      if (!providerId || !rawKey) {
+      if (!providerId || (!rawKey && providerId !== 'mock_search' && providerId !== 'custom_search')) {
         res.writeHead(400, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ valid: false, error: 'providerId et key (ou id existant) sont requis.' }));
         return;
+      }
+
+      // Validation pour les fournisseurs de recherche (Mission N3)
+      if (providerId === 'mock_search' || providerId === 'custom_search') {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ valid: true }));
+        return;
+      }
+
+      if (providerId === 'brave') {
+        try {
+          const checkRes = await fetch('https://api.search.brave.com/res/v1/web/search?q=test&count=1', {
+            method: 'GET',
+            headers: {
+              'X-Subscription-Token': rawKey,
+              'Accept': 'application/json'
+            }
+          });
+          if (checkRes.ok) {
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ valid: true }));
+            return;
+          }
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ valid: false, error: 'Clé API Brave Search refusée.' }));
+          return;
+        } catch (err: any) {
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ valid: false, error: `Erreur de connexion : ${err.message}` }));
+          return;
+        }
+      }
+
+      if (providerId === 'tavily') {
+        try {
+          const checkRes = await fetch('https://api.tavily.com/search', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ api_key: rawKey, query: 'test', max_results: 1 })
+          });
+          if (checkRes.ok) {
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ valid: true }));
+            return;
+          }
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ valid: false, error: 'Clé API Tavily refusée.' }));
+          return;
+        } catch (err: any) {
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ valid: false, error: `Erreur de connexion : ${err.message}` }));
+          return;
+        }
       }
 
       const result = await modelGateway.testCredential(providerId, rawKey);
@@ -785,6 +842,7 @@ const server = http.createServer(async (req, res) => {
       const removed = modelGateway.keyPool.removeKey(id);
 
       if (removed) {
+        toolRegistry.syncSearchTools();
         broadcastWsEvent({
           type: 'providers_changed',
           action: 'removed',
@@ -1946,6 +2004,55 @@ const server = http.createServer(async (req, res) => {
       }
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ artifact }));
+      return;
+    }
+
+    // --- Passerelle Recherche Web (Mission N3) ---
+    if (pathname === '/api/search/providers' && req.method === 'GET') {
+      const providers = searchGateway.listProviders();
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({
+        providers,
+        permission: searchGateway.getPermission(),
+        activeProviderId: searchGateway.getActiveProviderId(),
+        isConfigured: searchGateway.hasConfiguredProvider()
+      }));
+      return;
+    }
+
+    if (pathname === '/api/search/settings' && req.method === 'GET') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({
+        permission: searchGateway.getPermission(),
+        activeProviderId: searchGateway.getActiveProviderId(),
+        customUrl: (runtimeDatabase.getSetting('custom_search_url') as string) || '',
+        isConfigured: searchGateway.hasConfiguredProvider()
+      }));
+      return;
+    }
+
+    if (pathname === '/api/search/settings' && req.method === 'POST') {
+      const body = await readJson(64 * 1024);
+      if (body.permission) {
+        searchGateway.setPermission(body.permission);
+      }
+      if (body.activeProviderId !== undefined) {
+        searchGateway.setActiveProviderId(body.activeProviderId);
+      }
+      if (body.customUrl !== undefined) {
+        runtimeDatabase.setSetting('custom_search_url', body.customUrl);
+        if (body.customUrl) {
+          networkGuard.allowCustomHost(body.customUrl);
+        }
+      }
+      toolRegistry.syncSearchTools();
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({
+        success: true,
+        permission: searchGateway.getPermission(),
+        activeProviderId: searchGateway.getActiveProviderId(),
+        isConfigured: searchGateway.hasConfiguredProvider()
+      }));
       return;
     }
 

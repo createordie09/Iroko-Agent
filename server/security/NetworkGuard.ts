@@ -23,7 +23,9 @@ export class NetworkGuard {
     'openrouter.ai',
     'api.cloudflare.com',
     'api.replicate.com',
-    'queue.fal.run'
+    'queue.fal.run',
+    'api.search.brave.com',
+    'api.tavily.com'
   ]);
 
   private constructor() {}

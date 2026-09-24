@@ -6,6 +6,8 @@ export function useCapabilitiesSettings() {
   const [loadingTools, setLoadingTools] = useState(false);
   const [togglingToolName, setTogglingToolName] = useState<string | null>(null);
 
+  const [webSearchPermission, setWebSearchPermission] = useState<'ask' | 'auto' | 'disabled'>('ask');
+
   const fetchToolsData = async () => {
     setLoadingTools(true);
     try {
@@ -17,6 +19,27 @@ export function useCapabilitiesSettings() {
     } catch {} finally {
       setLoadingTools(false);
     }
+  };
+
+  const fetchSearchPermission = async () => {
+    try {
+      const res = await tokenService.fetch('/api/search/settings');
+      const data = await res.json();
+      if (data.permission) {
+        setWebSearchPermission(data.permission);
+      }
+    } catch {}
+  };
+
+  const handleUpdateSearchPermission = async (newPerm: 'ask' | 'auto' | 'disabled') => {
+    setWebSearchPermission(newPerm);
+    try {
+      await tokenService.fetch('/api/search/settings', {
+        method: 'POST',
+        body: JSON.stringify({ permission: newPerm })
+      });
+      fetchToolsData();
+    } catch {}
   };
 
   const handleToggleTool = async (name: string, currentEnabled: boolean) => {
@@ -36,6 +59,7 @@ export function useCapabilitiesSettings() {
 
   useEffect(() => {
     fetchToolsData();
+    fetchSearchPermission();
   }, []);
 
   return {
@@ -43,6 +67,8 @@ export function useCapabilitiesSettings() {
     loadingTools,
     togglingToolName,
     handleToggleTool,
-    fetchToolsData
+    fetchToolsData,
+    webSearchPermission,
+    handleUpdateSearchPermission
   };
 }

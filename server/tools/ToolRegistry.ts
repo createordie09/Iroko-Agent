@@ -37,8 +37,11 @@ import { RegisterArtifactTool } from './artifacts/register_artifact';
 import { GenerateImageTool } from './media/generate_image';
 import { GenerateVideoTool } from './media/generate_video';
 import { RunSkillScriptTool } from './skills/run_skill_script';
+import { WebSearchTool } from './search/web_search';
+import { WebFetchTool } from './search/web_fetch';
 import { mediaGateway } from '../media/MediaGateway';
 import { videoGateway } from '../media/VideoGateway';
+import { searchGateway } from '../search/SearchGateway';
 import { PermissionStore } from '../permissions/PermissionStore';
 import { runtimeDatabase } from '../storage/RuntimeDatabase';
 
@@ -117,6 +120,9 @@ export class ToolRegistry {
     // Outils Compétences Niveau 3 (Mission N1)
     this.register(new RunSkillScriptTool());
 
+    // Synchroniser les outils de recherche selon la configuration réelle
+    this.syncSearchTools();
+
     // Charger l'état d'activation persisté
     this.loadDisabledTools();
   }
@@ -173,6 +179,23 @@ export class ToolRegistry {
       return { available: true };
     }
 
+    // Outils de recherche web : requièrent un fournisseur configuré et l'activation globale
+    if (name === 'web_search' || name === 'web_fetch') {
+      if (!searchGateway.hasConfiguredProvider()) {
+        return {
+          available: false,
+          reasonDisabled: 'Aucun fournisseur de recherche configuré dans Paramètres › Fournisseurs & Clés.'
+        };
+      }
+      if (searchGateway.getPermission() === 'disabled') {
+        return {
+          available: false,
+          reasonDisabled: 'La recherche web est désactivée dans Paramètres › Capacités.'
+        };
+      }
+      return { available: true };
+    }
+
     // Outil LSP dépendant d'un serveur ou d'une configuration
     if (name === 'get_diagnostics') {
       // Vérifier si le gestionnaire LSP est configuré
@@ -220,6 +243,24 @@ export class ToolRegistry {
 
   public register(tool: IrokoTool): void {
     this.tools.set(tool.name, tool);
+  }
+
+  public unregister(name: string): boolean {
+    return this.tools.delete(name);
+  }
+
+  public syncSearchTools(): void {
+    if (searchGateway.hasConfiguredProvider()) {
+      if (!this.tools.has('web_search')) {
+        this.register(new WebSearchTool());
+      }
+      if (!this.tools.has('web_fetch')) {
+        this.register(new WebFetchTool());
+      }
+    } else {
+      this.unregister('web_search');
+      this.unregister('web_fetch');
+    }
   }
 
   public getTool(name: string): IrokoTool | undefined {

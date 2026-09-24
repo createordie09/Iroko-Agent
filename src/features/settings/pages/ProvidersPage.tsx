@@ -2,6 +2,7 @@ import React from 'react';
 import { Plus, Trash2, Image as ImageIcon, Film, ArrowRight } from 'lucide-react';
 import { useProvidersSettings } from '../../../hooks/settings/useProvidersSettings';
 import { ManageModelsSection } from './ManageModelsSection';
+import { SearchProvidersSection } from './SearchProvidersSection';
 
 export function ProvidersPage() {
   const {
@@ -11,6 +12,7 @@ export function ProvidersPage() {
     showManageModels, setShowManageModels, refreshingProviderId,
     handleTestCredential, handleTestProvider, handleRefreshProvider,
     handleDeleteProviderKeys, getProviderStatusText, handleAddCredential, handleDeleteCredential,
+    handleAddCredentialDirect,
     imageProviders, imageModels, activeImageProvider, activeImageModel, setActiveImageModel,
     imageApiKey, setImageApiKey, imageAccountId, setImageAccountId,
     imageHasKey, imageMaskedKey, imageSaveSuccess, isSavingImageSettings,
@@ -183,6 +185,16 @@ export function ProvidersPage() {
             </div>
           </form>
         )}
+
+        {/* ── Sous-section Recherche Web (Mission N3) ── */}
+        <SearchProvidersSection
+          credentials={credentials}
+          onAddCredential={handleAddCredentialDirect}
+          onDeleteCredential={handleDeleteCredential}
+          onTestCredential={handleTestCredential}
+          testingKeyId={testingKeyId}
+          testStatus={testStatus}
+        />
 
         {/* ── Sous-section Génération d'images (Mission M6) ── */}
         <div className="pt-6 mt-6 border-t border-[var(--border-subtle)]">

@@ -1,7 +1,7 @@
 import { WorkspaceMetadata, workspaceManager } from '../workspace/WorkspaceManager';
 
 export class SystemPrompt {
-  public static readonly VERSION = '1.2.0';
+  public static readonly VERSION = '1.3.0';
 
   /**
    * Construit le prompt système versionné, cloisonné et exempt de toute comparaison avec d'autres agents (cahier §26 & §31).
@@ -11,7 +11,8 @@ export class SystemPrompt {
     memorySnippet?: string,
     skillCatalog?: string,
     activeSkillInstructions?: string,
-    customInstructions?: string
+    customInstructions?: string,
+    hasWebSearch?: boolean
   ): string {
     const formattedWorkspace = workspaceManager.formatForPrompt(meta);
 
@@ -52,6 +53,15 @@ COMPORTEMENT CONVERSATIONNEL ET SOBRIÉTÉ :
 - Sur une salutation simple (ex. "bonjour", "salut", "hello") ou une prise de contact générale, réponds brièvement et poliment en une seule phrase (par exemple : "Bonjour ! Comment puis-je vous aider aujourd'hui ?").
 - Ne déballe JAMAIS spontanément les détails techniques du workspace (OS, chemin d'accès, branche Git, scripts, packages) sauf si l'utilisateur le demande expressément.
 - Réponds toujours dans la langue de l'utilisateur (en français par défaut).`;
+
+    if (hasWebSearch) {
+      prompt += `\n\nPOLITIQUE DE RECHERCHE WEB :
+- Utilise web_search pour les faits récents ou datés, les tarifs réels, les versions logicielles, les entités dont le statut peut avoir changé, et les demandes explicites de recherche.
+- Réponds directement sans recherche pour les connaissances générales stables, les concepts théoriques, les calculs et la rédaction créative.
+- Formule des requêtes courtes et ciblées ; reformule si les premiers résultats ne suffisent pas.
+- Utilise web_fetch uniquement pour approfondir une adresse issue des résultats de recherche ou fournie par l'utilisateur ; n'invente jamais d'adresse à lire.
+- Cite toujours explicitement les sources effectivement utilisées dans ta réponse.`;
+    }
 
     return prompt;
   }

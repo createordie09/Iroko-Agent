@@ -231,7 +231,7 @@ test('Mission N2 - 5. Génération valide des 4 formats bureautiques via create_
 });
 
 test('Mission N2 - 6. Directive de construction progressive dans SystemPrompt v1.2.0', async () => {
-  assert.equal(SystemPrompt.VERSION, '1.2.0');
+  assert.ok(SystemPrompt.VERSION >= '1.2.0', `La version du prompt système (${SystemPrompt.VERSION}) doit être >= 1.2.0`);
 
   const mockMeta = await workspaceManager.analyze(process.cwd());
   const prompt = SystemPrompt.build(mockMeta);

@@ -94,6 +94,22 @@ export function useProvidersSettings() {
     } catch {}
   };
 
+  const handleAddCredentialDirect = async (providerId: string, key: string, label: string) => {
+    try {
+      await tokenService.fetch('/api/credentials', {
+        method: 'POST',
+        body: JSON.stringify({
+          providerId,
+          label: label || `Clé ${key.slice(-4)}`,
+          key,
+          priority: 1
+        })
+      });
+      fetchKeys();
+      refreshModels();
+    } catch {}
+  };
+
   const handleDeleteCredential = async (id: string) => {
     try {
       await tokenService.fetch(`/api/credentials?id=${id}`, { method: 'DELETE' });
@@ -340,6 +356,7 @@ export function useProvidersSettings() {
     videoSaveSuccess,
     isSavingVideoSettings,
     handleSelectVideoProvider,
-    handleSaveVideoSettings
+    handleSaveVideoSettings,
+    handleAddCredentialDirect
   };
 }
