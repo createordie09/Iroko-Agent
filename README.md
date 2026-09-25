@@ -48,10 +48,11 @@ Toutes les modifications doivent respecter le protocole de conformité :
 
 | Commande | Rôle |
 | :--- | :--- |
-| `npm test` | Exécute l'ensemble des suites de tests unitaires et de sécurité. |
+| `npm test` | Exécute l'ensemble des suites de tests automatisés. Déclenche automatiquement `pretest` (`npm run build`) pour générer `dist/` et `dist-server/`. |
+| `node --test ...` | Exécution directe de tests ciblés. **Note** : nécessite l'exécution préalable de `npm run build` pour les tests dépendant des artefacts compilés (`network_guard`, `mission_m8_2`, `mission_lot6`). |
 | `npm run ui:check` | Lance le contrôle de non-régression visuelle Playwright (0,00 % de divergence exigé). |
 | `npm run lint` | Vérifie le typage strict TypeScript (`tsc --noEmit`). |
-| `npm run build` | Compile l'application pour la production dans le dossier `dist/`. |
+| `npm run build` | Compile l'application pour la production (`dist/` client et `dist-server/` serveur). |
 
 ---
 

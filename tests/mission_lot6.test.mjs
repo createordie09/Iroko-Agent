@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'fs';
 import path from 'path';
+import { execSync } from 'child_process';
 import { fileURLToPath } from 'url';
 import { runLintFr } from '../scripts/lint_fr.mjs';
 
@@ -83,7 +84,12 @@ test('Mission Lot 6 - 4. Allègement du bundle initial et imports dynamiques (Po
 
   // 4.2 Vérification des chunks générés dans dist/assets/
   const distAssetsDir = path.join(rootDir, 'dist', 'assets');
-  assert.ok(fs.existsSync(distAssetsDir), 'Le dossier dist/assets doit exister');
+  if (!fs.existsSync(distAssetsDir)) {
+    try {
+      execSync('npm run build:client', { cwd: rootDir, stdio: 'ignore' });
+    } catch {}
+  }
+  assert.ok(fs.existsSync(distAssetsDir), 'Le dossier dist/assets doit exister (exécuter "npm run build" au préalable ou passer par "npm test")');
   const files = fs.readdirSync(distAssetsDir);
 
   const modalChunk = files.find(f => f.startsWith('ClaudeSettingsModal') && f.endsWith('.js'));

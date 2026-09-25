@@ -24,7 +24,11 @@ async function getAuthToken() {
   return data.token;
 }
 
-test('Mission M3 - 1. Dialogue natif : annulation et concurrence d\'un seul dialogue', async () => {
+const isHeadlessLinux = process.platform === 'linux' && !process.env.DISPLAY && !process.env.WAYLAND_DISPLAY;
+
+test('Mission M3 - 1. Dialogue natif : annulation et concurrence d\'un seul dialogue', {
+  skip: isHeadlessLinux ? 'Environnement Linux sans interface graphique (DISPLAY et WAYLAND_DISPLAY absents)' : false
+}, async () => {
   const token = await getAuthToken();
 
   // Test annulation via API HTTP /api/workspaces/pick et /api/workspaces/pick/cancel
@@ -129,6 +133,9 @@ test('Mission M3 - 4. Validation serveur : avertissement si sélection du dossie
 });
 
 test('Mission M3 - 5. Persistance des dossiers récents : max 5, antéchronologique, suppression', async () => {
+  // Purger la table pour isoler strictement le test
+  runtimeDatabase.db.exec('DELETE FROM recent_workspaces');
+
   const testDirs = [
     path.join(__dirname, 'fixtures', 'recents_1'),
     path.join(__dirname, 'fixtures', 'recents_2'),

@@ -2,6 +2,7 @@ import { spawn, execSync } from 'node:child_process';
 import net from 'node:net';
 import fs from 'node:fs';
 import path from 'node:path';
+import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -101,6 +102,9 @@ async function start() {
   const is3001Open = await isPortOpen(3001);
   const is5173Open = await isPortOpen(5173);
 
+  const backendLog = fs.openSync(path.join(os.tmpdir(), 'iroko-supervisor-backend.log'), 'w');
+  const viteLog = fs.openSync(path.join(os.tmpdir(), 'iroko-supervisor-vite.log'), 'w');
+
   if (!is3001Open) {
     backendProc = spawn(process.execPath, ['--import', 'tsx', 'server/index.ts'], {
       cwd: rootDir,
@@ -113,7 +117,7 @@ async function start() {
         AGENT_PORT: '3001',
         IROKO_PORT: '3001'
       },
-      stdio: 'ignore'
+      stdio: ['ignore', backendLog, backendLog]
     });
   }
 
@@ -126,7 +130,7 @@ async function start() {
         NODE_ENV: 'test',
         DISABLE_HMR: 'true'
       },
-      stdio: 'ignore'
+      stdio: ['ignore', viteLog, viteLog]
     });
   }
 

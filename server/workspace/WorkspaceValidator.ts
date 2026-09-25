@@ -105,7 +105,14 @@ export class WorkspaceValidator {
         '/lib',
         '/lib64'
       ];
+      let homeCanonical = '';
+      try { homeCanonical = fs.realpathSync(os.homedir()); } catch {}
+
       for (const sysDir of systemDirsUnix) {
+        // Exception pour /root lorsque l'utilisateur s'exécute en tant que root (dossier personnel, traité à l'étape 8)
+        if (sysDir === '/root' && canonicalPath === homeCanonical) {
+          continue;
+        }
         if (canonicalPath === sysDir || canonicalPath.startsWith(sysDir + '/')) {
           return { valid: false, error: `Accès refusé : le dossier système "${canonicalPath}" ne peut pas servir de workspace.` };
         }

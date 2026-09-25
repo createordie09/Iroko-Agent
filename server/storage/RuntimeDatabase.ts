@@ -164,6 +164,7 @@ export class RuntimeDatabase {
   private db: DatabaseSync;
   public readonly dbPath: string;
   public readonly dataDir: string;
+  private lastRecentTimestamp = 0;
 
   constructor(customPath?: string) {
     if (customPath === ':memory:') {
@@ -742,7 +743,13 @@ export class RuntimeDatabase {
 
   // --- Projets Récents (Mission M3) ---
   public recordRecentWorkspace(wsPath: string, name: string): void {
-    const now = new Date().toISOString();
+    let nowMs = Date.now();
+    if (nowMs <= this.lastRecentTimestamp) {
+      nowMs = this.lastRecentTimestamp + 1;
+    }
+    this.lastRecentTimestamp = nowMs;
+    const now = new Date(nowMs).toISOString();
+
     this.db.prepare(`
       INSERT OR REPLACE INTO recent_workspaces (path, name, last_opened_at)
       VALUES (?, ?, ?)
@@ -751,13 +758,13 @@ export class RuntimeDatabase {
     // Conserver au maximum les 5 plus récents
     this.db.exec(`
       DELETE FROM recent_workspaces WHERE path NOT IN (
-        SELECT path FROM recent_workspaces ORDER BY last_opened_at DESC LIMIT 5
+        SELECT path FROM recent_workspaces ORDER BY last_opened_at DESC, rowid DESC LIMIT 5
       )
     `);
   }
 
   public listRecentWorkspaces(limit = 5): Array<{ path: string; name: string; last_opened_at: string }> {
-    const stmt = this.db.prepare('SELECT path, name, last_opened_at FROM recent_workspaces ORDER BY last_opened_at DESC LIMIT ?');
+    const stmt = this.db.prepare('SELECT path, name, last_opened_at FROM recent_workspaces ORDER BY last_opened_at DESC, rowid DESC LIMIT ?');
     return stmt.all(limit) as Array<{ path: string; name: string; last_opened_at: string }>;
   }
 
