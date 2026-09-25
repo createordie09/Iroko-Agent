@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, Globe } from 'lucide-react';
 import { ProviderCredential } from '../../../../server/models/types';
+import { tokenService } from '../../../services/security/TokenService';
 
 interface SearchProviderDef {
   id: string;
@@ -9,27 +10,6 @@ interface SearchProviderDef {
   docsUrl?: string;
   isCustom?: boolean;
 }
-
-const SEARCH_PROVIDERS: SearchProviderDef[] = [
-  {
-    id: 'brave',
-    name: 'Brave Search',
-    baseUrl: 'https://api.search.brave.com',
-    docsUrl: 'https://brave.com/search/api/'
-  },
-  {
-    id: 'tavily',
-    name: 'Tavily',
-    baseUrl: 'https://api.tavily.com',
-    docsUrl: 'https://tavily.com'
-  },
-  {
-    id: 'custom_search',
-    name: 'URL personnalisée',
-    baseUrl: 'Point d\'accès HTTP compatible JSON',
-    isCustom: true
-  }
-];
 
 interface SearchProvidersSectionProps {
   credentials: ProviderCredential[];
@@ -48,13 +28,33 @@ export function SearchProvidersSection({
   testingKeyId,
   testStatus
 }: SearchProvidersSectionProps) {
+  const [providers, setProviders] = useState<SearchProviderDef[]>([]);
   const [selectedProviderId, setSelectedProviderId] = useState<string | null>(null);
   const [keyRaw, setKeyRaw] = useState('');
   const [keyLabel, setKeyLabel] = useState('');
   const [customUrl, setCustomUrl] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
 
-  const selectedDef = SEARCH_PROVIDERS.find(p => p.id === selectedProviderId);
+  useEffect(() => {
+    let active = true;
+    tokenService.fetch('/api/search/providers')
+      .then(r => r.json())
+      .then(data => {
+        if (active && Array.isArray(data.providers)) {
+          setProviders(data.providers.map((p: any) => ({
+            id: p.id,
+            name: p.name,
+            baseUrl: p.baseUrl || (p.id === 'custom_search' ? "Point d'accès HTTP compatible JSON" : ''),
+            docsUrl: p.docsUrl,
+            isCustom: p.id === 'custom_search'
+          })));
+        }
+      })
+      .catch(() => {});
+    return () => { active = false; };
+  }, []);
+
+  const selectedDef = providers.find(p => p.id === selectedProviderId);
 
   const handleOpenAdd = (providerId: string) => {
     setSelectedProviderId(providerId);
@@ -108,7 +108,7 @@ export function SearchProvidersSection({
 
       {/* Lignes réutilisant exactement les composants de M10 */}
       <div className="space-y-2">
-        {SEARCH_PROVIDERS.map(p => {
+        {providers.map(p => {
           const pCreds = credentials.filter(c => c.providerId === p.id);
           const hasKeys = pCreds.length > 0;
           const statusText = getStatusText(p.id, pCreds);

@@ -77,8 +77,10 @@ export class SearchGateway {
   }
 
   public listProviders(): SearchProviderInfo[] {
+    const isTest = process.env.NODE_ENV === 'test' || process.env.IROKO_TEST_MODE === '1';
+    const presets = isTest ? SEARCH_PRESETS : SEARCH_PRESETS.filter(p => p.id !== 'mock_search');
     const activeId = this.getActiveProviderId();
-    return SEARCH_PRESETS.map(preset => {
+    return presets.map(preset => {
       const keys = this.keyPool.getKeysByProvider(preset.id);
       const hasKey = keys.length > 0;
       const maskedKey = hasKey ? keys[0].maskedKey : undefined;
