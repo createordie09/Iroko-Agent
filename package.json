@@ -12,7 +12,7 @@
     "start": "node dist-server/index.js",
     "preview": "vite preview",
     "lint": "tsc --noEmit",
-    "test": "node --import ./tests/setup_test_env.js --import tsx --test --test-timeout=60000 tests/*.test.mjs",
+    "test": "node --import ./tests/setup_test_env.js --import tsx --test --test-force-exit --test-timeout=60000 tests/*.test.mjs",
     "test:strict": "node --import ./tests/setup_test_env.js --import tsx --test --test-timeout=60000 tests/*.test.mjs",
     "e2e": "node --import ./tests/setup_test_env.js --test tests/e2e/*.test.mjs",
     "lint:tokens": "node scripts/lint_tokens.mjs",
