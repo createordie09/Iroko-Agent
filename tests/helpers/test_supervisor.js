@@ -43,7 +43,7 @@ function isPortOpen(port) {
   });
 }
 
-async function waitForPort(port, timeoutMs = 25000) {
+async function waitForPort(port, timeoutMs = 40000) {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
     if (await isPortOpen(port)) return true;
@@ -105,11 +105,13 @@ async function start() {
   const is3001Open = await isPortOpen(3001);
   const is5173Open = await isPortOpen(5173);
 
-  const backendLog = fs.openSync(path.join(os.tmpdir(), 'iroko-supervisor-backend.log'), 'w');
-  const viteLog = fs.openSync(path.join(os.tmpdir(), 'iroko-supervisor-vite.log'), 'w');
-
   if (!is3001Open) {
-    backendProc = spawn(process.execPath, ['--import', 'tsx', 'server/index.ts'], {
+    const compiledServer = path.join(rootDir, 'dist-server', 'index.js');
+    const serverArgs = fs.existsSync(compiledServer)
+      ? [compiledServer]
+      : ['--import', 'tsx', 'server/index.ts'];
+
+    backendProc = spawn(process.execPath, serverArgs, {
       cwd: rootDir,
       env: {
         ...process.env,
@@ -120,7 +122,7 @@ async function start() {
         AGENT_PORT: '3001',
         IROKO_PORT: '3001'
       },
-      stdio: ['ignore', backendLog, backendLog]
+      stdio: 'ignore'
     });
   }
 
@@ -133,7 +135,7 @@ async function start() {
         NODE_ENV: 'test',
         DISABLE_HMR: 'true'
       },
-      stdio: ['ignore', viteLog, viteLog]
+      stdio: 'ignore'
     });
   }
 
