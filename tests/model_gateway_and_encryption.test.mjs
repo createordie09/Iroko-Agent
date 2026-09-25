@@ -37,16 +37,27 @@ test('1. Chiffrement : IV aléatoire unique de 12 octets à chaque chiffrement A
 });
 
 test('2. Chiffrement : Clé maîtresse située hors dépôt et hors dossier de données', () => {
-  const masterKeyPath = EncryptionService.getMasterKeyPath();
-  const cwd = process.cwd();
-  const dataDir = process.platform === 'win32' && process.env.APPDATA
-    ? path.join(process.env.APPDATA, 'iroko')
-    : path.join(os.homedir(), '.iroko');
+  const masterKeyPath = path.resolve(EncryptionService.getMasterKeyPath());
+  const cwd = path.resolve(process.cwd());
+  const realDataDir = path.resolve(
+    process.platform === 'win32' && process.env.APPDATA
+      ? path.join(process.env.APPDATA, 'iroko')
+      : path.join(os.homedir(), '.iroko')
+  );
+  const runtimeDataDir = process.env.IROKO_DATA_DIR ? path.resolve(process.env.IROKO_DATA_DIR) : null;
+
+  const isSubpath = (parent, child) => {
+    const rel = path.relative(parent, child);
+    return !rel.startsWith('..') && !path.isAbsolute(rel);
+  };
 
   // Doit être en dehors du dépôt
-  assert.equal(masterKeyPath.startsWith(cwd), false, 'La clé maîtresse ne doit pas être dans le dépôt');
+  assert.equal(isSubpath(cwd, masterKeyPath), false, 'La clé maîtresse ne doit pas être dans le dépôt');
   // Doit être en dehors du dossier de données
-  assert.equal(masterKeyPath.startsWith(dataDir), false, 'La clé maîtresse ne doit pas être dans le dossier de données runtime');
+  assert.equal(isSubpath(realDataDir, masterKeyPath), false, 'La clé maîtresse ne doit pas être dans le dossier de données runtime');
+  if (runtimeDataDir) {
+    assert.equal(isSubpath(runtimeDataDir, masterKeyPath), false, 'La clé maîtresse ne doit pas être dans le dossier temporaire de test');
+  }
   // Doit être dans .iroko_security
   assert.equal(masterKeyPath.includes('.iroko_security'), true, 'La clé maîtresse doit résider dans .iroko_security');
 });

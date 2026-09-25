@@ -37,6 +37,7 @@
     "react": "^19.0.1",
     "react-dom": "^19.0.1",
     "vite": "^6.2.3",
+    "ws": "^8.21.3",
     "zod": "^4.6.5"
   },
   "devDependencies": {
@@ -49,8 +50,6 @@
     "tailwindcss": "^4.1.14",
     "tsx": "^4.23.13",
     "typescript": "~5.8.2",
-    "vite": "^6.2.3",
-    "web-vitals": "^6.2.2",
-    "ws": "^8.21.3"
+    "web-vitals": "^6.2.2"
   }
 }
