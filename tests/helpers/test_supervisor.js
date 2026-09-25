@@ -85,11 +85,14 @@ const cleanup = () => {
 const heartbeat = setInterval(() => {
   try {
     process.kill(runnerPid, 0);
-  } catch {
-    clearInterval(heartbeat);
-    cleanup();
+  } catch (err) {
+    // Seul ESRCH confirme que le processus parent n'existe plus
+    if (err.code === 'ESRCH') {
+      clearInterval(heartbeat);
+      cleanup();
+    }
   }
-}, 300);
+}, 500);
 
 // Sécurité : durée de vie maximale de 10 minutes
 setTimeout(cleanup, 600000).unref();

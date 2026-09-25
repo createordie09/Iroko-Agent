@@ -96,8 +96,8 @@ export async function ensureServersRunning(isolatedDataDir) {
     supProc.unref();
   }
 
-  // Attendre que les deux ports soient ouverts (max 30 secondes)
-  const maxWait = 30000;
+  // Attendre que les deux ports soient ouverts (max 45 secondes)
+  const maxWait = 45000;
   const start = Date.now();
 
   while (Date.now() - start < maxWait) {
