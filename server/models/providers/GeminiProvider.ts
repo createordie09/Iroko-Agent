@@ -1,10 +1,10 @@
 import { AIProvider, ModelRequest, StreamChunk, CredentialValidationResult, ProviderErrorClassification } from '../types';
 import { ErrorClassifier } from '../errors/ErrorClassifier';
+import { logger } from '../../utils/logger';
 
 export class GeminiProvider implements AIProvider {
   public id = 'gemini';
   public name = 'Google Gemini';
-  private defaultModel = 'gemini-2.5-flash';
 
   public async listModels(): Promise<string[]> {
     return [
@@ -15,7 +15,11 @@ export class GeminiProvider implements AIProvider {
   }
 
   public async *generateStream(request: ModelRequest, apiKey: string): AsyncIterable<StreamChunk> {
-    let model = request.modelId || this.defaultModel;
+    if (!request.modelId) {
+      logger.error(`[${this.name}] modelId absent dans la requête ModelRequest. Aucun repli silencieux autorisé.`);
+      throw new Error(`Identifiant de modèle obligatoire manquant pour le fournisseur ${this.name} (${this.id})`);
+    }
+    let model = request.modelId;
     if (model.startsWith('gemini/')) {
       model = model.slice('gemini/'.length);
     } else if (model.startsWith('google/')) {

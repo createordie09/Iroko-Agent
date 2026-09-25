@@ -1,15 +1,14 @@
 import { AIProvider, ModelRequest, StreamChunk, CredentialValidationResult, ProviderErrorClassification } from '../types';
 import { ErrorClassifier } from '../errors/ErrorClassifier';
+import { logger } from '../../utils/logger';
 
 export class OpenAIProvider implements AIProvider {
   public id = 'openai';
   public name = 'OpenAI';
   protected baseUrl: string;
-  protected defaultModel: string;
 
   constructor(options?: { baseUrl?: string; defaultModel?: string }) {
     this.baseUrl = options?.baseUrl || 'https://api.openai.com/v1';
-    this.defaultModel = options?.defaultModel || 'gpt-4o';
   }
 
   public async listModels(): Promise<string[]> {
@@ -23,7 +22,11 @@ export class OpenAIProvider implements AIProvider {
   }
 
   public async *generateStream(request: ModelRequest, apiKey: string): AsyncIterable<StreamChunk> {
-    let model = request.modelId || this.defaultModel;
+    if (!request.modelId) {
+      logger.error(`[${this.name}] modelId absent dans la requête ModelRequest. Aucun repli silencieux autorisé.`);
+      throw new Error(`Identifiant de modèle obligatoire manquant pour le fournisseur ${this.name} (${this.id})`);
+    }
+    let model = request.modelId;
     if (model.startsWith(this.id + '/')) {
       model = model.slice(this.id.length + 1);
     }

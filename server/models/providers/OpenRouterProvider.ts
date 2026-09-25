@@ -1,11 +1,11 @@
 import { AIProvider, ModelRequest, StreamChunk, CredentialValidationResult, ProviderErrorClassification } from '../types';
 import { ErrorClassifier } from '../errors/ErrorClassifier';
+import { logger } from '../../utils/logger';
 
 export class OpenRouterProvider implements AIProvider {
   public id = 'openrouter';
   public name = 'OpenRouter';
   private baseUrl = 'https://openrouter.ai/api/v1';
-  private defaultModel = 'anthropic/claude-3.5-sonnet';
 
   public async listModels(): Promise<string[]> {
     return [
@@ -20,7 +20,11 @@ export class OpenRouterProvider implements AIProvider {
   }
 
   public async *generateStream(request: ModelRequest, apiKey: string): AsyncIterable<StreamChunk> {
-    let model = request.modelId || this.defaultModel;
+    if (!request.modelId) {
+      logger.error(`[${this.name}] modelId absent dans la requête ModelRequest. Aucun repli silencieux autorisé.`);
+      throw new Error(`Identifiant de modèle obligatoire manquant pour le fournisseur ${this.name} (${this.id})`);
+    }
+    let model = request.modelId;
     if (model.startsWith('openrouter/')) {
       model = model.slice('openrouter/'.length);
     }

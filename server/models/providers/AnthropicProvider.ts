@@ -1,10 +1,10 @@
 import { AIProvider, ModelRequest, StreamChunk, CredentialValidationResult, ProviderErrorClassification } from '../types';
 import { ErrorClassifier } from '../errors/ErrorClassifier';
+import { logger } from '../../utils/logger';
 
 export class AnthropicProvider implements AIProvider {
   public id = 'anthropic';
   public name = 'Anthropic Claude';
-  private defaultModel = 'claude-3-7-sonnet-latest';
 
   public async listModels(): Promise<string[]> {
     return [
@@ -15,7 +15,11 @@ export class AnthropicProvider implements AIProvider {
   }
 
   public async *generateStream(request: ModelRequest, apiKey: string): AsyncIterable<StreamChunk> {
-    let model = request.modelId || this.defaultModel;
+    if (!request.modelId) {
+      logger.error(`[${this.name}] modelId absent dans la requête ModelRequest. Aucun repli silencieux autorisé.`);
+      throw new Error(`Identifiant de modèle obligatoire manquant pour le fournisseur ${this.name} (${this.id})`);
+    }
+    let model = request.modelId;
     if (model.startsWith('anthropic/')) {
       model = model.slice('anthropic/'.length);
     }
