@@ -77,11 +77,16 @@ export async function ensureServersRunning(isolatedDataDir) {
       try { fs.unlinkSync(statusFile); } catch {}
     }
 
+    const resolvedDataDir = isolatedDataDir || process.env.IROKO_DATA_DIR || path.join(os.tmpdir(), 'iroko-default-data');
+    if (!fs.existsSync(resolvedDataDir)) {
+      try { fs.mkdirSync(resolvedDataDir, { recursive: true }); } catch {}
+    }
+
     const supervisorScript = path.join(rootDir, 'tests', 'helpers', 'test_supervisor.js');
     const supProc = spawn(process.execPath, [
       supervisorScript,
       String(runnerPid),
-      isolatedDataDir,
+      resolvedDataDir,
       statusFile
     ], {
       detached: true,

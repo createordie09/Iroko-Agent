@@ -8,8 +8,15 @@ const __filename = fileURLToPath(import.meta.url);
 const rootDir = path.resolve(path.dirname(__filename), '..', '..');
 
 const runnerPid = parseInt(process.argv[2], 10);
-const isolatedDataDir = process.argv[3];
+let isolatedDataDir = process.argv[3];
 const statusFile = process.argv[4];
+
+if (!isolatedDataDir || isolatedDataDir === 'undefined') {
+  isolatedDataDir = process.env.IROKO_DATA_DIR || path.join(os.tmpdir(), 'iroko-default-data');
+}
+if (!fs.existsSync(isolatedDataDir)) {
+  try { fs.mkdirSync(isolatedDataDir, { recursive: true }); } catch {}
+}
 
 if (!runnerPid || isNaN(runnerPid)) {
   process.exit(1);

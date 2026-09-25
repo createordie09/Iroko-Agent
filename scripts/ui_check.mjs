@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import zlib from 'zlib';
+import { ensureServersRunning } from '../tests/helpers/ensure_servers.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -125,6 +126,7 @@ function verifyWcagAA() {
 
 (async () => {
   console.log('--- Lancement du contrôle visuel Iroko (npm run ui:check) ---');
+  await ensureServersRunning();
   let browser;
   try {
     browser = await chromium.launch({ channel: 'msedge', headless: true });
