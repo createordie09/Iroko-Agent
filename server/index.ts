@@ -36,6 +36,7 @@ import { RuntimeWatchdog } from './supervisor/RuntimeWatchdog';
 import { activeJobManager } from './runtime/ActiveJobManager';
 import { deletionManager } from './storage/DeletionManager';
 import { modelComparisonService } from './models/ModelComparisonService';
+import { ConversationPdfExporter } from './export/ConversationPdfExporter';
 
 // Activation immédiate du Garde Réseau pour l'ensemble du runtime
 networkGuard.install();
@@ -545,6 +546,82 @@ const server = http.createServer(async (req, res) => {
       } else {
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ active: false }));
+      }
+      return;
+    }
+
+    // --- Exportation PDF lisible d'une conversation (Mission R4g) ---
+    if (pathname === '/api/conversations/export-pdf' && req.method === 'POST') {
+      try {
+        const body = await readJson(10 * 1024 * 1024);
+        const { title, messages, date } = body;
+        if (!messages || !Array.isArray(messages)) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Le champ messages (tableau) est requis.' }));
+          return;
+        }
+        const pdfBuffer = await ConversationPdfExporter.generate({
+          title: title || 'Discussion Iroko',
+          messages,
+          date
+        });
+        const safeTitle = (title || 'discussion')
+          .replace(/[^a-zA-Z0-9_\-\u00C0-\u017F]/g, '_')
+          .substring(0, 50);
+        res.writeHead(200, {
+          'Content-Type': 'application/pdf',
+          'Content-Disposition': `attachment; filename="${encodeURIComponent(safeTitle)}.pdf"`,
+          'Content-Length': pdfBuffer.length,
+          'X-Content-Type-Options': 'nosniff'
+        });
+        res.end(pdfBuffer);
+      } catch (err: any) {
+        const status = err.message && err.message.includes('volumineuse') ? 400 : 500;
+        res.writeHead(status, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: err.message || 'Erreur lors de la génération du PDF.' }));
+      }
+      return;
+    }
+
+    if (pathname.startsWith('/api/conversations/') && pathname.endsWith('/export/pdf') && req.method === 'GET') {
+      const convId = pathname.replace('/api/conversations/', '').replace('/export/pdf', '').trim();
+      const convData = runtimeDatabase.getConversation(convId);
+      if (!convData || !convData.conversation) {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Conversation introuvable.' }));
+        return;
+      }
+      try {
+        const msgs = convData.messages || [];
+        const exportMessages = msgs.map(m => ({
+          role: m.role as 'user' | 'assistant' | 'system',
+          content: m.content || ''
+        }));
+        const pdfBuffer = await ConversationPdfExporter.generate({
+          title: convData.conversation.title || 'Discussion Iroko',
+          messages: exportMessages,
+          date: convData.conversation.created_at ? new Date(convData.conversation.created_at).toLocaleDateString('fr-FR', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          }) : undefined
+        });
+        const safeTitle = (convData.conversation.title || 'discussion')
+          .replace(/[^a-zA-Z0-9_\-\u00C0-\u017F]/g, '_')
+          .substring(0, 50);
+        res.writeHead(200, {
+          'Content-Type': 'application/pdf',
+          'Content-Disposition': `attachment; filename="${encodeURIComponent(safeTitle)}.pdf"`,
+          'Content-Length': pdfBuffer.length,
+          'X-Content-Type-Options': 'nosniff'
+        });
+        res.end(pdfBuffer);
+      } catch (err: any) {
+        const status = err.message && err.message.includes('volumineuse') ? 400 : 500;
+        res.writeHead(status, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: err.message || 'Erreur lors de la génération du PDF.' }));
       }
       return;
     }

@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { PanelLeft, ChevronDown, Settings, MoreHorizontal, FileText, Download, Trash2 } from 'lucide-react';
+import { PanelLeft, ChevronDown, Settings, MoreHorizontal, FileText, Download, Trash2, FileDown } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useUndoDeletion } from '../../hooks/useUndoDeletion';
+import { tokenService } from '../../services/security/TokenService';
 
 export function ClaudeTopbar() {
   const {
@@ -19,6 +20,8 @@ export function ClaudeTopbar() {
   const { scheduleUndoableDeletion } = useUndoDeletion();
 
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
+  const [pdfError, setPdfError] = useState<string | null>(null);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const isConversation = activeView === 'chat';
@@ -28,11 +31,13 @@ export function ClaudeTopbar() {
     const handleClickOutside = (e: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         setIsExportMenuOpen(false);
+        setPdfError(null);
       }
     };
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isExportMenuOpen) {
         setIsExportMenuOpen(false);
+        setPdfError(null);
       }
     };
     if (isExportMenuOpen) {
@@ -44,6 +49,63 @@ export function ClaudeTopbar() {
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [isExportMenuOpen]);
+
+  const handleExportPdf = async () => {
+    if (messages.length === 0 || isExportingPdf) return;
+    setIsExportingPdf(true);
+    setPdfError(null);
+    try {
+      const currentConv = history[0];
+      const payload = {
+        title: currentTitle,
+        messages: messages.map(m => ({ role: m.role, content: m.content })),
+        date: currentConv?.created_at ? new Date(currentConv.created_at).toLocaleDateString('fr-FR', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        }) : undefined
+      };
+
+      const res = await tokenService.fetch('/api/conversations/export-pdf', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/pdf, application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) {
+        let errorMsg = "Erreur lors de l'exportation PDF.";
+        try {
+          const errData = await res.json();
+          if (errData?.error) errorMsg = errData.error;
+        } catch {
+          // ignore
+        }
+        setPdfError(errorMsg);
+        return;
+      }
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const safeTitle = currentTitle.replace(/[^a-zA-Z0-9à-ÿÀ-Ÿ_-]/g, '_').slice(0, 40);
+      a.download = `${safeTitle || 'discussion'}_${new Date().toISOString().slice(0, 10)}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      setIsExportMenuOpen(false);
+    } catch (err: any) {
+      setPdfError(err?.message || "Erreur lors de l'exportation PDF.");
+    } finally {
+      setIsExportingPdf(false);
+    }
+  };
 
   const handleExportMarkdown = () => {
     let md = `# ${currentTitle}\n\n`;
@@ -157,6 +219,18 @@ export function ClaudeTopbar() {
                 <div className="absolute left-0 top-[calc(100%+4px)] w-56 bg-[var(--bg-surface)] border border-[var(--border-modal)] rounded-[8px] py-1 z-50">
                   <button
                     type="button"
+                    onClick={handleExportPdf}
+                    disabled={messages.length === 0 || isExportingPdf}
+                    className={`w-full px-3 py-1.5 text-left text-[13px] flex items-center gap-2 hover:bg-[var(--bg-surface-hover)] transition-colors ${
+                      messages.length === 0 || isExportingPdf ? 'text-[var(--text-tertiary)] cursor-not-allowed' : 'text-[var(--text-primary)]'
+                    }`}
+                  >
+                    <FileDown className="w-3.5 h-3.5 text-[var(--text-secondary)]" />
+                    <span>{isExportingPdf ? 'Génération du PDF...' : 'Exporter en PDF (.pdf)'}</span>
+                  </button>
+
+                  <button
+                    type="button"
                     onClick={handleExportMarkdown}
                     disabled={messages.length === 0}
                     className={`w-full px-3 py-1.5 text-left text-[13px] flex items-center gap-2 hover:bg-[var(--bg-surface-hover)] transition-colors ${
@@ -178,6 +252,12 @@ export function ClaudeTopbar() {
                     <Download className="w-3.5 h-3.5 text-[var(--text-secondary)]" />
                     <span>Exporter en JSON (.json)</span>
                   </button>
+
+                  {pdfError && (
+                    <div className="px-3 py-2 text-[11.5px] text-[var(--text-secondary)] border-t border-[var(--border-subtle)] bg-[var(--bg-surface-hover)] leading-tight">
+                      {pdfError}
+                    </div>
+                  )}
 
                   <div className="my-1 border-t border-[var(--border-subtle)]" />
 
