@@ -41,9 +41,17 @@ export function ClaudeChat() {
   const [selectedAttachmentId, setSelectedAttachmentId] = useState<string | null>(null);
   const [previewData, setPreviewData] = useState<AttachmentPreviewResult | null>(null);
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
-  const [attachmentsMap, setAttachmentsMap] = useState<Record<string, AttachmentPublicInfo>>({});
   const [selectedArtifactId, setSelectedArtifactId] = useState<string | null>(null);
   const [workspaceMeta, setWorkspaceMeta] = useState<any>(null);
+  const [attachmentsMap, setAttachmentsMap] = useState<Record<string, any>>({});
+
+  // Réinitialisation des sélections et aperçus lors du changement de conversation (Mission R5c)
+  useEffect(() => {
+    setSelectedAttachmentId(null);
+    setPreviewData(null);
+    setSelectedArtifactId(null);
+    setAttachmentsMap({});
+  }, [conversationId]);
 
   const {
     currentThinking,

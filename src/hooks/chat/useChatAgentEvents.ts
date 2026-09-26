@@ -96,6 +96,17 @@ export function useChatAgentEvents({
   };
 
   useEffect(() => {
+    // Réinitialisation stricte des états transitoires de l'ancienne discussion (Mission R5c)
+    setToolExecutions([]);
+    setPlanSteps([]);
+    setChangedFiles([]);
+    currentThinkingRef.current = '';
+    setCurrentThinking('');
+    setThinkingLogs([]);
+    setPendingPermission(null);
+    setErrorMessage(null);
+    setContextUsage(null);
+
     loadArtifacts();
     loadVideoJobs();
     if (conversationId) {
@@ -114,12 +125,8 @@ export function useChatAgentEvents({
               setCurrentThinking(data.thinkingText);
               setThinkingLogs([data.thinkingText]);
             }
-            if (Array.isArray(data.toolExecutions)) {
-              setToolExecutions(data.toolExecutions);
-            }
-            if (Array.isArray(data.planSteps)) {
-              setPlanSteps(data.planSteps);
-            }
+            if (Array.isArray(data.toolExecutions)) setToolExecutions(data.toolExecutions);
+            if (Array.isArray(data.planSteps)) setPlanSteps(data.planSteps);
           }
         })
         .catch(() => {});

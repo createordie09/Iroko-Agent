@@ -275,12 +275,23 @@ export class ActiveJobManager {
       logger.warn('Erreur lors de la finalisation du job en base', err);
     }
 
-    // Retirer le job après 5 secondes pour permettre à d'éventuels abonnés tardifs de lire la fin
+    // Retirer le job après 1 seconde et vider immédiatement les abonnés pour libérer le heap (Mission R5c)
     setTimeout(() => {
       if (this.jobs.get(job.conversationId)?.taskId === job.taskId) {
+        job.subscribers.clear();
         this.jobs.delete(job.conversationId);
       }
-    }, 5000);
+    }, 1000);
+
+    // Purge de sécurité si trop de jobs résiduels s'accumulent
+    if (this.jobs.size > 10) {
+      for (const [id, j] of this.jobs.entries()) {
+        if (j.status !== 'running') {
+          j.subscribers.clear();
+          this.jobs.delete(id);
+        }
+      }
+    }
   }
 
   public cancelJob(conversationId: string): boolean {

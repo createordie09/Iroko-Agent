@@ -340,6 +340,24 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    // Endpoint de métriques de consommation mémoire du processus runtime (Mission R5c)
+    if (pathname === '/api/system/memory' && req.method === 'GET') {
+      const mem = process.memoryUsage();
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({
+        rssBytes: mem.rss,
+        heapUsedBytes: mem.heapUsed,
+        heapTotalBytes: mem.heapTotal,
+        externalBytes: mem.external,
+        rssMb: Math.round((mem.rss / 1024 / 1024) * 100) / 100,
+        heapUsedMb: Math.round((mem.heapUsed / 1024 / 1024) * 100) / 100,
+        heapTotalMb: Math.round((mem.heapTotal / 1024 / 1024) * 100) / 100,
+        activeSessionsCount: sessions.size,
+        activeJobsCount: activeJobManager.getAllActiveJobs().length
+      }));
+      return;
+    }
+
     // 9. Persistance Runtime : Conversations & Messages (§21, §29)
     if (pathname === '/api/conversations' && req.method === 'GET') {
       const conversations = runtimeDatabase.listConversations();
@@ -3110,6 +3128,9 @@ wss.on('connection', (ws: WebSocket) => {
 
         case 'subscribe_conversation': {
           if (message.conversationId) {
+            if (activeConvId && activeConvId !== message.conversationId) {
+              activeJobManager.unsubscribe(activeConvId, sendEvent);
+            }
             activeConvId = message.conversationId;
             activeJobManager.subscribe(activeConvId, sendEvent);
           }
@@ -3150,7 +3171,9 @@ wss.on('connection', (ws: WebSocket) => {
           const effectiveThinkingLevel = message.thinkingLevel || persistedThinking || 'medium';
 
           let preferredProviderId = message.preferredProviderId;
-          if (!preferredProviderId && message.modelId) {
+          if (process.env.USE_MOCK_PROVIDER === '1' || process.env.IROKO_MOCK_ALL === '1') {
+            preferredProviderId = 'mock';
+          } else if (!preferredProviderId && message.modelId) {
             const parts = message.modelId.split('/');
             if (parts.length > 1) preferredProviderId = parts[0];
           }

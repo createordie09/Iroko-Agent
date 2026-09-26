@@ -269,8 +269,31 @@ export function useVirtualMessageList<T extends { id?: string; role?: string; co
 
     return () => {
       observer.disconnect();
+      itemElementsRef.current.clear();
+      heightMapRef.current.clear();
     };
   }, [containerRef, isEnabled]);
+
+  // Élagage des éléments détachés pour éviter les fuites mémoire lors de changements de conversation (Mission R5c)
+  useEffect(() => {
+    const activeIds = new Set<string | number>();
+    for (let i = 0; i < items.length; i++) {
+      activeIds.add(getItemId(items[i], i));
+    }
+
+    const observer = resizeObserverRef.current;
+    for (const [id, node] of itemElementsRef.current.entries()) {
+      if (!activeIds.has(id)) {
+        if (observer) {
+          try {
+            observer.unobserve(node);
+          } catch {}
+        }
+        itemElementsRef.current.delete(id);
+        heightMapRef.current.delete(id);
+      }
+    }
+  }, [items, getItemId]);
 
   // Ref callback pour attacher chaque message rendu au ResizeObserver
   const registerItemRef = useCallback((id: string | number, node: HTMLElement | null) => {

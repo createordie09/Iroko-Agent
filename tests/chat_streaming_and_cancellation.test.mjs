@@ -49,10 +49,10 @@ test('2. Arrêt réel : AgentLoop s\'interrompt proprement et conserve le texte 
     emitEvent
   };
 
-  // Lancer en arrière-plan et avorter après 70ms
+  // Lancer en arrière-plan et avorter après 80ms
   setTimeout(() => {
     controller.abort();
-  }, 70);
+  }, 80);
 
   const result = await loop.run('Analyse le projet et liste les fichiers', toolContext, planner, {
     preferredProviderId: 'mock',

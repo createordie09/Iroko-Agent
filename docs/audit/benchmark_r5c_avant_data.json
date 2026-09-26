@@ -1,0 +1,90 @@
+[
+  {
+    "iteration": 0,
+    "timestamp": 1790454574096,
+    "frontHeapMb": 3.24,
+    "domNodes": 294,
+    "runtimeRssMb": 152.64,
+    "runtimeHeapUsedMb": 70
+  },
+  {
+    "iteration": 5,
+    "timestamp": 1790454578570,
+    "frontHeapMb": 4.54,
+    "domNodes": 297,
+    "runtimeRssMb": 157.7,
+    "runtimeHeapUsedMb": 73.11
+  },
+  {
+    "iteration": 10,
+    "timestamp": 1790454582809,
+    "frontHeapMb": 5.18,
+    "domNodes": 297,
+    "runtimeRssMb": 159.85,
+    "runtimeHeapUsedMb": 73.93
+  },
+  {
+    "iteration": 15,
+    "timestamp": 1790454587687,
+    "frontHeapMb": 5.23,
+    "domNodes": 297,
+    "runtimeRssMb": 164.57,
+    "runtimeHeapUsedMb": 74.14
+  },
+  {
+    "iteration": 20,
+    "timestamp": 1790454591906,
+    "frontHeapMb": 5.06,
+    "domNodes": 297,
+    "runtimeRssMb": 164.95,
+    "runtimeHeapUsedMb": 76.91
+  },
+  {
+    "iteration": 25,
+    "timestamp": 1790454596240,
+    "frontHeapMb": 5.21,
+    "domNodes": 297,
+    "runtimeRssMb": 165.68,
+    "runtimeHeapUsedMb": 77.01
+  },
+  {
+    "iteration": 30,
+    "timestamp": 1790454600567,
+    "frontHeapMb": 5.47,
+    "domNodes": 297,
+    "runtimeRssMb": 165.48,
+    "runtimeHeapUsedMb": 76.26
+  },
+  {
+    "iteration": 35,
+    "timestamp": 1790454606560,
+    "frontHeapMb": 5.53,
+    "domNodes": 297,
+    "runtimeRssMb": 167.1,
+    "runtimeHeapUsedMb": 78.88
+  },
+  {
+    "iteration": 40,
+    "timestamp": 1790454611142,
+    "frontHeapMb": 5.67,
+    "domNodes": 297,
+    "runtimeRssMb": 173.52,
+    "runtimeHeapUsedMb": 79.23
+  },
+  {
+    "iteration": 45,
+    "timestamp": 1790454615533,
+    "frontHeapMb": 5.87,
+    "domNodes": 297,
+    "runtimeRssMb": 174.24,
+    "runtimeHeapUsedMb": 81.75
+  },
+  {
+    "iteration": 50,
+    "timestamp": 1790454620419,
+    "frontHeapMb": 6.01,
+    "domNodes": 297,
+    "runtimeRssMb": 176.19,
+    "runtimeHeapUsedMb": 78.47
+  }
+]

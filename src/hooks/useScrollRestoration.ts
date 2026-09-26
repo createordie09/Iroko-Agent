@@ -7,8 +7,17 @@ export interface ScrollAnchor {
   scrollTop: number;
 }
 
-// Cache persistant en mémoire par conversationId
+// Cache persistant en mémoire borné par conversationId (max 50 entrées — Mission R5c)
 const memoryAnchorCache = new Map<string, ScrollAnchor>();
+const MAX_ANCHORS = 50;
+
+function setMemoryAnchor(convId: string, anchor: ScrollAnchor): void {
+  if (memoryAnchorCache.size >= MAX_ANCHORS && !memoryAnchorCache.has(convId)) {
+    const oldestKey = memoryAnchorCache.keys().next().value;
+    if (oldestKey) memoryAnchorCache.delete(oldestKey);
+  }
+  memoryAnchorCache.set(convId, anchor);
+}
 
 const SESSION_PREFIX = 'iroko_scroll_anchor_';
 
@@ -71,7 +80,7 @@ export function useScrollRestoration(
           offsetTop: 0,
           scrollTop
         };
-        memoryAnchorCache.set(conversationId, anchor);
+        setMemoryAnchor(conversationId, anchor);
         setSessionAnchor(conversationId, anchor);
         return;
       }
@@ -99,7 +108,7 @@ export function useScrollRestoration(
         scrollTop
       };
 
-      memoryAnchorCache.set(conversationId, anchor);
+      setMemoryAnchor(conversationId, anchor);
       setSessionAnchor(conversationId, anchor);
     };
 

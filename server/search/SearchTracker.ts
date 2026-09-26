@@ -48,13 +48,27 @@ export class SearchTracker {
     for (const url of urls) {
       if (!url) continue;
       const normalized = this.normalizeUrl(url);
+
+      if (this.allowedUrls.size >= 500 && !this.allowedUrls.has(normalized)) {
+        const oldest = this.allowedUrls.values().next().value;
+        if (oldest) this.allowedUrls.delete(oldest);
+      }
       this.allowedUrls.add(normalized);
 
       if (conversationId) {
         if (!this.conversationUrls.has(conversationId)) {
+          if (this.conversationUrls.size >= 50) {
+            const oldestConv = this.conversationUrls.keys().next().value;
+            if (oldestConv) this.conversationUrls.delete(oldestConv);
+          }
           this.conversationUrls.set(conversationId, new Set());
         }
-        this.conversationUrls.get(conversationId)!.add(normalized);
+        const set = this.conversationUrls.get(conversationId)!;
+        if (set.size >= 50 && !set.has(normalized)) {
+          const first = set.values().next().value;
+          if (first) set.delete(first);
+        }
+        set.add(normalized);
       }
     }
   }

@@ -243,7 +243,11 @@ export class PermissionEngine {
     this.pendingRequests.delete(requestId);
     this.totalWaitTimeMs += (Date.now() - pending.promptTime);
 
-    // Marquer l'empreinte comme consommée pour interdire tout rejeu
+    // Marquer l'empreinte comme consommée pour interdire tout rejeu (plafonné à 200 entrées — Mission R5c)
+    if (this.consumedFingerprints.size >= 200) {
+      const oldest = this.consumedFingerprints.values().next().value;
+      if (oldest) this.consumedFingerprints.delete(oldest);
+    }
     this.consumedFingerprints.add(pending.fingerprint);
 
     const actualScope: PermissionScope = approved ? scope : 'reject';
