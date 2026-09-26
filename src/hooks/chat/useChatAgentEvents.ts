@@ -5,6 +5,8 @@ import { notificationService } from '../../services/notification/NotificationSer
 import { artifactService, ArtifactPublicInfo } from '../../services/artifacts/ArtifactService';
 import { mediaService, VideoJobData } from '../../services/media/MediaService';
 import { ChangedFileRecord } from '../../features/agent/DiffViewer';
+import { tokenService } from '../../services/security/TokenService';
+import { extractTurnArtifacts } from './artifactTurnExtractor';
 
 export interface UseChatAgentEventsOptions {
   conversationId: string;
@@ -96,6 +98,32 @@ export function useChatAgentEvents({
   useEffect(() => {
     loadArtifacts();
     loadVideoJobs();
+    if (conversationId) {
+      agentClient.subscribeConversation(conversationId);
+      tokenService.fetch(`/api/conversations/${encodeURIComponent(conversationId)}/active-task`)
+        .then(res => res.ok ? res.json() : null)
+        .then(data => {
+          if (data?.active) {
+            setChatStatus('loading');
+            if (data.streamedText) {
+              resetStreamBuffer();
+              appendStreamDelta(data.streamedText);
+            }
+            if (data.thinkingText) {
+              currentThinkingRef.current = data.thinkingText;
+              setCurrentThinking(data.thinkingText);
+              setThinkingLogs([data.thinkingText]);
+            }
+            if (Array.isArray(data.toolExecutions)) {
+              setToolExecutions(data.toolExecutions);
+            }
+            if (Array.isArray(data.planSteps)) {
+              setPlanSteps(data.planSteps);
+            }
+          }
+        })
+        .catch(() => {});
+    }
   }, [conversationId]);
 
   const handleCancelVideoJob = async (jobId: string) => {
@@ -122,69 +150,8 @@ export function useChatAgentEvents({
     }
   }, [currentAssistantStream]);
 
-  const extractTurnArtifacts = () => {
-    const turnArtifacts: any[] = [];
-    for (const te of toolExecutionsRef.current) {
-      if (!te.success) continue;
-      if ((te.tool === 'create_artifact' || te.tool === 'update_artifact') && te.result?.id) {
-        turnArtifacts.push(te.result);
-      } else if (te.tool === 'generate_image') {
-        const d = te.result?.data || te.result;
-        if (d?.artifactId || d?.id) {
-          turnArtifacts.push({
-            id: d.artifactId || d.id,
-            name: d.filename || d.name,
-            title: d.title || d.filename,
-            mimeType: d.mimeType || 'image/png',
-            currentVersion: 1,
-            size: d.size || 0,
-            metadata: {
-              prompt: d.prompt || te.input?.prompt,
-              model: d.model,
-              seed: d.seed,
-              aspectRatio: d.aspectRatio,
-              revisedPrompt: d.revisedPrompt,
-              isGeneratedImage: true
-            }
-          });
-        }
-      } else if (te.tool === 'create_document' || te.tool === 'register_artifact') {
-        const d = te.result?.data || te.result;
-        if (d?.artifactId || d?.id) {
-          turnArtifacts.push({
-            id: d.artifactId || d.id,
-            name: d.filename || d.name,
-            title: d.title || d.filename,
-            mimeType: d.mimeType || 'application/octet-stream',
-            currentVersion: 1,
-            size: d.size || 0
-          });
-        }
-      } else if (te.tool === 'generate_video') {
-        const d = te.result?.data || te.result;
-        if (d?.artifactId || d?.id) {
-          turnArtifacts.push({
-            id: d.artifactId || d.id,
-            name: d.filename || d.name || 'video.mp4',
-            title: d.title || d.filename || 'Vidéo générée',
-            mimeType: d.mimeType || 'video/mp4',
-            currentVersion: 1,
-            size: d.size || 0,
-            metadata: {
-              prompt: d.prompt || te.input?.prompt,
-              model: d.model,
-              aspectRatio: d.aspectRatio,
-              isGeneratedVideo: true
-            }
-          });
-        }
-      }
-    }
-    return turnArtifacts;
-  };
-
   const commitAssistantMessage = (content: string, turnThinking?: string, turnSources?: any[]) => {
-    const turnArtifacts = extractTurnArtifacts();
+    const turnArtifacts = extractTurnArtifacts(toolExecutionsRef.current);
     setMessages(prev => [
       ...prev,
       {
@@ -245,6 +212,28 @@ export function useChatAgentEvents({
             setContextUsage(event.usage);
           }
           break;
+        case 'task_resumed': {
+          const payload = (event as any).payload;
+          if (payload && (!payload.conversationId || payload.conversationId === conversationId)) {
+            setChatStatus('loading');
+            if (payload.content) {
+              resetStreamBuffer();
+              appendStreamDelta(payload.content);
+            }
+            if (payload.thinking) {
+              currentThinkingRef.current = payload.thinking;
+              setCurrentThinking(payload.thinking);
+              setThinkingLogs([payload.thinking]);
+            }
+            if (Array.isArray(payload.toolExecutions)) {
+              setToolExecutions(payload.toolExecutions);
+            }
+            if (Array.isArray(payload.planSteps)) {
+              setPlanSteps(payload.planSteps);
+            }
+          }
+          break;
+        }
         case 'message':
           if (event.role === 'assistant') {
             appendStreamDelta(event.content);

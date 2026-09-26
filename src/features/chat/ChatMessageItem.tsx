@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { 
   ChevronRight, ChevronDown, Copy, Check, RotateCcw, 
-  Trash2, Edit2, Paperclip
+  Trash2, Edit2, Paperclip, Play
 } from 'lucide-react';
 import { AttachmentPublicInfo } from '../../services/attachments/AttachmentService';
 import { FormattedMessage } from './FormattedMessage';
@@ -28,6 +28,7 @@ export interface ChatMessageItemProps {
   onOpenArtifact: (artifactId: string) => void;
   onRegenerateImage: (prompt: string) => void;
   onReuseArtifactAsAttachment: (artifact: any) => void;
+  onContinue?: (msg: any, index: number) => void;
   attachmentsMap: Record<string, AttachmentPublicInfo>;
 }
 
@@ -50,6 +51,7 @@ export function ChatMessageItem({
   onOpenArtifact,
   onRegenerateImage,
   onReuseArtifactAsAttachment,
+  onContinue,
   attachmentsMap
 }: ChatMessageItemProps) {
   const [isLocalThinkingOpen, setIsLocalThinkingOpen] = useState(false);
@@ -211,6 +213,28 @@ export function ChatMessageItem({
           {/* Sources de recherche citées (Mission N4) [VALIDÉ] */}
           {msg.metadata?.sources && msg.metadata.sources.length > 0 && (
             <MessageSources sources={msg.metadata.sources} />
+          )}
+
+          {/* Signalement sobre de message interrompu avec bouton Continuer (Mission R3c) [À VALIDER] */}
+          {msg.metadata?.interrupted && (
+            <div className="flex items-center gap-2 pt-1.5 select-none" data-interrupted-indicator="true">
+              <span className="px-1.5 py-0.5 rounded-[var(--radius-button)] bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[11px] text-[var(--text-tertiary)] font-sans">
+                Interrompu
+              </span>
+              {onContinue && (
+                <button
+                  type="button"
+                  onClick={() => onContinue(msg, index)}
+                  disabled={chatStatus === 'loading'}
+                  className="tap-target-24 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[var(--radius-button)] bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-hover)] border border-[var(--border-subtle)] text-[12px] text-[var(--text-primary)] transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                  title="Continuer la réponse à partir de ce point"
+                  aria-label="Continuer la génération"
+                >
+                  <Play className="w-3 h-3 text-[var(--text-secondary)]" />
+                  <span>Continuer</span>
+                </button>
+              )}
+            </div>
           )}
 
           {/* Actions au survol sous la réponse (Copier, Régénérer, Supprimer) [À VALIDER] */}

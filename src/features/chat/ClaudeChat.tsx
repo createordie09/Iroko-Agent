@@ -64,7 +64,7 @@ export function ClaudeChat() {
     copiedIndex, deleteConfirmMessage, setDeleteConfirmMessage,
     isDeletingMessage, editModalData, setEditModalData, isCheckingImpact,
     handleSendMessage, handleRetry, handleCopy, handleDeleteMessage,
-    handleStartEdit, handleConfirmEdit, handleRegenerateFrom
+    handleStartEdit, handleConfirmEdit, handleRegenerateFrom, handleContinue
   } = useChatMessageActions({
     conversationId, activeModel, composerMode, messages, setMessages,
     setChatStatus, resetStreamBuffer, setThinkingLogs, setToolExecutions,
@@ -194,6 +194,7 @@ export function ClaudeChat() {
                   onStartEdit={handleStartEdit}
                   onDeleteConfirm={(m, i) => setDeleteConfirmMessage({ message: m, index: i })}
                   onRegenerateFrom={handleRegenerateFrom}
+                  onContinue={handleContinue}
                   onOpenAttachmentPreview={(attId) => {
                     setSelectedAttachmentId(attId);
                     setInspectorTab('preview');

@@ -178,6 +178,16 @@ export function useChatMessageActions({
     }
   };
 
+  const handleContinue = (interruptedMsg: any, index: number) => {
+    const priorUser = [...messages.slice(0, index)].reverse().find(m => m.role === 'user');
+    const originalPrompt = interruptedMsg?.metadata?.prompt || priorUser?.content || '';
+    const partialText = interruptedMsg?.content || '';
+
+    const continuationPrompt = `Continuez votre réponse précédente exactement à partir de l'endroit où elle a été interrompue, sans répéter ce qui a déjà été produit.\n\nDemande initiale\u00A0: ${originalPrompt}\n\nTexte partiel déjà produit\u00A0:\n« ${partialText} »`;
+
+    handleSendMessage(continuationPrompt);
+  };
+
   return {
     copiedIndex,
     setCopiedIndex,
@@ -193,6 +203,7 @@ export function useChatMessageActions({
     handleDeleteMessage,
     handleStartEdit,
     handleConfirmEdit,
-    handleRegenerateFrom
+    handleRegenerateFrom,
+    handleContinue
   };
 }

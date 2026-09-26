@@ -13,6 +13,7 @@ export class IrokoAgentClient {
   private eventListeners: Set<EventListener> = new Set();
   private connectionListeners: Set<ConnectionListener> = new Set();
   private isExplicitlyClosed = false;
+  private subscribedConversationId?: string;
 
   constructor(url?: string) {
     if (url) {
@@ -41,6 +42,9 @@ export class IrokoAgentClient {
       this.ws.onopen = () => {
         this.reconnectAttempts = 0;
         this.notifyConnection(true);
+        if (this.subscribedConversationId) {
+          this.send({ type: 'subscribe_conversation', conversationId: this.subscribedConversationId });
+        }
       };
 
       this.ws.onmessage = (event) => {
@@ -132,6 +136,11 @@ export class IrokoAgentClient {
 
   public cancelTask(): boolean {
     return this.send({ type: 'cancel_task' });
+  }
+
+  public subscribeConversation(conversationId: string): boolean {
+    this.subscribedConversationId = conversationId;
+    return this.send({ type: 'subscribe_conversation', conversationId });
   }
 
   public onEvent(listener: EventListener): () => void {

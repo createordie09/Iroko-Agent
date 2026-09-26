@@ -33,9 +33,20 @@ import { PrivacyFilter } from './security/PrivacyFilter';
 import { logger } from './utils/logger';
 import { LocalRateLimiter } from './security/LocalRateLimiter';
 import { RuntimeWatchdog } from './supervisor/RuntimeWatchdog';
+import { activeJobManager } from './runtime/ActiveJobManager';
 
 // Activation immédiate du Garde Réseau pour l'ensemble du runtime
 networkGuard.install();
+
+// Récupération automatique des tâches interrompues par arrêt brutal du runtime (Mission R3c)
+try {
+  const recovered = runtimeDatabase.recoverInterruptedGenerations();
+  if (recovered.recoveredTasksCount > 0) {
+    logger.info(`Récupération de ${recovered.recoveredTasksCount} tâche(s) interrompue(s) par arrêt précédent.`);
+  }
+} catch (err) {
+  logger.warn('Erreur lors de la récupération des tâches interrompues', err);
+}
 
 const PORT = parseInt(process.env.AGENT_PORT || process.env.PORT || process.env.IROKO_PORT || '3001', 10);
 const HOST = '127.0.0.1';
@@ -99,6 +110,11 @@ export function broadcastActiveTasksStatus(extra?: { conversationId?: string; st
   for (const sess of sessions.values()) {
     if ((sess.status === 'running' || sess.runtime?.isRunning()) && sess.activeConvId) {
       activeConvIds.add(sess.activeConvId);
+    }
+  }
+  for (const job of activeJobManager.getAllActiveJobs()) {
+    if (job.status === 'running') {
+      activeConvIds.add(job.conversationId);
     }
   }
   try {
@@ -443,6 +459,30 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    if (pathname.startsWith('/api/conversations/') && pathname.endsWith('/active-task') && req.method === 'GET') {
+      const convId = pathname.replace('/api/conversations/', '').replace('/active-task', '').trim();
+      const job = activeJobManager.getActiveJob(convId);
+      if (job && job.status === 'running') {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+          active: true,
+          taskId: job.taskId,
+          conversationId: convId,
+          status: job.status,
+          prompt: job.prompt,
+          mode: job.mode,
+          streamedText: job.streamedText,
+          thinkingText: job.thinkingText,
+          toolExecutions: job.toolExecutions,
+          planSteps: job.planSteps
+        }));
+      } else {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ active: false }));
+      }
+      return;
+    }
+
     if (pathname.startsWith('/api/conversations/') && req.method === 'GET') {
       const id = pathname.replace('/api/conversations/', '').trim();
       const data = runtimeDatabase.getConversation(id);
@@ -547,6 +587,12 @@ const server = http.createServer(async (req, res) => {
       for (const sess of sessions.values()) {
         if ((sess.status === 'running' || sess.runtime?.isRunning()) && sess.activeConvId) {
           activeConvIds.add(sess.activeConvId);
+        }
+      }
+
+      for (const job of activeJobManager.getAllActiveJobs()) {
+        if (job.status === 'running') {
+          activeConvIds.add(job.conversationId);
         }
       }
 
@@ -2502,66 +2548,61 @@ wss.on('connection', (ws: WebSocket) => {
 
   const sendEvent = (event: AgentEvent) => {
     if (ws.readyState === WebSocket.OPEN) {
-      // Observabilité (§36) : enrichir chaque événement avec sessionId, taskId et horodatage UTC ISO
       const enrichedEvent: AgentEvent = {
         ...event,
         sessionId,
         taskId: activeTaskId || event.taskId,
         timestamp: new Date().toISOString()
       };
-
-      // Enregistrer l'événement dans la persistance runtime
-      try {
-        runtimeDatabase.recordEvent({
-          id: crypto.randomUUID(),
-          sessionId,
-          taskId: activeTaskId,
-          eventType: event.type,
-          payload: event
-        });
-
-        // Persistance des appels d'outils (tool_calls)
-        if (event.type === 'tool_call_start' && activeTaskId) {
-          runtimeDatabase.recordToolCall({
-            id: event.callId,
-            taskId: activeTaskId,
-            toolName: event.tool,
-            arguments: event.input,
-            status: 'running'
-          });
-        } else if (event.type === 'tool_call_result' && activeTaskId) {
-          runtimeDatabase.recordToolCall({
-            id: event.callId,
-            taskId: activeTaskId,
-            toolName: event.tool,
-            arguments: {},
-            status: event.success ? 'completed' : 'failed',
-            result: event.result ?? event.error
-          });
-        }
-
-        // Persistance du message assistant à la complétion (§21, §29, Mission N4)
-        if (event.type === 'completed' && activeConvId && event.summary) {
-          const metadata: Record<string, any> = {};
-          if (event.sources && Array.isArray(event.sources) && event.sources.length > 0) {
-            metadata.sources = event.sources;
-          }
-          runtimeDatabase.addMessage({
-            id: crypto.randomUUID(),
-            conversationId: activeConvId,
-            role: 'assistant',
-            content: event.summary,
-            thinkingLogs: event.thinking ? [event.thinking] : undefined,
-            metadata: Object.keys(metadata).length > 0 ? metadata : undefined
-          });
-        }
-      } catch {}
-
       ws.send(JSON.stringify(enrichedEvent));
     }
   };
 
-  const runtime = new AgentRuntime(sessionId, DEFAULT_WORKSPACE, permissionEngine, sendEvent);
+  const emitRuntimeEvent = (event: AgentEvent) => {
+    const enrichedEvent: AgentEvent = {
+      ...event,
+      sessionId,
+      taskId: activeTaskId || event.taskId,
+      timestamp: new Date().toISOString()
+    };
+
+    try {
+      runtimeDatabase.recordEvent({
+        id: crypto.randomUUID(),
+        sessionId,
+        taskId: activeTaskId,
+        eventType: event.type,
+        payload: event
+      });
+
+      if (event.type === 'tool_call_start' && activeTaskId) {
+        runtimeDatabase.recordToolCall({
+          id: event.callId,
+          taskId: activeTaskId,
+          toolName: event.tool,
+          arguments: event.input,
+          status: 'running'
+        });
+      } else if (event.type === 'tool_call_result' && activeTaskId) {
+        runtimeDatabase.recordToolCall({
+          id: event.callId,
+          taskId: activeTaskId,
+          toolName: event.tool,
+          arguments: {},
+          status: event.success ? 'completed' : 'failed',
+          result: event.result ?? event.error
+        });
+      }
+    } catch {}
+
+    if (activeConvId) {
+      activeJobManager.handleEvent(activeConvId, enrichedEvent);
+    } else {
+      sendEvent(enrichedEvent);
+    }
+  };
+
+  const runtime = new AgentRuntime(sessionId, DEFAULT_WORKSPACE, permissionEngine, emitRuntimeEvent);
 
   const session: ActiveSession = {
     id: sessionId,
@@ -2606,13 +2647,21 @@ wss.on('connection', (ws: WebSocket) => {
           break;
         }
 
+        case 'subscribe_conversation': {
+          if (message.conversationId) {
+            activeConvId = message.conversationId;
+            activeJobManager.subscribe(activeConvId, sendEvent);
+          }
+          break;
+        }
+
         case 'send_prompt': {
           // Vérification du plafond de tâches simultanées (Mission M8.3 P6)
           const maxConcurrentSetting = runtimeDatabase.getSetting('max_concurrent_tasks');
           const maxConcurrent = maxConcurrentSetting ? parseInt(String(maxConcurrentSetting), 10) : 2;
           const limit = isNaN(maxConcurrent) ? 2 : maxConcurrent;
 
-          let runningCount = 0;
+          let runningCount = activeJobManager.getRunningCount();
           for (const s of sessions.values()) {
             if (s.id !== sessionId && (s.status === 'running' || s.runtime?.isRunning())) {
               runningCount++;
@@ -2697,6 +2746,26 @@ wss.on('connection', (ws: WebSocket) => {
             }
           }
 
+          // Mission R3c : Création immédiate du message assistant en base avec statut generating et interrupted: true
+          const assistantMessageId = crypto.randomUUID();
+          try {
+            runtimeDatabase.addMessage({
+              id: assistantMessageId,
+              conversationId: activeConvId,
+              role: 'assistant',
+              content: '',
+              metadata: {
+                taskId: activeTaskId,
+                status: 'generating',
+                interrupted: true,
+                canContinue: true,
+                prompt: message.prompt
+              }
+            });
+          } catch (err) {
+            logger.warn('Impossible d\'enregistrer le message assistant initial en base', err);
+          }
+
           runtimeDatabase.recordTask({
             id: activeTaskId,
             sessionId,
@@ -2704,6 +2773,17 @@ wss.on('connection', (ws: WebSocket) => {
             prompt: message.prompt,
             status: 'running',
             mode: convMode
+          });
+
+          // Enregistrement du job actif découplé avec abonnement du WebSocket courant
+          const currentJob = activeJobManager.registerJob({
+            taskId: activeTaskId,
+            conversationId: activeConvId,
+            prompt: message.prompt,
+            mode: convMode,
+            assistantMessageId,
+            runtime: session.runtime,
+            initialSubscriber: sendEvent
           });
 
           session.runtime.runTask(message.prompt, {
@@ -2717,16 +2797,16 @@ wss.on('connection', (ws: WebSocket) => {
             attachmentIds: message.attachmentIds
           })
             .then(() => {
-              if (activeTaskId) {
-                runtimeDatabase.updateTaskStatus(activeTaskId, 'completed');
+              if (currentJob.status === 'running') {
+                activeJobManager.finishJob(currentJob, 'completed');
               }
             })
             .catch(err => {
               logger.error('Erreur d\'exécution de tâche', err, { sessionId, taskId: activeTaskId });
-              if (activeTaskId) {
-                runtimeDatabase.updateTaskStatus(activeTaskId, 'failed', err.message);
+              if (currentJob.status === 'running') {
+                activeJobManager.finishJob(currentJob, 'failed');
               }
-              sendEvent({
+              emitRuntimeEvent({
                 type: 'error',
                 message: err.message || 'Erreur inattendue dans la boucle agentique',
                 fatal: false
@@ -2734,8 +2814,6 @@ wss.on('connection', (ws: WebSocket) => {
             })
             .finally(() => {
               const finishedConvId = activeConvId;
-              activeTaskId = undefined;
-              activeConvId = undefined;
               session.activeTaskId = undefined;
               session.activeConvId = undefined;
               session.status = 'idle';
@@ -2752,10 +2830,11 @@ wss.on('connection', (ws: WebSocket) => {
 
         case 'cancel_task': {
           logger.info('Tâche annulée par l\'utilisateur', { sessionId, taskId: activeTaskId });
-          if (activeTaskId) {
-            runtimeDatabase.updateTaskStatus(activeTaskId, 'cancelled');
+          if (activeConvId) {
+            activeJobManager.cancelJob(activeConvId);
+          } else {
+            session.runtime.cancelTask();
           }
-          session.runtime.cancelTask();
           broadcastActiveTasksStatus({ conversationId: activeConvId, status: 'cancelled' });
           break;
         }
@@ -2772,6 +2851,9 @@ wss.on('connection', (ws: WebSocket) => {
 
   ws.on('close', () => {
     logger.info('Session WebSocket fermée', { sessionId });
+    if (activeConvId) {
+      activeJobManager.unsubscribe(activeConvId, sendEvent);
+    }
     sessions.delete(sessionId);
     broadcastActiveTasksStatus();
   });

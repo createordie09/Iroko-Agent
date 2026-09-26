@@ -816,12 +816,16 @@ export class RuntimeDatabase {
     return stmt.all() as unknown as DbConversation[];
   }
 
-  public getConversation(id: string): { conversation: DbConversation; messages: DbMessage[] } | null {
+  public getConversation(id: string, includeGenerating = false): { conversation: DbConversation; messages: DbMessage[] } | null {
     const convStmt = this.db.prepare('SELECT * FROM conversations WHERE id = ?');
     const conv = convStmt.get(id) as unknown as DbConversation | undefined;
     if (!conv) return null;
 
-    const msgStmt = this.db.prepare('SELECT * FROM messages WHERE conversation_id = ? ORDER BY created_at ASC');
+    const query = includeGenerating
+      ? 'SELECT * FROM messages WHERE conversation_id = ? ORDER BY created_at ASC'
+      : "SELECT * FROM messages WHERE conversation_id = ? AND (metadata IS NULL OR json_extract(metadata, '$.status') != 'generating' OR json_extract(metadata, '$.status') IS NULL) ORDER BY created_at ASC";
+
+    const msgStmt = this.db.prepare(query);
     const messages = msgStmt.all(id) as unknown as DbMessage[];
     return { conversation: conv, messages };
   }
@@ -1369,6 +1373,34 @@ export class RuntimeDatabase {
     return row || null;
   }
 
+  public updateMessageContent(
+    messageId: string,
+    content: string,
+    thinkingLogs?: any[],
+    metadata?: any
+  ): boolean {
+    const existing = this.getMessage(messageId);
+    if (!existing) return false;
+
+    let metaString = existing.metadata;
+    if (metadata !== undefined) {
+      metaString = metadata ? JSON.stringify(metadata) : null;
+    }
+
+    let thinkingString = existing.thinking_logs;
+    if (thinkingLogs !== undefined) {
+      thinkingString = thinkingLogs ? JSON.stringify(thinkingLogs) : null;
+    }
+
+    const res = this.db.prepare(`
+      UPDATE messages 
+      SET content = ?, thinking_logs = ?, metadata = ?
+      WHERE id = ?
+    `).run(content, thinkingString, metaString, messageId);
+
+    return Number(res.changes) > 0;
+  }
+
   public deleteMessage(messageId: string): {
     success: boolean;
     conversationId?: string;
@@ -1815,6 +1847,66 @@ export class RuntimeDatabase {
       SET status = ?, completed_at = ?, error = ?
       WHERE id = ?
     `).run(status, now, error || null, taskId);
+  }
+
+  public recoverInterruptedGenerations(): { recoveredTasksCount: number; interruptedMessagesCount: number } {
+    const runningTasks = this.db.prepare("SELECT id, session_id, conversation_id, prompt FROM agent_tasks WHERE status = 'running'").all() as Array<{
+      id: string;
+      session_id: string;
+      conversation_id: string | null;
+      prompt: string;
+    }>;
+
+    let interruptedMessagesCount = 0;
+
+    for (const task of runningTasks) {
+      this.updateTaskStatus(task.id, 'interrupted', 'Interrompu par arrêt inattendu du runtime');
+
+      if (task.conversation_id) {
+        const lastAssistant = this.db.prepare(`
+          SELECT id, metadata, content FROM messages 
+          WHERE conversation_id = ? AND role = 'assistant'
+          ORDER BY created_at DESC LIMIT 1
+        `).get(task.conversation_id) as { id: string; metadata: string | null; content: string } | undefined;
+
+        if (lastAssistant) {
+          let meta: Record<string, any> = {};
+          if (lastAssistant.metadata) {
+            try { meta = JSON.parse(lastAssistant.metadata); } catch {}
+          }
+
+          meta.status = 'interrupted';
+          meta.interrupted = true;
+          meta.canContinue = true;
+          meta.prompt = meta.prompt || task.prompt;
+
+          this.db.prepare("UPDATE messages SET metadata = ? WHERE id = ?").run(JSON.stringify(meta), lastAssistant.id);
+          interruptedMessagesCount++;
+        }
+      }
+    }
+
+    return {
+      recoveredTasksCount: runningTasks.length,
+      interruptedMessagesCount
+    };
+  }
+
+  public getRunningTaskForConversation(conversationId: string): {
+    id: string;
+    sessionId: string;
+    prompt: string;
+    status: string;
+    mode: string;
+    createdAt: string;
+  } | null {
+    const row = this.db.prepare(`
+      SELECT id, session_id as sessionId, prompt, status, mode, created_at as createdAt
+      FROM agent_tasks 
+      WHERE conversation_id = ? AND status = 'running'
+      ORDER BY created_at DESC LIMIT 1
+    `).get(conversationId) as any;
+    return row || null;
   }
 
   public recordEvent(event: {
