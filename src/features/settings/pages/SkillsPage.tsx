@@ -1,5 +1,5 @@
 import React from 'react';
-import { Edit2, Trash2 } from 'lucide-react';
+import { Edit2, Trash2, Download, Upload } from 'lucide-react';
 import { useSkillsSettings } from '../../../hooks/settings/useSkillsSettings';
 
 export function SkillsPage() {
@@ -17,6 +17,8 @@ export function SkillsPage() {
     setEditSkillInstructions,
     handleToggleSkill,
     handleImportSkill,
+    handleExportSkill,
+    handleImportZipFile,
     handleSaveSkillEdit,
     handleDeleteSkill,
     importResult,
@@ -54,14 +56,29 @@ export function SkillsPage() {
         <div className="p-3 bg-[var(--bg-app)] border border-[var(--border-modal)] rounded-[8px] space-y-3">
           <div className="text-[13px] font-medium text-[var(--text-primary)]">Importer une compétence</div>
           <div>
-            <label className="text-[11px] text-[var(--text-secondary)] block mb-1">Chemin absolu du dossier</label>
+            <label className="text-[11px] text-[var(--text-secondary)] block mb-1">Chemin absolu du dossier ou de l'archive (.zip)</label>
             <input
               type="text"
               value={importSkillPath}
               onChange={e => setImportSkillPath(e.target.value)}
-              placeholder="Ex: C:\Users\...\ma-competence"
+              placeholder={"Ex\u00A0: C:\\chemin\\ma-competence ou ma-competence.zip"}
               className="w-full bg-[var(--bg-surface)] border border-[var(--border-modal)] rounded-[6px] px-2.5 py-1.5 text-[12px] text-[var(--text-primary)] font-mono focus:outline-none focus:border-[var(--border-focus)]"
             />
+          </div>
+          <div>
+            <label className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[12px] bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-hover)] border border-[var(--border-modal)] rounded-[6px] transition-colors cursor-pointer">
+              <Upload className="w-3.5 h-3.5" />
+              <span>Choisir une archive (.zip)</span>
+              <input
+                type="file"
+                accept=".zip"
+                className="sr-only"
+                onChange={e => {
+                  const file = e.target.files?.[0];
+                  if (file) handleImportZipFile(file);
+                }}
+              />
+            </label>
           </div>
           {skillError && <div className="text-[12px] text-[var(--text-primary)] bg-[var(--border-subtle)] p-2 rounded">{skillError}</div>}
           <div className="flex items-center justify-end gap-2 pt-1">
@@ -217,14 +234,26 @@ export function SkillsPage() {
                     <Edit2 className="w-3.5 h-3.5" />
                   </button>
                   {!skill.isSystem && (
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteSkill(skill.name)}
-                      className="p-1 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
-                      title="Supprimer la compétence"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => handleExportSkill(skill.name)}
+                        className="p-1 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors tap-target-24"
+                        title="Exporter la compétence (.zip)"
+                        aria-label={`Exporter la compétence ${skill.name}`}
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteSkill(skill.name)}
+                        className="p-1 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors tap-target-24"
+                        title="Supprimer la compétence"
+                        aria-label="Supprimer la compétence"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </>
                   )}
                 </div>
               </div>

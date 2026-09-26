@@ -6,6 +6,7 @@ import fs from 'fs';
 import os from 'os';
 import { runtimeDatabase } from '../storage/RuntimeDatabase';
 import { SkillScanner, SkillSecurityScan, SkillParseResult } from './SkillScanner';
+import { SkillArchiveManager } from './SkillArchiveManager';
 
 export interface SkillInfo {
   id?: string;
@@ -59,13 +60,8 @@ export class SkillManager {
               const existing = runtimeDatabase.getSkill(parsed.name);
               if (!existing) {
                 runtimeDatabase.saveSkill({
-                  name: parsed.name,
-                  description: parsed.description,
-                  dirPath: skillPath,
-                  instructions: parsed.instructions,
-                  enabled: true,
-                  isSystem,
-                  metadata: parsed.metadata
+                  name: parsed.name, description: parsed.description, dirPath: skillPath,
+                  instructions: parsed.instructions, enabled: true, isSystem, metadata: parsed.metadata
                 });
               }
             } catch {}
@@ -149,6 +145,12 @@ export class SkillManager {
     options?: { isSystem?: boolean; autoEnable?: boolean }
   ): Promise<SkillInfo & { scanReport?: SkillSecurityScan; warnings: string[] }> {
     const resolvedPath = path.resolve(dirPath);
+
+    // Support direct des archives .zip (Mission R4f)
+    if (resolvedPath.toLowerCase().endsWith('.zip') || (fs.existsSync(resolvedPath) && fs.statSync(resolvedPath).isFile())) {
+      return SkillArchiveManager.importSkillFromZip(resolvedPath, this.skillsDir, options);
+    }
+
     const skillMd = path.join(resolvedPath, 'SKILL.md');
 
     if (!fs.existsSync(skillMd)) {
@@ -168,13 +170,8 @@ export class SkillManager {
       : (options === undefined ? true : Boolean(options.isSystem));
 
     const saved = runtimeDatabase.saveSkill({
-      name: parsed.name,
-      description: parsed.description,
-      dirPath: resolvedPath,
-      instructions: parsed.instructions,
-      enabled: shouldEnable,
-      isSystem,
-      metadata: parsed.metadata
+      name: parsed.name, description: parsed.description, dirPath: resolvedPath,
+      instructions: parsed.instructions, enabled: shouldEnable, isSystem, metadata: parsed.metadata
     });
 
     return {
@@ -182,6 +179,26 @@ export class SkillManager {
       scanReport,
       warnings: parsed.warnings
     };
+  }
+
+  /**
+   * Exporte une compétence sous forme d'archive .zip téléchargeable (Mission R4f)
+   */
+  public async exportSkill(name: string): Promise<{ filename: string; buffer: Buffer }> {
+    const skill = this.getSkill(name);
+    if (!skill) throw new Error(`Compétence introuvable : "${name}".`);
+    return SkillArchiveManager.exportSkillToZip(skill);
+  }
+
+  /**
+   * Importe une compétence depuis un buffer d'archive .zip (Mission R4f)
+   */
+  public async importSkillFromBuffer(
+    buffer: Buffer,
+    originalFilename?: string,
+    options?: { isSystem?: boolean; autoEnable?: boolean }
+  ): Promise<SkillInfo & { scanReport?: SkillSecurityScan; warnings: string[] }> {
+    return SkillArchiveManager.importSkillFromBuffer(buffer, this.skillsDir, originalFilename, options);
   }
 
   /**
@@ -218,16 +235,8 @@ export class SkillManager {
   public isReferenceCited(skillNameOrPath: string, referenceFileName: string): boolean {
     const skill = this.getSkill(skillNameOrPath) || this.listSkills().find(s => s.dirPath === skillNameOrPath);
     if (!skill || !skill.instructions) return false;
-
     const baseName = path.basename(referenceFileName);
-    const relRefName = `references/${baseName}`;
-    const backslashRefName = `references\\${baseName}`;
-
-    return (
-      skill.instructions.includes(baseName) ||
-      skill.instructions.includes(relRefName) ||
-      skill.instructions.includes(backslashRefName)
-    );
+    return skill.instructions.includes(baseName) || skill.instructions.includes(`references/${baseName}`) || skill.instructions.includes(`references\\${baseName}`);
   }
 
   /**

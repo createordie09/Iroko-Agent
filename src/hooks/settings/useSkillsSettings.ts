@@ -60,7 +60,7 @@ export function useSkillsSettings() {
   const handleImportSkill = async () => {
     setSkillError(null);
     if (!importSkillPath.trim()) {
-      setSkillError('Le chemin du dossier est obligatoire.');
+      setSkillError("Le chemin du dossier ou de l'archive .zip est obligatoire.");
       return;
     }
 
@@ -118,6 +118,64 @@ export function useSkillsSettings() {
     });
   };
 
+  const handleExportSkill = async (name: string): Promise<boolean> => {
+    try {
+      const res = await tokenService.fetch(`/api/skills/${encodeURIComponent(name)}/export`);
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setSkillError(data.error || "Erreur lors de l'exportation de la compétence.");
+        return false;
+      }
+
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = `${name}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(blobUrl);
+      return true;
+    } catch (err: any) {
+      setSkillError(err.message || "Erreur réseau lors de l'exportation.");
+      return false;
+    }
+  };
+
+  const handleImportZipFile = async (file: File) => {
+    setSkillError(null);
+    try {
+      const token = await tokenService.getToken();
+      const res = await fetch('/api/skills/import', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'X-Iroko-Request': '1',
+          'Content-Type': 'application/zip',
+          'X-Filename': encodeURIComponent(file.name)
+        },
+        body: file
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setSkillError(data.error || "Erreur lors de l'importation de l'archive.");
+        return;
+      }
+
+      setShowImportSkillForm(false);
+      setImportSkillPath('');
+      setImportResult({
+        skill: data.skill,
+        scanReport: data.scanReport,
+        warnings: data.warnings
+      });
+      fetchSkillsData();
+    } catch (err: any) {
+      setSkillError(err.message || 'Erreur réseau.');
+    }
+  };
+
   useEffect(() => {
     fetchSkillsData();
   }, []);
@@ -136,6 +194,8 @@ export function useSkillsSettings() {
     setEditSkillInstructions,
     handleToggleSkill,
     handleImportSkill,
+    handleExportSkill,
+    handleImportZipFile,
     handleSaveSkillEdit,
     handleDeleteSkill,
     importResult,

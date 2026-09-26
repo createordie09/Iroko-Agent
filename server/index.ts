@@ -1893,13 +1893,44 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
-    if (pathname === '/api/skills/import' && req.method === 'POST') {
-      const body = await readJson(64 * 1024);
+    if (pathname.startsWith('/api/skills/') && pathname.endsWith('/export') && req.method === 'GET') {
+      const name = decodeURIComponent(pathname.replace('/api/skills/', '').replace('/export', '').trim());
       try {
-        const result = await skillManager.importSkillFromDirectory(body.dirPath, {
-          isSystem: Boolean(body.isSystem),
-          autoEnable: Boolean(body.autoEnable)
+        const { filename, buffer } = await skillManager.exportSkill(name);
+        res.writeHead(200, {
+          'Content-Type': 'application/zip',
+          'Content-Disposition': `attachment; filename="${encodeURIComponent(filename)}"`,
+          'X-Content-Type-Options': 'nosniff'
         });
+        res.end(buffer);
+      } catch (err: any) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, error: err.message }));
+      }
+      return;
+    }
+
+    if (pathname === '/api/skills/import' && req.method === 'POST') {
+      try {
+        const contentType = req.headers['content-type'] || '';
+        let result: any;
+
+        if (contentType.includes('application/zip') || contentType.includes('application/octet-stream')) {
+          const chunks: Buffer[] = [];
+          for await (const chunk of req) {
+            chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk);
+          }
+          const buffer = Buffer.concat(chunks);
+          const rawFilename = (req.headers['x-filename'] as string) || 'skill.zip';
+          result = await skillManager.importSkillFromBuffer(buffer, decodeURIComponent(rawFilename));
+        } else {
+          const body = await readJson(64 * 1024);
+          result = await skillManager.importSkillFromDirectory(body.dirPath, {
+            isSystem: Boolean(body.isSystem),
+            autoEnable: Boolean(body.autoEnable)
+          });
+        }
+
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({
           success: true,
