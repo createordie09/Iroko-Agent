@@ -1523,6 +1523,46 @@ export class RuntimeDatabase {
     };
   }
 
+  public addMessagesBulk(messages: Array<{
+    id?: string;
+    conversationId: string;
+    role: 'user' | 'assistant' | 'system';
+    content: string;
+    thinkingLogs?: any[];
+    metadata?: any;
+    createdAt?: string;
+  }>): number {
+    if (!messages || messages.length === 0) return 0;
+    const stmt = this.db.prepare(`
+      INSERT INTO messages (id, conversation_id, role, content, created_at, thinking_logs, metadata)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `);
+    const updateConvStmt = this.db.prepare('UPDATE conversations SET updated_at = ? WHERE id = ?');
+    const now = new Date().toISOString();
+    const convId = messages[0].conversationId;
+
+    this.db.exec('BEGIN TRANSACTION;');
+    try {
+      for (const msg of messages) {
+        stmt.run(
+          msg.id || crypto.randomUUID(),
+          msg.conversationId,
+          msg.role,
+          msg.content,
+          msg.createdAt || now,
+          msg.thinkingLogs ? JSON.stringify(msg.thinkingLogs) : null,
+          msg.metadata ? JSON.stringify(msg.metadata) : null
+        );
+      }
+      updateConvStmt.run(now, convId);
+      this.db.exec('COMMIT;');
+      return messages.length;
+    } catch (err) {
+      this.db.exec('ROLLBACK;');
+      throw err;
+    }
+  }
+
   public getMessage(messageId: string, includePending = false): DbMessage | null {
     if (!includePending && this.isPendingDeletion('message', messageId)) return null;
     const row = this.db.prepare('SELECT * FROM messages WHERE id = ?').get(messageId) as unknown as DbMessage | undefined;

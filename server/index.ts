@@ -882,6 +882,24 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    if (pathname.includes('/messages/bulk') && req.method === 'POST') {
+      const parts = pathname.split('/');
+      const convId = parts[3];
+      const body = await readJson(15 * 1024 * 1024);
+      if (!Array.isArray(body.messages)) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Le champ messages (tableau) est requis.' }));
+        return;
+      }
+      const count = runtimeDatabase.addMessagesBulk(body.messages.map((m: any) => ({
+        ...m,
+        conversationId: convId
+      })));
+      res.writeHead(201, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: true, count }));
+      return;
+    }
+
     if (pathname.includes('/messages') && req.method === 'POST') {
       const parts = pathname.split('/');
       const convId = parts[3];

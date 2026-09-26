@@ -1,0 +1,130 @@
+[
+  {
+    "messageCount": 200,
+    "cpuThrottle": "×1",
+    "openTimeMs": 994,
+    "domNodeCount": 8823,
+    "heapOpenMo": 14.75,
+    "heapPostScrollMo": 14.82,
+    "memoryDeltaMo": 0.07,
+    "scrollFps": 60,
+    "droppedFramesPct": 0,
+    "contentVisibility": {
+      "total": 200,
+      "optimized": 194,
+      "offscreen": 194
+    }
+  },
+  {
+    "messageCount": 200,
+    "cpuThrottle": "×4",
+    "openTimeMs": 2214,
+    "domNodeCount": 8823,
+    "heapOpenMo": 14.69,
+    "heapPostScrollMo": 14.76,
+    "memoryDeltaMo": 0.07,
+    "scrollFps": 60,
+    "droppedFramesPct": 0,
+    "contentVisibility": {
+      "total": 200,
+      "optimized": 194,
+      "offscreen": 194
+    }
+  },
+  {
+    "messageCount": 1000,
+    "cpuThrottle": "×1",
+    "openTimeMs": 1257,
+    "domNodeCount": 43023,
+    "heapOpenMo": 48.08,
+    "heapPostScrollMo": 48.17,
+    "memoryDeltaMo": 0.09,
+    "scrollFps": 60,
+    "droppedFramesPct": 0,
+    "contentVisibility": {
+      "total": 1000,
+      "optimized": 994,
+      "offscreen": 994
+    }
+  },
+  {
+    "messageCount": 1000,
+    "cpuThrottle": "×4",
+    "openTimeMs": 3993,
+    "domNodeCount": 43023,
+    "heapOpenMo": 48.03,
+    "heapPostScrollMo": 48.12,
+    "memoryDeltaMo": 0.09,
+    "scrollFps": 60,
+    "droppedFramesPct": 0,
+    "contentVisibility": {
+      "total": 1000,
+      "optimized": 994,
+      "offscreen": 994
+    }
+  },
+  {
+    "messageCount": 3000,
+    "cpuThrottle": "×1",
+    "openTimeMs": 1766,
+    "domNodeCount": 128523,
+    "heapOpenMo": 109.18,
+    "heapPostScrollMo": 109.35,
+    "memoryDeltaMo": 0.17,
+    "scrollFps": 60,
+    "droppedFramesPct": 0,
+    "contentVisibility": {
+      "total": 3000,
+      "optimized": 2994,
+      "offscreen": 2994
+    }
+  },
+  {
+    "messageCount": 3000,
+    "cpuThrottle": "×4",
+    "openTimeMs": 8168,
+    "domNodeCount": 128523,
+    "heapOpenMo": 110.47,
+    "heapPostScrollMo": 109.7,
+    "memoryDeltaMo": -0.77,
+    "scrollFps": 60,
+    "droppedFramesPct": 0,
+    "contentVisibility": {
+      "total": 3000,
+      "optimized": 2994,
+      "offscreen": 2994
+    }
+  },
+  {
+    "messageCount": 5000,
+    "cpuThrottle": "×1",
+    "openTimeMs": 2590,
+    "domNodeCount": 214023,
+    "heapOpenMo": 187.26,
+    "heapPostScrollMo": 187.51,
+    "memoryDeltaMo": 0.25,
+    "scrollFps": 60,
+    "droppedFramesPct": 0,
+    "contentVisibility": {
+      "total": 5000,
+      "optimized": 4994,
+      "offscreen": 4994
+    }
+  },
+  {
+    "messageCount": 5000,
+    "cpuThrottle": "×4",
+    "openTimeMs": 12046,
+    "domNodeCount": 214023,
+    "heapOpenMo": 190.45,
+    "heapPostScrollMo": 179.32,
+    "memoryDeltaMo": -11.13,
+    "scrollFps": 60,
+    "droppedFramesPct": 0,
+    "contentVisibility": {
+      "total": 5000,
+      "optimized": 4994,
+      "offscreen": 4994
+    }
+  }
+]
