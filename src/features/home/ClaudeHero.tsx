@@ -2,7 +2,7 @@ import React from 'react';
 import { ClaudeComposer } from '../../components/composer/ClaudeComposer';
 
 export interface ClaudeHeroProps {
-  onSendMessage: (text: string, options?: { mode: 'chat' | 'code'; tools?: string[]; attachmentIds?: string[] }) => void;
+  onSendMessage: (text: string, options?: { mode?: 'chat' | 'code'; tools?: string[]; attachmentIds?: string[]; comparisonModelBId?: string }) => void;
   isLoading?: boolean;
 }
 

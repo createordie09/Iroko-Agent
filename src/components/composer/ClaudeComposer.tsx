@@ -1,10 +1,10 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { 
-  Plus, ArrowUp, Mic, Volume2, ChevronDown, Check, Wrench, Sparkles, Paperclip, Terminal, Square, X, FileText, Folder, Download, Image as ImageIcon, Film
+  Plus, ArrowUp, Mic, Volume2, ChevronDown, Check, Wrench, Sparkles, Paperclip, Terminal, Square, X, FileText, Folder, Download, Image as ImageIcon, Film, Columns
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { tokenService } from '../../services/security/TokenService';
-import { FormattedModel, getModelCapabilities } from '../../lib/models';
+import { FormattedModel, getModelCapabilities, formatModelLabel } from '../../lib/models';
 import { speechService } from '../../services/speech/SpeechService';
 import { attachmentService } from '../../services/attachments/AttachmentService';
 import { workspaceService, RecentWorkspace } from '../../services/workspace/WorkspaceService';
@@ -12,9 +12,10 @@ import { mediaService } from '../../services/media/MediaService';
 import { useModelSelection } from '../../hooks/models';
 import { ModelSelectorMenu } from './ModelSelectorMenu';
 import { useDraft } from '../../hooks/useDraft';
+import { ComparisonBar } from './ComparisonBar';
 
 export interface ClaudeComposerProps {
-  onSend: (text: string, options?: { mode: 'chat' | 'code'; tools?: string[]; attachmentIds?: string[] }) => void;
+  onSend: (text: string, options?: { mode?: 'chat' | 'code'; tools?: string[]; attachmentIds?: string[]; comparisonModelBId?: string }) => void;
   onStop?: () => void;
   isLoading?: boolean;
   placeholder?: string;
@@ -105,6 +106,42 @@ export function ClaudeComposer({
   const [hasImageChip, setHasImageChip] = useState(false);
   const [isVideoConfigured, setIsVideoConfigured] = useState(false);
   const [hasVideoChip, setHasVideoChip] = useState(false);
+  const [isComparisonMode, setIsComparisonMode] = useState(false);
+  const [comparisonModelBId, setComparisonModelBId] = useState<string>('');
+  const [isComparisonAvailable, setIsComparisonAvailable] = useState(false);
+  const [comparisonDisabledReason, setComparisonDisabledReason] = useState<string>(
+    'Nécessite au moins deux fournisseurs d\'IA configurés avec des clés valides.'
+  );
+
+  const { groupedModels } = useModelSelection();
+
+  const availableModelsForB = useMemo(() => {
+    const list = (groupedModels || []).flatMap(g => g.tiers.flatMap(t => t.models));
+    return list.filter(m => m.id !== activeModel);
+  }, [groupedModels, activeModel]);
+
+  useEffect(() => {
+    if (availableModelsForB.length > 0 && (!comparisonModelBId || comparisonModelBId === activeModel)) {
+      setComparisonModelBId(availableModelsForB[0].id);
+    }
+  }, [availableModelsForB, activeModel, comparisonModelBId]);
+
+  const activeModelFormatted = useMemo(() => formatModelLabel(activeModel), [activeModel]);
+
+  useEffect(() => {
+    tokenService.fetch('/api/models/comparison-status')
+      .then(res => res.json())
+      .then(data => {
+        setIsComparisonAvailable(Boolean(data?.available));
+        if (data?.reason) {
+          setComparisonDisabledReason(data.reason);
+        }
+      })
+      .catch(() => {
+        setIsComparisonAvailable(false);
+      });
+  }, [modelsRefreshKey]);
+
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const toolsMenuRef = useRef<HTMLDivElement>(null);
   const modelMenuRef = useRef<HTMLDivElement>(null);
@@ -512,7 +549,11 @@ export function ClaudeComposer({
     setInput('');
     setAttachments([]);
     if (textareaRef.current) textareaRef.current.style.height = 'auto';
-    onSend(text, { mode: composerMode, attachmentIds: readyAttachmentIds });
+    const compBId = isComparisonMode ? comparisonModelBId : undefined;
+    if (isComparisonMode) {
+      setIsComparisonMode(false);
+    }
+    onSend(text, { mode: composerMode, attachmentIds: readyAttachmentIds, comparisonModelBId: compBId });
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -739,6 +780,17 @@ export function ClaudeComposer({
         </div>
       )}
 
+      {/* ── Bandeau de Comparaison de deux modèles (Mission R4d) [À VALIDER] ── */}
+      {isComparisonMode && (
+        <ComparisonBar
+          modelAName={activeModelFormatted.name}
+          modelBId={comparisonModelBId}
+          availableModels={availableModelsForB}
+          onSelectModelB={(id) => setComparisonModelBId(id)}
+          onClose={() => setIsComparisonMode(false)}
+        />
+      )}
+
       {/* ── Ligne 1 : Zone de saisie ── */}
       <textarea
         ref={textareaRef}
@@ -851,6 +903,36 @@ export function ClaudeComposer({
                     <div className="flex items-center gap-2">
                       <Film className="w-3.5 h-3.5 text-[var(--text-tertiary)]" />
                       <span>Créer une vidéo</span>
+                    </div>
+                    <span className="text-[11px] text-[var(--text-tertiary)]">À configurer</span>
+                  </button>
+                )}
+
+                {/* Comparer deux modèles (Mission R4d) [À VALIDER] */}
+                {isComparisonAvailable ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsComparisonMode(true);
+                      setIsToolsOpen(false);
+                      if (textareaRef.current) textareaRef.current.focus();
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-1.5 text-[13px] text-[var(--text-primary)] hover:bg-[var(--bg-surface-hover)] transition-colors text-left"
+                  >
+                    <Columns className="w-3.5 h-3.5 text-[var(--text-secondary)]" />
+                    <span>Comparer deux modèles</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={true}
+                    aria-disabled={true}
+                    title={comparisonDisabledReason}
+                    className="w-full flex items-center justify-between px-3 py-1.5 text-[13px] text-[var(--text-tertiary)] opacity-40 cursor-not-allowed text-left"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Columns className="w-3.5 h-3.5 text-[var(--text-tertiary)]" />
+                      <span>Comparer deux modèles</span>
                     </div>
                     <span className="text-[11px] text-[var(--text-tertiary)]">À configurer</span>
                   </button>

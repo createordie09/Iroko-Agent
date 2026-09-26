@@ -7,6 +7,7 @@ import { AttachmentPublicInfo } from '../../services/attachments/AttachmentServi
 import { FormattedMessage } from './FormattedMessage';
 import { ArtifactCard } from './ArtifactCard';
 import { MessageSources } from './MessageSources';
+import { ComparisonMessageView } from '../../components/chat/ComparisonMessageView';
 
 export interface ChatMessageItemProps {
   key?: any;
@@ -155,45 +156,54 @@ export function ChatMessageItem({
       ) : (
         /* Réponse de l'assistant : texte directement sur le fond (Capture 4) */
         <div className="space-y-3 group">
-          {/* ── Bloc de réflexion dépliable propre par message ── */}
-          {messageThinking && (
-            <div className="mb-3">
-              <button
-                type="button"
-                onClick={() => setIsLocalThinkingOpen(prev => !prev)}
-                className="flex items-center gap-1.5 text-[13px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors select-none cursor-pointer"
-                aria-expanded={isLocalThinkingOpen}
-              >
-                <span>Réflexion</span>
-                {isLocalThinkingOpen ? (
-                  <ChevronDown className="w-3.5 h-3.5 text-[var(--text-secondary)]" />
-                ) : (
-                  <ChevronRight className="w-3.5 h-3.5 text-[var(--text-secondary)]" />
-                )}
-              </button>
+          {msg.metadata?.comparison ? (
+            <ComparisonMessageView
+              msg={msg}
+              conversationFont={conversationFont}
+            />
+          ) : (
+            <>
+              {/* ── Bloc de réflexion dépliable propre par message ── */}
+              {messageThinking && (
+                <div className="mb-3">
+                  <button
+                    type="button"
+                    onClick={() => setIsLocalThinkingOpen(prev => !prev)}
+                    className="flex items-center gap-1.5 text-[13px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors select-none cursor-pointer"
+                    aria-expanded={isLocalThinkingOpen}
+                  >
+                    <span>Réflexion</span>
+                    {isLocalThinkingOpen ? (
+                      <ChevronDown className="w-3.5 h-3.5 text-[var(--text-secondary)]" />
+                    ) : (
+                      <ChevronRight className="w-3.5 h-3.5 text-[var(--text-secondary)]" />
+                    )}
+                  </button>
 
-              {isLocalThinkingOpen && (
-                <div
-                  className="mt-2 pl-3 border-l border-[var(--border-subtle)] text-[13px] text-[var(--text-secondary)] leading-relaxed font-sans whitespace-pre-wrap max-h-60 overflow-y-auto claude-scrollbar animate-in fade-in duration-150"
-                >
-                  {messageThinking}
+                  {isLocalThinkingOpen && (
+                    <div
+                      className="mt-2 pl-3 border-l border-[var(--border-subtle)] text-[13px] text-[var(--text-secondary)] leading-relaxed font-sans whitespace-pre-wrap max-h-60 overflow-y-auto claude-scrollbar animate-in fade-in duration-150"
+                    >
+                      {messageThinking}
+                    </div>
+                  )}
                 </div>
               )}
-            </div>
-          )}
 
-          {/* Texte principal de la réponse (Police serif ou sans selon réglage) */}
-          <div
-            className={`text-[15px] sm:text-[15.5px] text-[var(--text-primary)] leading-[1.5] ${
-              conversationFont === 'serif' ? 'font-serif' : 'font-sans'
-            }`}
-            style={{
-              fontFamily: conversationFont === 'serif' ? 'var(--font-serif)' : 'var(--font-sans)',
-              letterSpacing: '-0.005em'
-            }}
-          >
-            <FormattedMessage content={msg.content} />
-          </div>
+              {/* Texte principal de la réponse (Police serif ou sans selon réglage) */}
+              <div
+                className={`text-[15px] sm:text-[15.5px] text-[var(--text-primary)] leading-[1.5] ${
+                  conversationFont === 'serif' ? 'font-serif' : 'font-sans'
+                }`}
+                style={{
+                  fontFamily: conversationFont === 'serif' ? 'var(--font-serif)' : 'var(--font-sans)',
+                  letterSpacing: '-0.005em'
+                }}
+              >
+                <FormattedMessage content={msg.content} />
+              </div>
+            </>
+          )}
 
           {/* Artéfacts générés dans cette réponse */}
           {msg.metadata?.artifacts && msg.metadata.artifacts.length > 0 && (

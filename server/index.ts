@@ -35,6 +35,7 @@ import { LocalRateLimiter } from './security/LocalRateLimiter';
 import { RuntimeWatchdog } from './supervisor/RuntimeWatchdog';
 import { activeJobManager } from './runtime/ActiveJobManager';
 import { deletionManager } from './storage/DeletionManager';
+import { modelComparisonService } from './models/ModelComparisonService';
 
 // Activation immédiate du Garde Réseau pour l'ensemble du runtime
 networkGuard.install();
@@ -598,6 +599,184 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    // Comparaison de deux modèles en parallèle (Mission R4d)
+    if (pathname.startsWith('/api/conversations/') && pathname.endsWith('/compare') && req.method === 'POST') {
+      const parts = pathname.split('/');
+      const convId = parts[3];
+      const body = await readJson(64 * 1024);
+      const { prompt, modelAId, modelBId } = body;
+      if (!prompt || !modelAId || !modelBId) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'prompt, modelAId et modelBId sont requis.' }));
+        return;
+      }
+
+      // S'assurer que la conversation existe
+      const existingConv = runtimeDatabase.getConversation(convId);
+      if (!existingConv) {
+        runtimeDatabase.saveConversation(convId, prompt.slice(0, 40), 'chat');
+      }
+
+      const userMsgId = crypto.randomUUID();
+      const userMsg = runtimeDatabase.addMessage({
+        id: userMsgId,
+        conversationId: convId,
+        role: 'user',
+        content: prompt
+      });
+
+      const assistantMsgId = crypto.randomUUID();
+      const initComparison = {
+        prompt,
+        modelA: {
+          modelId: modelAId,
+          modelName: modelAId,
+          content: '',
+          startTime: Date.now(),
+          endTime: 0,
+          status: 'streaming' as const
+        },
+        modelB: {
+          modelId: modelBId,
+          modelName: modelBId,
+          content: '',
+          startTime: Date.now(),
+          endTime: 0,
+          status: 'streaming' as const
+        },
+        selectedModel: null,
+        archivedModel: null
+      };
+
+      const assistantMsg = runtimeDatabase.addMessage({
+        id: assistantMsgId,
+        conversationId: convId,
+        role: 'assistant',
+        content: '',
+        metadata: { comparison: initComparison }
+      });
+
+      broadcastWsEvent({
+        type: 'comparison_started',
+        conversationId: convId,
+        userMessage: userMsg,
+        assistantMessage: assistantMsg
+      });
+
+      const comparisonResult = await modelComparisonService.runComparison(prompt, modelAId, modelBId, {
+        conversationId: convId,
+        onChunk: (column, delta) => {
+          broadcastWsEvent({
+            type: 'comparison_chunk',
+            conversationId: convId,
+            messageId: assistantMsgId,
+            column,
+            delta
+          });
+        }
+      });
+
+      runtimeDatabase.updateMessageContent(
+        assistantMsgId,
+        '',
+        undefined,
+        { comparison: comparisonResult }
+      );
+
+      const finalMsg = runtimeDatabase.getMessage(assistantMsgId);
+      broadcastWsEvent({
+        type: 'comparison_completed',
+        conversationId: convId,
+        messageId: assistantMsgId,
+        comparison: comparisonResult
+      });
+
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({
+        success: true,
+        userMessage: userMsg,
+        assistantMessage: finalMsg,
+        comparison: comparisonResult
+      }));
+      return;
+    }
+
+    // Sélection de la réponse conservée ("Garder cette réponse", Mission R4d)
+    if (pathname.startsWith('/api/conversations/') && pathname.includes('/messages/') && pathname.endsWith('/choose-response') && req.method === 'PUT') {
+      const parts = pathname.split('/');
+      const convId = parts[3];
+      const msgId = parts[5];
+      const body = await readJson(64 * 1024);
+      const { choice } = body;
+      if (choice !== 'modelA' && choice !== 'modelB') {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Le choix doit être modelA ou modelB.' }));
+        return;
+      }
+
+      const result = modelComparisonService.selectResponse(msgId, choice);
+      if (!result.success) {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Message introuvable ou ne contenant pas de comparaison.' }));
+        return;
+      }
+
+      broadcastWsEvent({
+        type: 'comparison_selection_changed',
+        conversationId: convId,
+        messageId: msgId,
+        choice,
+        message: result.message
+      });
+
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: true, message: result.message }));
+      return;
+    }
+
+    // Régénération isolée d'une seule colonne de comparaison (Mission R4d)
+    if (pathname.startsWith('/api/conversations/') && pathname.includes('/messages/') && pathname.endsWith('/regenerate-column') && req.method === 'POST') {
+      const parts = pathname.split('/');
+      const convId = parts[3];
+      const msgId = parts[5];
+      const body = await readJson(64 * 1024);
+      const { column } = body;
+      if (column !== 'modelA' && column !== 'modelB') {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'La colonne doit être modelA ou modelB.' }));
+        return;
+      }
+
+      const resRegen = await modelComparisonService.regenerateColumn(msgId, column, (delta) => {
+        broadcastWsEvent({
+          type: 'comparison_chunk',
+          conversationId: convId,
+          messageId: msgId,
+          column,
+          delta
+        });
+      });
+
+      if (!resRegen.success) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Échec de la régénération de la colonne.' }));
+        return;
+      }
+
+      const updatedMsg = runtimeDatabase.getMessage(msgId);
+      broadcastWsEvent({
+        type: 'comparison_column_regenerated',
+        conversationId: convId,
+        messageId: msgId,
+        column,
+        message: updatedMsg
+      });
+
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: true, message: updatedMsg, columnResult: resRegen.result }));
+      return;
+    }
+
     if (pathname.includes('/messages') && req.method === 'POST') {
       const parts = pathname.split('/');
       const convId = parts[3];
@@ -784,6 +963,14 @@ const server = http.createServer(async (req, res) => {
         fallbackPolicy: modelGateway.getFallbackPolicy(),
         defaultStrategy: modelGateway.router.getDefaultStrategy()
       }));
+      return;
+    }
+
+    // Statut de disponibilité de la comparaison de deux modèles (Mission R4d)
+    if (pathname === '/api/models/comparison-status' && req.method === 'GET') {
+      const status = modelComparisonService.isComparisonAvailable();
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(status));
       return;
     }
 

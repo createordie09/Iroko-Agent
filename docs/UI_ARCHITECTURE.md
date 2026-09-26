@@ -83,6 +83,8 @@ Tiroir mobile (≤768px) : Drawer latéral animé (slide-in) avec overlay sombre
 | **SearchProvidersSection** | `src/features/settings/pages/SearchProvidersSection.tsx` | Sous-section modulaire (< 250 lignes) de gestion des fournisseurs de recherche web (Brave, Tavily, URL personnalisée, Mock) dans Paramètres › Fournisseurs & Clés avec statut, clé masquée, test réel et ajout | `ProvidersPage.tsx` |
 | **SkillsPage** | `src/features/settings/pages/SkillsPage.tsx` | Page modulaire des compétences (catalogue prompt vs instructions complètes §13, architecture Niveau 3, badges "Système" / "Importée", suppression masquée pour les compétences système non supprimables, carte sobre de confirmation de sécurité affichant les scripts, URLs et appels réseau avant activation) | `ClaudeSettingsModal.tsx` |
 | **UndoDeletionBanner** | `src/components/common/UndoDeletionBanner.tsx` | Bandeau discret fixe centré en bas (`role="status"`, `aria-live="polite"`, `data-undo-banner="true"`) affichant l'avis de suppression différée ("X supprimé. Annuler.") pendant 5 secondes avec bouton de rétractation immédiat | `ZyriconAppShell.tsx` |
+| **ComparisonBar** | `src/components/composer/ComparisonBar.tsx` | Bandeau de configuration du mode comparaison au-dessus du textarea (Modèle A vs Modèle B, mention informative de coût implicite sans montant, bouton de fermeture) | `ClaudeComposer.tsx` |
+| **ComparisonMessageView** | `src/components/chat/ComparisonMessageView.tsx` | Vue bicolonne responsive des réponses parallèles (côte à côte desktop `md:grid-cols-2`, empilées mobile 375px), statuts indépendants, copies, régénérations isolées et sélection réversible "Garder cette réponse" | `ChatMessageItem.tsx` |
 
 
 ---

@@ -43,7 +43,7 @@ export function useChatMessageActions({
 
   const handleSendMessage = (
     text: string, 
-    options?: { mode?: 'chat' | 'code'; tools?: string[]; attachmentIds?: string[] }
+    options?: { mode?: 'chat' | 'code'; tools?: string[]; attachmentIds?: string[]; comparisonModelBId?: string }
   ) => {
     const userMsg = { 
       id: crypto.randomUUID(),
@@ -65,6 +65,33 @@ export function useChatMessageActions({
           setAttachmentsMap(prev => ({ ...prev, [id]: att }));
         }).catch(() => {});
       }
+    }
+
+    if (options?.comparisonModelBId) {
+      tokenService.fetch(`/api/conversations/${encodeURIComponent(conversationId)}/compare`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: text,
+          modelAId: activeModel,
+          modelBId: options.comparisonModelBId
+        })
+      }).then(async (res) => {
+        if (res.ok) {
+          const data = await res.json();
+          if (data.assistantMessage) {
+            setMessages(prev => {
+              const filtered = prev.filter(m => m.id !== data.assistantMessage.id);
+              return [...filtered, data.assistantMessage];
+            });
+          }
+        }
+        setChatStatus('idle');
+      }).catch((err) => {
+        console.error('Erreur comparaison de modèles', err);
+        setChatStatus('idle');
+      });
+      return;
     }
 
     let preferredProviderId: string | undefined = undefined;

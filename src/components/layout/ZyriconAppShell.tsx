@@ -12,6 +12,7 @@ import { useOnboarding } from '../../hooks/useOnboarding';
 import { useProviders } from '../../hooks/models/useProviders';
 import { ZoneErrorBoundary } from '../common/ZoneErrorBoundary';
 import { UndoDeletionBanner } from '../common/UndoDeletionBanner';
+import { tokenService } from '../../services/security/TokenService';
 
 // Chargement dynamique différé (Lot 6 Fiche 19) pour alléger le bundle initial
 const ClaudeChat = lazy(() => import('../../features/chat/ClaudeChat').then(m => ({ default: m.ClaudeChat })));
@@ -63,7 +64,10 @@ export function ZyriconAppShell() {
   // Régions d'annonces en direct conformes WCAG 4.1.3 & Règle U6
   const { statusAnnouncement, alertAnnouncement } = useLiveAnnouncements();
 
-  const handleHeroSendMessage = (text: string, options?: { mode: 'chat' | 'code'; tools?: string[]; attachmentIds?: string[] }) => {
+  const handleHeroSendMessage = (
+    text: string, 
+    options?: { mode?: 'chat' | 'code'; tools?: string[]; attachmentIds?: string[]; comparisonModelBId?: string }
+  ) => {
     const newConvId = crypto.randomUUID();
     const targetMode = options?.mode || composerMode;
     if (options?.mode) {
@@ -82,6 +86,35 @@ export function ZyriconAppShell() {
     setHistory(prev => [newConvItem, ...prev.filter(h => h.id !== newConvId)]);
     setMessages([{ role: 'user', content: text, timestamp: Date.now() }]);
     setChatStatus('loading');
+
+    if (options?.comparisonModelBId) {
+      setActiveView('chat');
+      tokenService.fetch(`/api/conversations/${encodeURIComponent(newConvId)}/compare`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: text,
+          modelAId: activeModel,
+          modelBId: options.comparisonModelBId
+        })
+      }).then(async (res) => {
+        if (res.ok) {
+          const data = await res.json();
+          if (data.assistantMessage) {
+            setMessages(prev => {
+              const filtered = prev.filter(m => m.id !== data.assistantMessage.id);
+              return [...filtered, data.assistantMessage];
+            });
+          }
+        }
+        setChatStatus('idle');
+      }).catch((err) => {
+        console.error('Erreur comparaison de modèles', err);
+        setChatStatus('idle');
+      });
+      return;
+    }
+
     let preferredProviderId: string | undefined = undefined;
     if (activeModel && activeModel.includes('/')) {
       preferredProviderId = activeModel.split('/')[0];
