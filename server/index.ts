@@ -31,6 +31,8 @@ import { searchGateway } from './search/SearchGateway';
 import { networkGuard } from './security/NetworkGuard';
 import { PrivacyFilter } from './security/PrivacyFilter';
 import { logger } from './utils/logger';
+import { LocalRateLimiter } from './security/LocalRateLimiter';
+import { RuntimeWatchdog } from './supervisor/RuntimeWatchdog';
 
 // Activation immédiate du Garde Réseau pour l'ensemble du runtime
 networkGuard.install();
@@ -40,6 +42,21 @@ const HOST = '127.0.0.1';
 const DEFAULT_WORKSPACE = process.env.WORKSPACE_PATH || process.cwd();
 
 export const permissionStore = PermissionStore.getInstance();
+
+// Limiteurs de fréquence locaux avec délai d'attente progressif (Mission R3a)
+export const bootstrapRateLimiter = new LocalRateLimiter({
+  windowMs: 10000,
+  maxRequests: 10,
+  baseDelayMs: 1000,
+  maxDelayMs: 30000
+});
+
+export const wsRateLimiter = new LocalRateLimiter({
+  windowMs: 10000,
+  maxRequests: 15,
+  baseDelayMs: 1000,
+  maxDelayMs: 30000
+});
 
 // Jeton éphémère d'authentification généré cryptographiquement au lancement (§26)
 export const runtimeToken = crypto.randomBytes(32).toString('hex');
@@ -234,14 +251,31 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // 5. Amorçage du jeton : GET /api/bootstrap (§26, §29)
+  // 5. Amorçage du jeton : GET /api/bootstrap (§26, §29, Mission R3a)
   // Strictement même origine ou client local, aucun CORS, X-Content-Type-Options: nosniff
-  if (pathname === '/api/bootstrap' && req.method === 'GET') {
+  if ((pathname === '/api/bootstrap' || pathname === '/api/auth/bootstrap') && req.method === 'GET') {
     const secFetchSite = req.headers['sec-fetch-site'];
     if (secFetchSite && secFetchSite !== 'same-origin' && secFetchSite !== 'none') {
       logger.warn(`Bootstrap refusé : Sec-Fetch-Site non autorisé (${secFetchSite})`);
       res.writeHead(403, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: 'Accès bootstrap restreint à la même origine.' }));
+      return;
+    }
+
+    // Protection en profondeur locale : limite de fréquence avec délai progressif (Mission R3a)
+    const clientIp = req.socket.remoteAddress || '127.0.0.1';
+    const rateCheck = bootstrapRateLimiter.check(clientIp);
+    if (!rateCheck.allowed) {
+      logger.warn(`Amorçage temporairement limité pour ${clientIp} : réessai dans ${rateCheck.retryAfterSeconds}s`);
+      res.writeHead(429, {
+        'Content-Type': 'application/json',
+        'Retry-After': String(rateCheck.retryAfterSeconds),
+        'X-Content-Type-Options': 'nosniff'
+      });
+      res.end(JSON.stringify({
+        error: 'Limite de fréquence locale dépassée sur l\'amorçage du jeton. Veuillez patienter avant de réessayer.',
+        retryAfter: rateCheck.retryAfterSeconds
+      }));
       return;
     }
 
@@ -1370,6 +1404,7 @@ const server = http.createServer(async (req, res) => {
           message: anonymize(PrivacyFilter.maskSecretsForModel(typeof e.message === 'string' ? e.message : JSON.stringify(e.message)))
         }));
         const dataDir = anonymize(runtimeDatabase.dataDir);
+        const watchdogRestarts = RuntimeWatchdog.getRestartsFromDisk(runtimeDatabase.dataDir);
 
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({
@@ -1384,7 +1419,8 @@ const server = http.createServer(async (req, res) => {
           connectedProviders: providers,
           mcpServers,
           recentErrors,
-          dataDir
+          dataDir,
+          restarts: watchdogRestarts
         }));
       } catch (err: any) {
         res.writeHead(500, { 'Content-Type': 'application/json' });
@@ -2398,6 +2434,16 @@ server.on('upgrade', (req, socket, head) => {
   if (!isHostAllowed(host) || (origin && !isOriginAllowed(origin))) {
     logger.warn(`Handshake WebSocket refusé : Host (${host}) ou Origin (${origin}) non autorisé`);
     socket.write('HTTP/1.1 403 Forbidden\r\n\r\n');
+    socket.destroy();
+    return;
+  }
+
+  // 1b. Protection en profondeur locale : limite de fréquence avec délai progressif sur les connexions WS (Mission R3a)
+  const clientIp = req.socket.remoteAddress || '127.0.0.1';
+  const wsRateCheck = wsRateLimiter.check(clientIp);
+  if (!wsRateCheck.allowed) {
+    logger.warn(`Handshake WebSocket temporairement limité pour ${clientIp} : réessai dans ${wsRateCheck.retryAfterSeconds}s`);
+    socket.write(`HTTP/1.1 429 Too Many Requests\r\nRetry-After: ${wsRateCheck.retryAfterSeconds}\r\nConnection: close\r\n\r\n`);
     socket.destroy();
     return;
   }

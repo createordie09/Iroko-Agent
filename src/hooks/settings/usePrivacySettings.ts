@@ -40,6 +40,7 @@ export function usePrivacySettings() {
     mcpServers: Array<{ name: string; status: string }>;
     recentErrors: Array<{ timestamp: string; message: string }>;
     dataDir: string;
+    restarts?: Array<{ timestamp: string; exitCode: number | null; signal: string | null; reason?: string }>;
   } | null>(null);
   const [diagnosticCopied, setDiagnosticCopied] = useState(false);
 

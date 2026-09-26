@@ -328,6 +328,12 @@ export function PrivacyPage() {
                 <div><span className="text-[var(--text-primary)]">Dossier données{'\u00A0'}:</span> {diagnosticData.dataDir}</div>
                 <div><span className="text-[var(--text-primary)]">Fournisseurs configurés{'\u00A0'}:</span> {diagnosticData.connectedProviders?.join(', ') || 'aucun'}</div>
                 <div><span className="text-[var(--text-primary)]">Serveurs MCP{'\u00A0'}:</span> {diagnosticData.mcpServers?.length || 0} configuré(s)</div>
+                {diagnosticData.restarts && diagnosticData.restarts.length > 0 ? (
+                  <div>
+                    <span className="text-[var(--text-primary)]">Redémarrages superviseur{'\u00A0'}:</span>{' '}
+                    {diagnosticData.restarts.length} (dernier{'\u00A0'}: {diagnosticData.restarts[diagnosticData.restarts.length - 1].timestamp})
+                  </div>
+                ) : null}
                 {diagnosticData.recentErrors && diagnosticData.recentErrors.length > 0 ? (
                   <div className="pt-1 text-[var(--text-muted)]">
                     Dernière erreur{'\u00A0'}: {diagnosticData.recentErrors[0].message}
