@@ -64,7 +64,7 @@ L'application Iroko applique l'intégralité des critères de succès WCAG 2.2 A
   - Pas de valeurs `tabindex` positives (> 0).
 - **Raccourcis clavier Iroko** :
   - `Ctrl+B` (ou `Cmd+B`) : Bascule réduction/expansion de la barre latérale.
-  - `Ctrl+K` : Recherche rapide dans les discussions.
+  - `Ctrl+K` : Palette de commandes universelle (recherche discussions, actions, navigation, modèle).
   - `Ctrl+,` : Ouverture de la modale des paramètres.
   - `Échap` : Fermeture hiérarchique (menu contextuel → modale → tiroir mobile) avec restauration immédiate du focus sur l'élément déclencheur.
   - `Entrée` : Envoi du message dans le composer.

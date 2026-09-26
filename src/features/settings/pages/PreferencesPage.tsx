@@ -362,7 +362,7 @@ export function PreferencesPage() {
             <kbd className="font-mono bg-[var(--bg-surface)] border border-[var(--border-modal)] px-1.5 py-0.5 rounded text-[var(--text-primary)] text-[11px]">Ctrl+B</kbd>
           </div>
           <div className="flex items-center justify-between px-3 py-2">
-            <span className="text-[var(--text-secondary)]">Rechercher dans les discussions</span>
+            <span className="text-[var(--text-secondary)]">Palette de commandes</span>
             <kbd className="font-mono bg-[var(--bg-surface)] border border-[var(--border-modal)] px-1.5 py-0.5 rounded text-[var(--text-primary)] text-[11px]">Ctrl+K</kbd>
           </div>
           <div className="flex items-center justify-between px-3 py-2">

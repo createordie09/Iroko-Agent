@@ -315,14 +315,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      // 3. Ctrl+K / Cmd+K : Recherche / focus recherche
+      // 3. Ctrl+K / Cmd+K : Palette de commandes universelle (Mission R4a)
       if ((e.metaKey || e.ctrlKey) && (e.key === 'k' || e.key === 'K')) {
         e.preventDefault();
-        setIsSidebarCollapsed(false);
-        const searchInput = document.querySelector('input[data-search="true"]') as HTMLInputElement;
-        if (searchInput) {
-          searchInput.focus();
-        }
+        setIsCommandPaletteOpen(prev => !prev);
         return;
       }
 

@@ -15,6 +15,7 @@ import { ZoneErrorBoundary } from '../common/ZoneErrorBoundary';
 // Chargement dynamique différé (Lot 6 Fiche 19) pour alléger le bundle initial
 const ClaudeChat = lazy(() => import('../../features/chat/ClaudeChat').then(m => ({ default: m.ClaudeChat })));
 const ClaudeSettingsModal = lazy(() => import('../../features/settings/ClaudeSettingsModal').then(m => ({ default: m.ClaudeSettingsModal })));
+const CommandPalette = lazy(() => import('../../features/command-palette/CommandPalette').then(m => ({ default: m.CommandPalette })));
 
 function BuggyFallback({ message }: { message: string }): never {
   throw new Error(message);
@@ -40,7 +41,8 @@ export function ZyriconAppShell() {
     setActiveSettingsTab,
     composerMode,
     setComposerMode,
-    activeModel
+    activeModel,
+    isCommandPaletteOpen,
   } = useApp();
 
   const { providers } = useProviders();
@@ -208,6 +210,12 @@ export function ZyriconAppShell() {
               <ClaudeSettingsModal />
             )}
           </ZoneErrorBoundary>
+        </Suspense>
+      )}
+      {/* ── Palette de commandes universelle (Mission R4a — [À VALIDER]) ── */}
+      {isCommandPaletteOpen && (
+        <Suspense fallback={null}>
+          <CommandPalette />
         </Suspense>
       )}
 
