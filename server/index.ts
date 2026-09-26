@@ -1420,7 +1420,8 @@ const server = http.createServer(async (req, res) => {
           mcpServers,
           recentErrors,
           dataDir,
-          restarts: watchdogRestarts
+          restarts: watchdogRestarts,
+          corruptionIncident: runtimeDatabase.getCorruptionIncident()
         }));
       } catch (err: any) {
         res.writeHead(500, { 'Content-Type': 'application/json' });

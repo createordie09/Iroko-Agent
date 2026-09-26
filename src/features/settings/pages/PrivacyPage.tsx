@@ -334,6 +334,11 @@ export function PrivacyPage() {
                     {diagnosticData.restarts.length} (dernier{'\u00A0'}: {diagnosticData.restarts[diagnosticData.restarts.length - 1].timestamp})
                   </div>
                 ) : null}
+                {diagnosticData.corruptionIncident ? (
+                  <div className="pt-1 text-[var(--text-muted)] border-t border-[var(--border-subtle)] mt-1">
+                    Incident base{'\u00A0'}: {diagnosticData.corruptionIncident.userMessage}
+                  </div>
+                ) : null}
                 {diagnosticData.recentErrors && diagnosticData.recentErrors.length > 0 ? (
                   <div className="pt-1 text-[var(--text-muted)]">
                     Dernière erreur{'\u00A0'}: {diagnosticData.recentErrors[0].message}

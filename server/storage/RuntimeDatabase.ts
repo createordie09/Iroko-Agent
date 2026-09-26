@@ -195,13 +195,7 @@ export class RuntimeDatabase {
         fs.mkdirSync(dataDir, { recursive: true });
       }
       this.dbPath = path.join(dataDir, 'iroko_runtime.db');
-      // Sauvegarde préalable de la base (§ Mission M1)
-      if (fs.existsSync(this.dbPath)) {
-        try {
-          fs.copyFileSync(this.dbPath, this.dbPath + '.bak');
-        } catch {}
-      }
-      this.db = new DatabaseSync(this.dbPath);
+      this.ensureDatabaseIntegrityAndConnect();
     }
 
     // Activer les clés étrangères et le mode WAL pour la robustesse
@@ -213,6 +207,165 @@ export class RuntimeDatabase {
       } catch {}
     }
     this.runMigrations();
+  }
+
+  public lastCorruptionIncident: {
+    timestamp: string;
+    corruptedBackupPath: string;
+    corruptedBackupName: string;
+    corruptionReason: string;
+    recoveredTables: string[];
+    fallbackToNew: boolean;
+    userMessage: string;
+  } | null = null;
+
+  public getCorruptionIncident(): any {
+    if (this.lastCorruptionIncident) return this.lastCorruptionIncident;
+    if (this.dataDir && this.dataDir !== ':memory:') {
+      const reportPath = path.join(this.dataDir, 'database_corruption_report.json');
+      if (fs.existsSync(reportPath)) {
+        try {
+          return JSON.parse(fs.readFileSync(reportPath, 'utf8'));
+        } catch {}
+      }
+    }
+    return null;
+  }
+
+  private ensureDatabaseIntegrityAndConnect(): void {
+    if (!fs.existsSync(this.dbPath)) {
+      this.db = new DatabaseSync(this.dbPath);
+      return;
+    }
+
+    // Sauvegarde préalable de précaution (.bak)
+    try {
+      fs.copyFileSync(this.dbPath, this.dbPath + '.bak');
+    } catch {}
+
+    let isCorrupted = false;
+    let corruptionReason = '';
+    let testDb: DatabaseSync | null = null;
+
+    try {
+      testDb = new DatabaseSync(this.dbPath);
+      const rows = testDb.prepare('PRAGMA integrity_check').all() as Array<Record<string, any>>;
+      const firstVal = rows.length > 0 ? Object.values(rows[0])[0] : null;
+      if (firstVal !== 'ok') {
+        isCorrupted = true;
+        corruptionReason = `PRAGMA integrity_check: ${JSON.stringify(rows)}`;
+      }
+    } catch (err: any) {
+      isCorrupted = true;
+      corruptionReason = err.message || 'Échec lors de l\'ouverture de la base SQLite';
+    } finally {
+      if (testDb) {
+        try { testDb.close(); } catch {}
+      }
+    }
+
+    if (!isCorrupted) {
+      this.db = new DatabaseSync(this.dbPath);
+      return;
+    }
+
+    // --- CORRUPTION DÉTECTÉE (Mission R3b) ---
+    console.warn(`[BASE SQLITE] Corruption détectée : ${corruptionReason}`);
+
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const corruptedBackupName = `iroko_runtime_corrupted_${timestamp}.db`;
+    const corruptedBackupPath = path.join(this.dataDir, corruptedBackupName);
+
+    // 1. Sauvegarde automatique du fichier corrompu (jamais écrasé)
+    try {
+      fs.copyFileSync(this.dbPath, corruptedBackupPath);
+      if (fs.existsSync(this.dbPath + '-wal')) {
+        try { fs.copyFileSync(this.dbPath + '-wal', corruptedBackupPath + '-wal'); } catch {}
+      }
+      if (fs.existsSync(this.dbPath + '-shm')) {
+        try { fs.copyFileSync(this.dbPath + '-shm', corruptedBackupPath + '-shm'); } catch {}
+      }
+    } catch (copyErr) {
+      console.error('Erreur lors de la sauvegarde du fichier corrompu :', copyErr);
+    }
+
+    // 2. Nettoyage de l'ancien fichier corrompu pour permettre l'initialisation de la base neuve
+    try {
+      fs.unlinkSync(this.dbPath);
+      if (fs.existsSync(this.dbPath + '-wal')) fs.unlinkSync(this.dbPath + '-wal');
+      if (fs.existsSync(this.dbPath + '-shm')) fs.unlinkSync(this.dbPath + '-shm');
+    } catch {}
+
+    // 3. Initialisation de la base neuve avec son schéma complet
+    this.db = new DatabaseSync(this.dbPath);
+    this.db.exec('PRAGMA foreign_keys = OFF;');
+    this.runMigrations();
+
+    // 4. Tentative de récupération partielle des tables lisibles depuis le fichier corrompu sauvegardé
+    const recoveredTables: string[] = [];
+    let rescueDb: DatabaseSync | null = null;
+    try {
+      rescueDb = new DatabaseSync(corruptedBackupPath, { readOnly: true });
+      const candidates = [
+        'settings',
+        'conversations',
+        'messages',
+        'agent_tasks',
+        'project_memories',
+        'installed_plugins',
+        'custom_instructions',
+        'model_catalog'
+      ];
+
+      for (const table of candidates) {
+        try {
+          const rows = rescueDb.prepare(`SELECT * FROM ${table}`).all();
+          if (Array.isArray(rows) && rows.length > 0) {
+            const firstRow = rows[0] as Record<string, any>;
+            const cols = Object.keys(firstRow);
+            const placeholders = cols.map(() => '?').join(', ');
+            const insertStmt = this.db.prepare(
+              `INSERT OR REPLACE INTO ${table} (${cols.join(', ')}) VALUES (${placeholders})`
+            );
+            for (const row of rows) {
+              const vals = cols.map(c => (row as any)[c]);
+              insertStmt.run(...vals);
+            }
+            recoveredTables.push(table);
+          }
+        } catch {}
+      }
+    } catch (rescueErr) {
+      console.warn('[BASE SQLITE] Récupération partielle impossible, base neuve vierge conservée :', rescueErr);
+    } finally {
+      if (rescueDb) {
+        try { rescueDb.close(); } catch {}
+      }
+    }
+
+    // 5. Consignation du rapport d'incident accessible
+    const userMessage = recoveredTables.length > 0
+      ? `Base SQLite corrompue. Sauvegarde créée sous '${corruptedBackupName}'. Données partielles récupérées (${recoveredTables.join(', ')}).`
+      : `Base SQLite corrompue. Sauvegarde créée sous '${corruptedBackupName}'. Repli sur une base neuve.`;
+
+    const report = {
+      timestamp: new Date().toISOString(),
+      corruptedBackupPath,
+      corruptedBackupName,
+      corruptionReason,
+      recoveredTables,
+      fallbackToNew: true,
+      userMessage
+    };
+
+    this.lastCorruptionIncident = report;
+    try {
+      fs.writeFileSync(
+        path.join(this.dataDir, 'database_corruption_report.json'),
+        JSON.stringify(report, null, 2),
+        'utf8'
+      );
+    } catch {}
   }
 
   private runMigrations(): void {

@@ -10,13 +10,21 @@ import { useVisualViewportHeight } from '../../hooks/useVisualViewportHeight';
 import { OnboardingView } from '../../features/onboarding/OnboardingView';
 import { useOnboarding } from '../../hooks/useOnboarding';
 import { useProviders } from '../../hooks/models/useProviders';
+import { ZoneErrorBoundary } from '../common/ZoneErrorBoundary';
 
 // Chargement dynamique différé (Lot 6 Fiche 19) pour alléger le bundle initial
 const ClaudeChat = lazy(() => import('../../features/chat/ClaudeChat').then(m => ({ default: m.ClaudeChat })));
 const ClaudeSettingsModal = lazy(() => import('../../features/settings/ClaudeSettingsModal').then(m => ({ default: m.ClaudeSettingsModal })));
 
+function BuggyFallback({ message }: { message: string }): never {
+  throw new Error(message);
+}
+
 export function ZyriconAppShell() {
   useVisualViewportHeight();
+  const simulatedErrorZone = typeof window !== 'undefined'
+    ? new URLSearchParams(window.location.search).get('simulate_error')
+    : null;
   const {
     activeView,
     setActiveView,
@@ -149,9 +157,18 @@ export function ZyriconAppShell() {
           isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         }`}
       >
-        <ClaudeSidebar
-          onOpenPersonalize={handleOpenPersonalize}
-        />
+        <ZoneErrorBoundary
+          zoneName="barre latérale"
+          fallbackClass="h-full w-[222px] flex flex-col items-center justify-center p-4 bg-[var(--bg-sidebar)] border-r border-[var(--border-subtle)] select-none"
+        >
+          {simulatedErrorZone === 'sidebar' ? (
+            <BuggyFallback message="Défaillance simulée de la barre latérale" />
+          ) : (
+            <ClaudeSidebar
+              onOpenPersonalize={handleOpenPersonalize}
+            />
+          )}
+        </ZoneErrorBoundary>
       </div>
 
       {/* ── Zone principale avec repère sémantique main (WCAG 1.3.1) ── */}
@@ -160,15 +177,19 @@ export function ZyriconAppShell() {
         <ClaudeTopbar />
 
         <main id="main-content" tabIndex={-1} className="flex-1 min-h-0 flex flex-col overflow-hidden relative outline-none">
-          {shouldShowOnboarding ? (
-            <OnboardingView onComplete={completeOnboarding} onSkip={skipOnboarding} />
-          ) : activeView === 'home' ? (
-            <ClaudeHero onSendMessage={handleHeroSendMessage} />
-          ) : (
-            <Suspense fallback={<div className="flex-1 bg-[var(--bg-app)]" />}>
-              <ClaudeChat />
-            </Suspense>
-          )}
+          <ZoneErrorBoundary zoneName="zone de conversation">
+            {simulatedErrorZone === 'chat' ? (
+              <BuggyFallback message="Défaillance simulée de la zone de discussion" />
+            ) : shouldShowOnboarding ? (
+              <OnboardingView onComplete={completeOnboarding} onSkip={skipOnboarding} />
+            ) : activeView === 'home' ? (
+              <ClaudeHero onSendMessage={handleHeroSendMessage} />
+            ) : (
+              <Suspense fallback={<div className="flex-1 bg-[var(--bg-app)]" />}>
+                <ClaudeChat />
+              </Suspense>
+            )}
+          </ZoneErrorBoundary>
         </main>
 
       </div>
@@ -176,7 +197,17 @@ export function ZyriconAppShell() {
       {/* ── Modale de Paramètres (Chargement différé à l'ouverture) ── */}
       {isSettingsOpen && (
         <Suspense fallback={null}>
-          <ClaudeSettingsModal />
+          <ZoneErrorBoundary
+            zoneName="modale des paramètres"
+            fallbackClass="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4"
+            onReset={() => setIsSettingsOpen(false)}
+          >
+            {simulatedErrorZone === 'settings' ? (
+              <BuggyFallback message="Défaillance simulée de la modale des paramètres" />
+            ) : (
+              <ClaudeSettingsModal />
+            )}
+          </ZoneErrorBoundary>
         </Suspense>
       )}
 

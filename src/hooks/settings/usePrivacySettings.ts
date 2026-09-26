@@ -41,6 +41,7 @@ export function usePrivacySettings() {
     recentErrors: Array<{ timestamp: string; message: string }>;
     dataDir: string;
     restarts?: Array<{ timestamp: string; exitCode: number | null; signal: string | null; reason?: string }>;
+    corruptionIncident?: { timestamp: string; corruptedBackupName: string; recoveredTables: string[]; userMessage: string } | null;
   } | null>(null);
   const [diagnosticCopied, setDiagnosticCopied] = useState(false);
 
