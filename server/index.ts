@@ -34,6 +34,7 @@ import { logger } from './utils/logger';
 import { LocalRateLimiter } from './security/LocalRateLimiter';
 import { RuntimeWatchdog } from './supervisor/RuntimeWatchdog';
 import { activeJobManager } from './runtime/ActiveJobManager';
+import { deletionManager } from './storage/DeletionManager';
 
 // Activation immédiate du Garde Réseau pour l'ensemble du runtime
 networkGuard.install();
@@ -496,8 +497,64 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    // --- Suppressions Différées & Annulation (Mission R4b) ---
+    if (pathname === '/api/deletions/pending' && req.method === 'POST') {
+      const body = await readJson(64 * 1024);
+      if (!body.itemType || !body.id) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'itemType et id sont requis.' }));
+        return;
+      }
+      const durationMs = typeof body.durationMs === 'number' ? body.durationMs : 5000;
+      const pending = deletionManager.scheduleDeletion(body.itemType, body.id, durationMs, body.metadata);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: true, pending }));
+      return;
+    }
+
+    if (pathname === '/api/deletions/cancel' && req.method === 'POST') {
+      const body = await readJson(64 * 1024);
+      if (!body.itemType || !body.id) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'itemType et id sont requis.' }));
+        return;
+      }
+      const restored = deletionManager.cancelDeletion(body.itemType, body.id);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: true, restored }));
+      return;
+    }
+
+    if (pathname === '/api/deletions/purge' && req.method === 'POST') {
+      const body = await readJson(64 * 1024);
+      if (!body.itemType || !body.id) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'itemType et id sont requis.' }));
+        return;
+      }
+      deletionManager.executePhysicalPurge(body.itemType, body.id);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: true, purged: true }));
+      return;
+    }
+
+    if (pathname === '/api/deletions/pending' && req.method === 'GET') {
+      const itemType = parsedUrl.searchParams.get('itemType') || undefined;
+      const list = deletionManager.listPending(itemType);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ pendingDeletions: list }));
+      return;
+    }
+
     if (pathname.startsWith('/api/conversations/') && req.method === 'DELETE') {
       const id = pathname.replace('/api/conversations/', '').trim();
+      const isPending = parsedUrl.searchParams.get('pending') === '1' || parsedUrl.searchParams.get('pending') === 'true';
+      if (isPending) {
+        const pending = deletionManager.scheduleDeletion('conversation', id, 5000);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true, pending }));
+        return;
+      }
       attachmentManager.deleteConversationAttachments(id);
       const success = runtimeDatabase.deleteConversation(id);
       res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -527,9 +584,16 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
-    // Suppression d'un message avec nettoyage en cascade (Mission M8.3 P4)
+    // Suppression d'un message avec nettoyage en cascade (Mission M8.3 P4, R4b)
     if (pathname.startsWith('/api/messages/') && req.method === 'DELETE') {
       const msgId = pathname.replace('/api/messages/', '').trim();
+      const isPending = parsedUrl.searchParams.get('pending') === '1' || parsedUrl.searchParams.get('pending') === 'true';
+      if (isPending) {
+        const pending = deletionManager.scheduleDeletion('message', msgId, 5000);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true, pending }));
+        return;
+      }
       const result = runtimeDatabase.deleteMessage(msgId);
       if (!result.success) {
         res.writeHead(404, { 'Content-Type': 'application/json' });
@@ -1243,6 +1307,13 @@ const server = http.createServer(async (req, res) => {
 
     if (pathname.startsWith('/api/memory/') && req.method === 'DELETE') {
       const id = pathname.replace('/api/memory/', '').trim();
+      const isPending = parsedUrl.searchParams.get('pending') === '1' || parsedUrl.searchParams.get('pending') === 'true';
+      if (isPending) {
+        const pending = deletionManager.scheduleDeletion('memory', id, 5000);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true, pending }));
+        return;
+      }
       const success = projectMemoryManager.deleteMemory(id);
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ success }));
@@ -1603,6 +1674,19 @@ const server = http.createServer(async (req, res) => {
 
     if (pathname.startsWith('/api/skills/') && req.method === 'DELETE') {
       const name = decodeURIComponent(pathname.replace('/api/skills/', '').trim());
+      const isPending = parsedUrl.searchParams.get('pending') === '1' || parsedUrl.searchParams.get('pending') === 'true';
+      if (isPending) {
+        const existing = skillManager.getSkill(name);
+        if (existing?.isSystem) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ success: false, error: 'Impossible de supprimer une compétence système.' }));
+          return;
+        }
+        const pending = deletionManager.scheduleDeletion('skill', name, 5000);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true, pending }));
+        return;
+      }
       try {
         const success = skillManager.deleteSkill(name);
         res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -2890,11 +2974,22 @@ server.listen(PORT, HOST, async () => {
   } catch (err: any) {
     logger.warn('Avertissement lors de la reprise des jobs vidéo', err);
   }
+
+  // Purge immédiate au démarrage des suppressions différées expirées (Mission R4b)
+  try {
+    const purgeReport = deletionManager.purgeExpiredOnStartup();
+    if (purgeReport.count > 0) {
+      logger.info(`Purge de ${purgeReport.count} élément(s) dont le délai de rétractation a expiré hors ligne.`);
+    }
+  } catch (err: any) {
+    logger.warn('Avertissement lors de la purge des suppressions expirées au démarrage', err);
+  }
 });
 
 export const handleShutdown = (exitProcess = true): Promise<void> => {
   return new Promise((resolve) => {
     logger.info('Arrêt du runtime en cours...');
+    deletionManager.clearAllTimers();
     mcpManager.cleanup();
     processManager.terminateAll();
     processManager.cleanup();

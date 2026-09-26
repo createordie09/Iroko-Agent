@@ -11,6 +11,7 @@ import { OnboardingView } from '../../features/onboarding/OnboardingView';
 import { useOnboarding } from '../../hooks/useOnboarding';
 import { useProviders } from '../../hooks/models/useProviders';
 import { ZoneErrorBoundary } from '../common/ZoneErrorBoundary';
+import { UndoDeletionBanner } from '../common/UndoDeletionBanner';
 
 // Chargement dynamique différé (Lot 6 Fiche 19) pour alléger le bundle initial
 const ClaudeChat = lazy(() => import('../../features/chat/ClaudeChat').then(m => ({ default: m.ClaudeChat })));
@@ -218,6 +219,9 @@ export function ZyriconAppShell() {
           <CommandPalette />
         </Suspense>
       )}
+
+      {/* ── Bandeau de suppression différée avec annulation (Mission R4b — [À VALIDER]) ── */}
+      <UndoDeletionBanner />
 
     </div>
   );

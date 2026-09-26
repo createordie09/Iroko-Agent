@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { tokenService } from '../../services/security/TokenService';
+import { useUndoDeletion } from '../useUndoDeletion';
 
 export interface SkillScanSummary {
   scripts: string[];
@@ -23,6 +24,7 @@ export interface SkillItem {
 }
 
 export function useSkillsSettings() {
+  const { scheduleUndoableDeletion } = useUndoDeletion();
   const [skillsList, setSkillsList] = useState<SkillItem[]>([]);
   const [showImportSkillForm, setShowImportSkillForm] = useState(false);
   const [importSkillPath, setImportSkillPath] = useState('');
@@ -103,11 +105,17 @@ export function useSkillsSettings() {
     } catch {}
   };
 
-  const handleDeleteSkill = async (name: string) => {
-    try {
-      await tokenService.fetch(`/api/skills/${encodeURIComponent(name)}`, { method: 'DELETE' });
-      fetchSkillsData();
-    } catch {}
+  const handleDeleteSkill = (name: string) => {
+    const oldSkills = [...skillsList];
+    setSkillsList(prev => prev.filter(s => s.name !== name));
+    scheduleUndoableDeletion({
+      itemType: 'skill',
+      id: name,
+      label: 'Compétence supprimée.',
+      onRestore: () => {
+        setSkillsList(oldSkills);
+      }
+    });
   };
 
   useEffect(() => {

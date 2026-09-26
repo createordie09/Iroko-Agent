@@ -3,6 +3,7 @@ import { agentClient } from '../../lib/agent-client';
 import { tokenService } from '../../services/security/TokenService';
 import { attachmentService } from '../../services/attachments/AttachmentService';
 import { EditModalData } from '../../features/chat/modals/EditMessageModal';
+import { useUndoDeletion } from '../useUndoDeletion';
 
 export interface UseChatMessageActionsOptions {
   conversationId: string;
@@ -33,6 +34,7 @@ export function useChatMessageActions({
   loadArtifacts,
   setAttachmentsMap
 }: UseChatMessageActionsOptions) {
+  const { scheduleUndoableDeletion } = useUndoDeletion();
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [deleteConfirmMessage, setDeleteConfirmMessage] = useState<{ message: any; index: number } | null>(null);
   const [isDeletingMessage, setIsDeletingMessage] = useState(false);
@@ -92,22 +94,26 @@ export function useChatMessageActions({
     setTimeout(() => setCopiedIndex(null), 2000);
   };
 
-  const handleDeleteMessage = async (msg: any, index: number) => {
-    setIsDeletingMessage(true);
-    try {
-      if (msg.id) {
-        await tokenService.fetch(`/api/messages/${encodeURIComponent(msg.id)}`, {
-          method: 'DELETE'
-        });
-      }
+  const handleDeleteMessage = (msg: any, index: number) => {
+    setDeleteConfirmMessage(null);
+    if (!msg?.id) {
       setMessages(prev => prev.filter((_, i) => i !== index));
-      setDeleteConfirmMessage(null);
-      loadArtifacts();
-    } catch {
-      // silencieux
-    } finally {
-      setIsDeletingMessage(false);
+      return;
     }
+    const oldMessages = [...messages];
+    setMessages(prev => prev.filter((_, i) => i !== index));
+    scheduleUndoableDeletion({
+      itemType: 'message',
+      id: msg.id,
+      label: 'Message supprimé.',
+      onRestore: () => {
+        setMessages(oldMessages);
+        loadArtifacts();
+      },
+      onPurge: () => {
+        loadArtifacts();
+      }
+    });
   };
 
   const handleStartEdit = async (msg: any, index: number) => {

@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { tokenService } from '../../services/security/TokenService';
+import { useUndoDeletion } from '../useUndoDeletion';
 
 export function useMemorySettings() {
+  const { scheduleUndoableDeletion } = useUndoDeletion();
   const [memoryEnabled, setMemoryEnabled] = useState(true);
   const [memories, setMemories] = useState<any[]>([]);
   const [, setLoadingMemories] = useState(false);
@@ -77,14 +79,17 @@ export function useMemorySettings() {
     }
   };
 
-  const handleDeleteMemoryItem = async (id: string) => {
-    setDeletingMemoryId(id);
-    try {
-      await tokenService.fetch(`/api/memory/${id}`, { method: 'DELETE' });
-      setMemories(prev => prev.filter(m => m.id !== id));
-    } catch {} finally {
-      setDeletingMemoryId(null);
-    }
+  const handleDeleteMemoryItem = (id: string) => {
+    const oldMemories = [...memories];
+    setMemories(prev => prev.filter(m => m.id !== id));
+    scheduleUndoableDeletion({
+      itemType: 'memory',
+      id,
+      label: 'Élément de mémoire supprimé.',
+      onRestore: () => {
+        setMemories(oldMemories);
+      }
+    });
   };
 
   const handleClearAllMemories = async () => {

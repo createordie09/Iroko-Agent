@@ -166,6 +166,10 @@ export class RuntimeDatabase {
   public readonly dataDir: string;
   private lastRecentTimestamp = 0;
 
+  public getDb(): DatabaseSync {
+    return this.db;
+  }
+
   constructor(customPath?: string) {
     if (customPath === ':memory:') {
       this.dbPath = ':memory:';
@@ -808,22 +812,44 @@ export class RuntimeDatabase {
 
       this.db.exec(`INSERT INTO schema_migrations (version, applied_at) VALUES (14, '${new Date().toISOString()}');`);
     }
+
+    if (currentVersion < 15) {
+      // Mission R4b : Suppression logique différée avec annulation (5 secondes)
+      this.db.exec(`
+        CREATE TABLE IF NOT EXISTS pending_deletions (
+          id TEXT NOT NULL,
+          item_type TEXT NOT NULL,
+          deleted_at TEXT NOT NULL,
+          purge_at TEXT NOT NULL,
+          metadata TEXT,
+          PRIMARY KEY (item_type, id)
+        );
+        CREATE INDEX IF NOT EXISTS idx_pending_deletions_purge ON pending_deletions(purge_at);
+
+        INSERT INTO schema_migrations (version, applied_at) VALUES (15, '${new Date().toISOString()}');
+      `);
+    }
   }
 
   // --- Conversations ---
-  public listConversations(): DbConversation[] {
-    const stmt = this.db.prepare('SELECT * FROM conversations ORDER BY updated_at DESC');
+  public listConversations(includePending = false): DbConversation[] {
+    const sql = includePending
+      ? 'SELECT * FROM conversations ORDER BY updated_at DESC'
+      : "SELECT * FROM conversations WHERE id NOT IN (SELECT id FROM pending_deletions WHERE item_type = 'conversation') ORDER BY updated_at DESC";
+    const stmt = this.db.prepare(sql);
     return stmt.all() as unknown as DbConversation[];
   }
 
-  public getConversation(id: string, includeGenerating = false): { conversation: DbConversation; messages: DbMessage[] } | null {
+  public getConversation(id: string, includeGenerating = false, includePending = false): { conversation: DbConversation; messages: DbMessage[] } | null {
+    if (!includePending && this.isPendingDeletion('conversation', id)) return null;
+
     const convStmt = this.db.prepare('SELECT * FROM conversations WHERE id = ?');
     const conv = convStmt.get(id) as unknown as DbConversation | undefined;
     if (!conv) return null;
 
     const query = includeGenerating
-      ? 'SELECT * FROM messages WHERE conversation_id = ? ORDER BY created_at ASC'
-      : "SELECT * FROM messages WHERE conversation_id = ? AND (metadata IS NULL OR json_extract(metadata, '$.status') != 'generating' OR json_extract(metadata, '$.status') IS NULL) ORDER BY created_at ASC";
+      ? "SELECT * FROM messages WHERE conversation_id = ? AND id NOT IN (SELECT id FROM pending_deletions WHERE item_type = 'message') ORDER BY created_at ASC"
+      : "SELECT * FROM messages WHERE conversation_id = ? AND id NOT IN (SELECT id FROM pending_deletions WHERE item_type = 'message') AND (metadata IS NULL OR json_extract(metadata, '$.status') != 'generating' OR json_extract(metadata, '$.status') IS NULL) ORDER BY created_at ASC";
 
     const msgStmt = this.db.prepare(query);
     const messages = msgStmt.all(id) as unknown as DbMessage[];
@@ -966,6 +992,7 @@ export class RuntimeDatabase {
   public getAttachment(id: string): any | null {
     const row = this.db.prepare('SELECT * FROM attachments WHERE id = ?').get(id) as any;
     if (!row) return null;
+    if (this.isPendingDeletion('conversation', row.conversation_id)) return null;
     return {
       id: row.id,
       conversationId: row.conversation_id,
@@ -982,6 +1009,7 @@ export class RuntimeDatabase {
   }
 
   public listAttachments(conversationId: string): any[] {
+    if (this.isPendingDeletion('conversation', conversationId)) return [];
     const rows = this.db.prepare('SELECT * FROM attachments WHERE conversation_id = ? ORDER BY created_at ASC').all(conversationId) as any[];
     return rows.map(row => ({
       id: row.id,
@@ -1116,6 +1144,7 @@ export class RuntimeDatabase {
     `).get(id) as any;
 
     if (!row) return null;
+    if (this.isPendingDeletion('conversation', row.conversationId)) return null;
     let parsedMetadata = undefined;
     if (row.metadata) {
       try { parsedMetadata = JSON.parse(row.metadata); } catch {}
@@ -1139,6 +1168,7 @@ export class RuntimeDatabase {
     createdAt: string;
     updatedAt: string;
   }> {
+    if (this.isPendingDeletion('conversation', conversationId)) return [];
     const rows = this.db.prepare(`
       SELECT 
         a.id, a.conversation_id as conversationId, a.message_id as messageId, 
@@ -1368,7 +1398,8 @@ export class RuntimeDatabase {
     };
   }
 
-  public getMessage(messageId: string): DbMessage | null {
+  public getMessage(messageId: string, includePending = false): DbMessage | null {
+    if (!includePending && this.isPendingDeletion('message', messageId)) return null;
     const row = this.db.prepare('SELECT * FROM messages WHERE id = ?').get(messageId) as unknown as DbMessage | undefined;
     return row || null;
   }
@@ -1591,6 +1622,8 @@ export class RuntimeDatabase {
         FROM search_fts f
         JOIN conversations c ON c.id = f.conversation_id
         WHERE search_fts MATCH ?
+          AND f.conversation_id NOT IN (SELECT id FROM pending_deletions WHERE item_type = 'conversation')
+          AND (f.item_type != 'message' OR f.item_id NOT IN (SELECT id FROM pending_deletions WHERE item_type = 'message'))
         ORDER BY f.rank
         LIMIT 50
       `);
@@ -2104,27 +2137,31 @@ export class RuntimeDatabase {
   }
 
   // --- Mémoire de Projet (§20) ---
-  public listMemories(scope?: 'global' | 'project', projectHash?: string | null): DbMemoryItem[] {
+  public listMemories(scope?: 'global' | 'project', projectHash?: string | null, includePending = false): DbMemoryItem[] {
+    const notPending = includePending ? "" : "AND id NOT IN (SELECT id FROM pending_deletions WHERE item_type = 'memory')";
+    const whereBase = includePending ? "" : "WHERE id NOT IN (SELECT id FROM pending_deletions WHERE item_type = 'memory')";
+
     if (scope && projectHash !== undefined) {
       const stmt = this.db.prepare(
-        'SELECT * FROM project_memories WHERE scope = ? AND (project_hash = ? OR project_hash IS NULL) ORDER BY updated_at DESC'
+        `SELECT * FROM project_memories WHERE scope = ? AND (project_hash = ? OR project_hash IS NULL) ${notPending} ORDER BY updated_at DESC`
       );
       return stmt.all(scope, projectHash) as unknown as DbMemoryItem[];
     } else if (scope) {
-      const stmt = this.db.prepare('SELECT * FROM project_memories WHERE scope = ? ORDER BY updated_at DESC');
+      const stmt = this.db.prepare(`SELECT * FROM project_memories WHERE scope = ? ${notPending} ORDER BY updated_at DESC`);
       return stmt.all(scope) as unknown as DbMemoryItem[];
     } else if (projectHash) {
       const stmt = this.db.prepare(
-        'SELECT * FROM project_memories WHERE scope = \'global\' OR (scope = \'project\' AND project_hash = ?) ORDER BY updated_at DESC'
+        `SELECT * FROM project_memories WHERE (scope = 'global' OR (scope = 'project' AND project_hash = ?)) ${notPending} ORDER BY updated_at DESC`
       );
       return stmt.all(projectHash) as unknown as DbMemoryItem[];
     } else {
-      const stmt = this.db.prepare('SELECT * FROM project_memories ORDER BY updated_at DESC');
+      const stmt = this.db.prepare(`SELECT * FROM project_memories ${whereBase} ORDER BY updated_at DESC`);
       return stmt.all() as unknown as DbMemoryItem[];
     }
   }
 
-  public getMemory(id: string): DbMemoryItem | null {
+  public getMemory(id: string, includePending = false): DbMemoryItem | null {
+    if (!includePending && this.isPendingDeletion('memory', id)) return null;
     const stmt = this.db.prepare('SELECT * FROM project_memories WHERE id = ?');
     const row = stmt.get(id) as unknown as DbMemoryItem | undefined;
     return row || null;
@@ -2344,8 +2381,11 @@ export class RuntimeDatabase {
   }
 
   // --- Compétences / Skills (Cahier §13, §15, Mission L14, N1) ---
-  public listSkills(): any[] {
-    const rows = this.db.prepare('SELECT * FROM skills ORDER BY name ASC').all() as any[];
+  public listSkills(includePending = false): any[] {
+    const sql = includePending
+      ? 'SELECT * FROM skills ORDER BY name ASC'
+      : "SELECT * FROM skills WHERE name NOT IN (SELECT id FROM pending_deletions WHERE item_type = 'skill') ORDER BY name ASC";
+    const rows = this.db.prepare(sql).all() as any[];
     return rows.map(r => ({
       ...r,
       dirPath: r.dir_path,
@@ -2355,7 +2395,8 @@ export class RuntimeDatabase {
     }));
   }
 
-  public getSkill(name: string): any | null {
+  public getSkill(name: string, includePending = false): any | null {
+    if (!includePending && this.isPendingDeletion('skill', name)) return null;
     const row = this.db.prepare('SELECT * FROM skills WHERE name = ?').get(name) as any;
     if (!row) return null;
     return {
@@ -2845,6 +2886,67 @@ export class RuntimeDatabase {
     }
     const row = this.db.prepare('SELECT MAX(last_refreshed_at) as last_refreshed FROM model_catalog').get() as { last_refreshed: string | null } | undefined;
     return row?.last_refreshed || null;
+  }
+
+  // --- Suppressions Différées avec Annulation (Mission R4b) ---
+  public markPendingDeletion(
+    itemType: 'conversation' | 'message' | 'memory' | 'skill' | string,
+    id: string,
+    durationMs: number = 5000,
+    metadata?: any
+  ): { id: string; itemType: string; deletedAt: string; purgeAt: string; metadata?: any } {
+    const now = new Date();
+    const deletedAt = now.toISOString();
+    const purgeAt = new Date(now.getTime() + durationMs).toISOString();
+    const metaStr = metadata ? JSON.stringify(metadata) : null;
+
+    this.db.prepare(`
+      INSERT OR REPLACE INTO pending_deletions (id, item_type, deleted_at, purge_at, metadata)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(id, itemType, deletedAt, purgeAt, metaStr);
+
+    return { id, itemType, deletedAt, purgeAt, metadata };
+  }
+
+  public cancelPendingDeletion(itemType: string, id: string): boolean {
+    const res = this.db.prepare('DELETE FROM pending_deletions WHERE item_type = ? AND id = ?').run(itemType, id);
+    return Number(res.changes) > 0;
+  }
+
+  public isPendingDeletion(itemType: string, id: string): boolean {
+    const row = this.db.prepare('SELECT 1 FROM pending_deletions WHERE item_type = ? AND id = ?').get(itemType, id);
+    return Boolean(row);
+  }
+
+  public getPendingDeletion(itemType: string, id: string): any | null {
+    const row = this.db.prepare('SELECT * FROM pending_deletions WHERE item_type = ? AND id = ?').get(itemType, id) as any;
+    if (!row) return null;
+    return {
+      id: row.id,
+      itemType: row.item_type,
+      deletedAt: row.deleted_at,
+      purgeAt: row.purge_at,
+      metadata: row.metadata ? (() => { try { return JSON.parse(row.metadata); } catch { return {}; } })() : undefined
+    };
+  }
+
+  public listPendingDeletions(itemType?: string): any[] {
+    const stmt = itemType
+      ? this.db.prepare('SELECT * FROM pending_deletions WHERE item_type = ? ORDER BY purge_at ASC')
+      : this.db.prepare('SELECT * FROM pending_deletions ORDER BY purge_at ASC');
+    const rows = (itemType ? stmt.all(itemType) : stmt.all()) as any[];
+    return rows.map(r => ({
+      id: r.id,
+      itemType: r.item_type,
+      deletedAt: r.deleted_at,
+      purgeAt: r.purge_at,
+      metadata: r.metadata ? (() => { try { return JSON.parse(r.metadata); } catch { return {}; } })() : undefined
+    }));
+  }
+
+  public removePendingDeletion(itemType: string, id: string): boolean {
+    const res = this.db.prepare('DELETE FROM pending_deletions WHERE item_type = ? AND id = ?').run(itemType, id);
+    return Number(res.changes) > 0;
   }
 
   public close(): void {

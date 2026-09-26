@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { PanelLeft, ChevronDown, Settings, MoreHorizontal, FileText, Download } from 'lucide-react';
+import { PanelLeft, ChevronDown, Settings, MoreHorizontal, FileText, Download, Trash2 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { useUndoDeletion } from '../../hooks/useUndoDeletion';
 
 export function ClaudeTopbar() {
   const {
@@ -10,8 +11,12 @@ export function ClaudeTopbar() {
     setIsMobileSidebarOpen,
     setIsSettingsOpen,
     history,
+    setHistory,
+    resetChat,
+    loadConversation,
     messages
   } = useApp();
+  const { scheduleUndoableDeletion } = useUndoDeletion();
 
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -79,6 +84,25 @@ export function ClaudeTopbar() {
     a.remove();
     URL.revokeObjectURL(url);
     setIsExportMenuOpen(false);
+  };
+
+  const handleDeleteCurrent = () => {
+    const currentConv = history[0];
+    if (!currentConv) return;
+    const oldHistory = [...history];
+    const oldId = currentConv.id;
+    setHistory(prev => prev.filter(h => h.id !== oldId));
+    resetChat();
+    setIsExportMenuOpen(false);
+    scheduleUndoableDeletion({
+      itemType: 'conversation',
+      id: oldId,
+      label: 'Discussion supprimée.',
+      onRestore: () => {
+        setHistory(oldHistory);
+        loadConversation(oldId);
+      }
+    });
   };
 
   return (
@@ -153,6 +177,17 @@ export function ClaudeTopbar() {
                   >
                     <Download className="w-3.5 h-3.5 text-[var(--text-secondary)]" />
                     <span>Exporter en JSON (.json)</span>
+                  </button>
+
+                  <div className="my-1 border-t border-[var(--border-subtle)]" />
+
+                  <button
+                    type="button"
+                    onClick={handleDeleteCurrent}
+                    className="w-full px-3 py-1.5 text-left text-[13px] flex items-center gap-2 hover:bg-[var(--bg-surface-hover)] transition-colors text-[var(--text-primary)] cursor-pointer"
+                  >
+                    <Trash2 className="w-3.5 h-3.5 text-[var(--text-secondary)]" />
+                    <span>Supprimer la discussion</span>
                   </button>
                 </div>
               )}

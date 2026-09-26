@@ -1,8 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { 
-  Plus, Code2, SlidersHorizontal, PanelLeft, Settings, ListFilter, Search, X
-} from 'lucide-react';
+import { Plus, Code2, SlidersHorizontal, PanelLeft, Settings, ListFilter, Search, X, Trash2 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { useUndoDeletion } from '../../hooks/useUndoDeletion';
 import { tokenService } from '../../services/security/TokenService';
 import { agentClient } from '../../lib/agent-client';
 
@@ -14,20 +13,11 @@ export interface ClaudeSidebarProps {
 
 export function ClaudeSidebar({ onOpenPersonalize }: ClaudeSidebarProps) {
   const {
-    activeView,
-    setActiveView,
-    projects,
-    activeProjectId,
-    setActiveProjectId,
-    resetChat,
-    isSidebarCollapsed,
-    setIsSidebarCollapsed,
-    setIsMobileSidebarOpen,
-    setIsSettingsOpen,
-    history,
-    setHistory,
-    loadConversation
+    activeView, setActiveView, projects, activeProjectId, setActiveProjectId,
+    resetChat, isSidebarCollapsed, setIsSidebarCollapsed, setIsMobileSidebarOpen,
+    setIsSettingsOpen, history, setHistory, loadConversation
   } = useApp();
+  const { scheduleUndoableDeletion } = useUndoDeletion();
 
   const sidebarRef = useRef<HTMLElement>(null);
   const filterBtnRef = useRef<HTMLButtonElement>(null);
@@ -128,6 +118,23 @@ export function ClaudeSidebar({ onOpenPersonalize }: ClaudeSidebarProps) {
     };
   }, []);
 
+  const handleDeleteConversation = (e: React.MouseEvent, item: any) => {
+    e.stopPropagation();
+    const wasActive = history[0]?.id === item.id && activeView === 'chat';
+    const oldHistory = [...history];
+    setHistory(prev => prev.filter(h => h.id !== item.id));
+    if (wasActive) resetChat();
+    scheduleUndoableDeletion({
+      itemType: 'conversation',
+      id: item.id,
+      label: 'Discussion supprimée.',
+      onRestore: () => {
+        setHistory(oldHistory);
+        if (wasActive) loadConversation(item.id);
+      }
+    });
+  };
+
   const filteredHistory = useMemo(() => {
     return history.filter(item => {
       if (searchQuery.trim()) {
@@ -226,28 +233,21 @@ export function ClaudeSidebar({ onOpenPersonalize }: ClaudeSidebarProps) {
               Épinglés
             </div>
             <div className="space-y-0.5">
-              {projects.map(p => {
-                const isSelected = p.id === activeProjectId && activeView === 'chat';
-                return (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => {
-                      setActiveProjectId(p.id);
-                      setActiveView('chat');
-                      setIsMobileSidebarOpen(false);
-                    }}
-                    className={`w-full flex items-center gap-2 px-2.5 h-[28px] rounded-[var(--radius-item)] text-[13px] text-left transition-colors group ${
-                      isSelected ? 'bg-[var(--bg-active)] text-[var(--text-primary)]' : 'text-[var(--text-muted)] hover:bg-[var(--bg-surface-hover)] hover:text-[var(--text-primary)]'
-                    }`}
-                    title={p.name}
-                    aria-label={p.name}
-                  >
-                    <span className="w-1 h-1 rounded-full bg-[var(--text-tertiary)] shrink-0 group-hover:bg-[var(--text-secondary)]" />
-                    <span className="truncate mask-fade-right">{p.name}</span>
-                  </button>
-                );
-              })}
+              {projects.map(p => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => { setActiveProjectId(p.id); setActiveView('chat'); setIsMobileSidebarOpen(false); }}
+                  className={`w-full flex items-center gap-2 px-2.5 h-[28px] rounded-[var(--radius-item)] text-[13px] text-left transition-colors group ${
+                    p.id === activeProjectId && activeView === 'chat' ? 'bg-[var(--bg-active)] text-[var(--text-primary)]' : 'text-[var(--text-muted)] hover:bg-[var(--bg-surface-hover)] hover:text-[var(--text-primary)]'
+                  }`}
+                  title={p.name}
+                  aria-label={p.name}
+                >
+                  <span className="w-1 h-1 rounded-full bg-[var(--text-tertiary)] shrink-0 group-hover:bg-[var(--text-secondary)]" />
+                  <span className="truncate mask-fade-right">{p.name}</span>
+                </button>
+              ))}
             </div>
           </div>
         )}
@@ -305,12 +305,7 @@ export function ClaudeSidebar({ onOpenPersonalize }: ClaudeSidebarProps) {
                 </div>
                 <div className="flex items-center gap-1">
                 {(['all', 'chat', 'code', 'pinned'] as const).map((mode) => {
-                  const labels: Record<string, string> = {
-                    all: 'Tout',
-                    chat: 'Chat',
-                    code: 'Code',
-                    pinned: 'Épinglées'
-                  };
+                  const labels: Record<string, string> = { all: 'Tout', chat: 'Chat', code: 'Code', pinned: 'Épinglées' };
                   const active = filterMode === mode;
                   return (
                     <button
@@ -332,30 +327,36 @@ export function ClaudeSidebar({ onOpenPersonalize }: ClaudeSidebarProps) {
 
             <div className="space-y-0.5">
               {visibleHistory.map(item => (
-                <button
+                <div
                   key={item.id}
-                  type="button"
-                  onClick={() => {
-                    loadConversation(item.id);
-                    setIsMobileSidebarOpen(false);
-                  }}
-                  className="w-full flex items-center gap-2 px-2.5 h-[28px] rounded-[var(--radius-item)] text-[13px] text-left text-[var(--text-muted)] hover:bg-[var(--bg-surface-hover)] hover:text-[var(--text-primary)] transition-colors group"
-                  title={item.topic}
-                  aria-label={item.topic || 'Discussion'}
+                  className="w-full flex items-center justify-between rounded-[var(--radius-item)] text-[var(--text-muted)] hover:bg-[var(--bg-surface-hover)] hover:text-[var(--text-primary)] transition-colors group"
                 >
-                  {activeTaskConvIds.includes(item.id) ? (
-                    <span
-                      className="w-2 h-2 rounded-full bg-[var(--text-secondary)] shrink-0"
-                      aria-label="Tâche en cours d'exécution"
-                      title="Tâche en cours d'exécution"
-                    />
-                  ) : item.mode === 'code' ? (
-                    <Code2 className="w-3 h-3 text-[var(--text-secondary)] shrink-0" aria-label="Mode Code" />
-                  ) : (
-                    <span className="w-1 h-1 rounded-full bg-[var(--text-tertiary)] shrink-0 group-hover:bg-[var(--text-secondary)]" />
-                  )}
-                  <span className="truncate mask-fade-right leading-none">{item.topic}</span>
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => { loadConversation(item.id); setIsMobileSidebarOpen(false); }}
+                    className="flex-1 min-w-0 flex items-center gap-2 px-2.5 h-[28px] text-[13px] text-left select-none"
+                    title={item.topic}
+                    aria-label={item.topic || 'Discussion'}
+                  >
+                    {activeTaskConvIds.includes(item.id) ? (
+                      <span className="w-2 h-2 rounded-full bg-[var(--text-secondary)] shrink-0" aria-label="Tâche en cours d'exécution" title="Tâche en cours d'exécution" />
+                    ) : item.mode === 'code' ? (
+                      <Code2 className="w-3 h-3 text-[var(--text-secondary)] shrink-0" aria-label="Mode Code" />
+                    ) : (
+                      <span className="w-1 h-1 rounded-full bg-[var(--text-tertiary)] shrink-0 group-hover:bg-[var(--text-secondary)]" />
+                    )}
+                    <span className="truncate mask-fade-right leading-none">{item.topic}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => handleDeleteConversation(e, item)}
+                    className="opacity-0 group-hover:opacity-100 focus:opacity-100 p-1 mr-1 text-[var(--text-secondary)] hover:text-[var(--text-primary)] rounded-[4px] tap-target-24 shrink-0 transition-opacity"
+                    title="Supprimer la discussion"
+                    aria-label={`Supprimer la discussion ${item.topic}`}
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               ))}
 
               {filteredHistory.length === 0 && (

@@ -82,6 +82,7 @@ Tiroir mobile (≤768px) : Drawer latéral animé (slide-in) avec overlay sombre
 | **ManageModelsSection** | `src/features/settings/pages/ManageModelsSection.tsx` | Panneau modulaire de gestion du catalogue de modèles dans Paramètres › Fournisseurs & Clés (recherche instantanée, étoiles de favoris, icônes de masquage, affichage des prix exacts de l'API en texte gris) | `ProvidersPage.tsx` |
 | **SearchProvidersSection** | `src/features/settings/pages/SearchProvidersSection.tsx` | Sous-section modulaire (< 250 lignes) de gestion des fournisseurs de recherche web (Brave, Tavily, URL personnalisée, Mock) dans Paramètres › Fournisseurs & Clés avec statut, clé masquée, test réel et ajout | `ProvidersPage.tsx` |
 | **SkillsPage** | `src/features/settings/pages/SkillsPage.tsx` | Page modulaire des compétences (catalogue prompt vs instructions complètes §13, architecture Niveau 3, badges "Système" / "Importée", suppression masquée pour les compétences système non supprimables, carte sobre de confirmation de sécurité affichant les scripts, URLs et appels réseau avant activation) | `ClaudeSettingsModal.tsx` |
+| **UndoDeletionBanner** | `src/components/common/UndoDeletionBanner.tsx` | Bandeau discret fixe centré en bas (`role="status"`, `aria-live="polite"`, `data-undo-banner="true"`) affichant l'avis de suppression différée ("X supprimé. Annuler.") pendant 5 secondes avec bouton de rétractation immédiat | `ZyriconAppShell.tsx` |
 
 
 ---
