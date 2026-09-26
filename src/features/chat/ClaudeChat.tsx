@@ -4,19 +4,17 @@ import { useApp } from '../../context/AppContext';
 import { ClaudeComposer } from '../../components/composer/ClaudeComposer';
 import { agentClient } from '../../lib/agent-client';
 import { formatModelLabel } from '../../lib/models';
-import { PermissionPrompt } from '../agent/PermissionPrompt';
 import { tokenService } from '../../services/security/TokenService';
 import { attachmentService, AttachmentPreviewResult, AttachmentPublicInfo } from '../../services/attachments/AttachmentService';
 import { useStreamBuffer } from '../../hooks/useStreamBuffer';
 import { useStickToBottom } from '../../hooks/useStickToBottom';
 import { useScrollRestoration } from '../../hooks/useScrollRestoration';
+import { useVirtualMessageList } from '../../hooks/chat/useVirtualMessageList';
 import { useChatAgentEvents } from '../../hooks/chat/useChatAgentEvents';
 import { useChatMessageActions } from '../../hooks/chat/useChatMessageActions';
 import { FormattedMessage } from './FormattedMessage';
-import { ChatMessageItem } from './ChatMessageItem';
+import { ChatMessageList } from './ChatMessageList';
 import { ChatInspectorPanel, InspectorTabType } from './ChatInspectorPanel';
-import { ActiveVideoJobCard } from './ActiveVideoJobCard';
-import { LiveToolExecutions } from './LiveToolExecutions';
 import { DeleteMessageModal } from './modals/DeleteMessageModal';
 import { EditMessageModal } from './modals/EditMessageModal';
 
@@ -163,6 +161,12 @@ export function ClaudeChat() {
     return () => { isMounted = false; };
   }, [selectedAttachmentId]);
 
+  const virtualizer = useVirtualMessageList({
+    items: messages,
+    containerRef: scrollContainerRef,
+    getItemId: (m, idx) => m.id || idx
+  });
+
   return (
     <div className="flex-1 h-full w-full flex overflow-hidden relative bg-[var(--bg-app)]">
       <div aria-live="polite" aria-atomic="false" className="sr-only">
@@ -172,77 +176,47 @@ export function ClaudeChat() {
       <div className="flex-1 h-full flex flex-col min-w-0 overflow-hidden relative">
         <div
           ref={scrollContainerRef}
+          onKeyDown={virtualizer.handleKeyDown}
+          tabIndex={virtualizer.isVirtualized ? 0 : undefined}
+          aria-label={virtualizer.isVirtualized ? "Discussion défilante" : undefined}
           className="flex-1 min-h-0 overflow-y-auto claude-scrollbar px-4 sm:px-6 py-4"
         >
           <div className="max-w-[720px] mx-auto space-y-6 pb-28 pt-2">
-            {messages.length === 0 ? (
-              <div className="h-64 flex items-center justify-center text-[13px] text-[var(--text-secondary)]">
-                Aucun message dans cette discussion.
-              </div>
-            ) : (
-              messages.map((msg, idx) => (
-                <ChatMessageItem
-                  key={msg.id || idx}
-                  msg={msg}
-                  index={idx}
-                  isOptimizedVisibility={idx < messages.length - 6}
-                  conversationFont={conversationFont}
-                  copiedIndex={copiedIndex}
-                  chatStatus={chatStatus}
-                  isCheckingImpact={isCheckingImpact}
-                  onCopy={handleCopy}
-                  onStartEdit={handleStartEdit}
-                  onDeleteConfirm={(m, i) => setDeleteConfirmMessage({ message: m, index: i })}
-                  onRegenerateFrom={handleRegenerateFrom}
-                  onContinue={handleContinue}
-                  onOpenAttachmentPreview={(attId) => {
-                    setSelectedAttachmentId(attId);
-                    setInspectorTab('preview');
-                    setInspectorOpen(true);
-                  }}
-                  onOpenArtifact={(artId) => {
-                    setSelectedArtifactId(artId);
-                    setInspectorTab('artifacts');
-                    setInspectorOpen(true);
-                  }}
-                  onRegenerateImage={(prompt) => {
-                    handleSendMessage(`Régénère l'image suivante\u00A0: ${prompt}`);
-                  }}
-                  onReuseArtifactAsAttachment={async (artifact) => {
-                    try {
-                      const res = await tokenService.fetch(`/api/artifacts/${encodeURIComponent(artifact.id)}/download`);
-                      if (!res.ok) return;
-                      const blob = await res.blob();
-                      const file = new File([blob], artifact.name, { type: artifact.mimeType || blob.type || 'image/png' });
-                      window.dispatchEvent(new CustomEvent('iroko:add-attachment', { detail: { file } }));
-                    } catch (err) {
-                      console.error('Failed to reuse artifact as attachment', err);
-                    }
-                  }}
-                  attachmentsMap={attachmentsMap}
-                />
-              ))
-            )}
+            {/* Rendu des messages virtualisés (Optimisation Lot 7 : idx < messages.length - 6) */}
+            <ChatMessageList
+              messages={messages}
+              virtualizer={virtualizer}
+              conversationFont={conversationFont}
+              copiedIndex={copiedIndex}
+              chatStatus={chatStatus}
+              isCheckingImpact={isCheckingImpact}
+              onCopy={handleCopy}
+              onStartEdit={handleStartEdit}
+              onDeleteConfirm={(m, i) => setDeleteConfirmMessage({ message: m, index: i })}
+              onRegenerateFrom={handleRegenerateFrom}
+              onContinue={handleContinue}
+              onOpenAttachmentPreview={(attId) => {
+                setSelectedAttachmentId(attId);
+                setInspectorTab('preview');
+                setInspectorOpen(true);
+              }}
+              onOpenArtifact={(artId) => {
+                setSelectedArtifactId(artId);
+                setInspectorTab('artifacts');
+                setInspectorOpen(true);
+              }}
+              onRegenerateImage={(prompt) => {
+                handleSendMessage(`Régénère l'image suivante\u00A0: ${prompt}`);
+              }}
+              attachmentsMap={attachmentsMap}
+              toolExecutions={toolExecutions}
+              activeVideoJobs={activeVideoJobs}
+              handleCancelVideoJob={handleCancelVideoJob}
+              pendingPermission={pendingPermission}
+              handlePermissionResponse={handlePermissionResponse}
+            />
 
-            <LiveToolExecutions executions={toolExecutions} />
-
-            {activeVideoJobs.map(job => (
-              <ActiveVideoJobCard
-                key={job.id}
-                job={job}
-                onCancel={handleCancelVideoJob}
-              />
-            ))}
-
-            {pendingPermission && (
-              <div className="w-full my-3">
-                <PermissionPrompt
-                  request={pendingPermission}
-                  onRespond={handlePermissionResponse}
-                />
-              </div>
-            )}
-
+            {/* Réponse streaming en direct */}
             {chatStatus === 'loading' && (
               <article aria-labelledby="assistant-stream-heading" className="space-y-3">
                 <h3 id="assistant-stream-heading" className="sr-only">Iroko a dit{'\u00A0'}:</h3>
@@ -295,6 +269,7 @@ export function ClaudeChat() {
               </article>
             )}
 
+            {/* Message d'erreur avec réessai */}
             {chatStatus === 'error' && (
               <div className="p-3 rounded-[8px] bg-[var(--bg-surface)] border border-[var(--border-modal)] text-[13px] text-[var(--text-secondary)] flex items-center justify-between">
                 <span>{errorMessage || 'Une erreur est survenue lors de la communication avec le modèle.'}</span>

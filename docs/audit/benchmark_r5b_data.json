@@ -1,0 +1,202 @@
+[
+  {
+    "messageCount": 200,
+    "cpuThrottle": "×1",
+    "openTimeMs": 755,
+    "domNodeCount": 1734,
+    "renderedArticleCount": 0,
+    "heapOpenMo": 6.65,
+    "heapPostScrollMo": 6.72,
+    "memoryDeltaMo": 0.07,
+    "scrollFps": 60,
+    "droppedFramesPct": 0,
+    "searchAccessibility": {
+      "offscreenCount": 0,
+      "hasSearchableOffscreen": false,
+      "beforeMatchTriggered": true
+    },
+    "keyboardNavigation": {
+      "worked": true,
+      "initialScroll": 0,
+      "afterHome": 0,
+      "afterEnd": 0,
+      "respondedToHome": true,
+      "respondedToEnd": false
+    }
+  },
+  {
+    "messageCount": 200,
+    "cpuThrottle": "×4",
+    "openTimeMs": 1314,
+    "domNodeCount": 1734,
+    "renderedArticleCount": 0,
+    "heapOpenMo": 6.56,
+    "heapPostScrollMo": 6.63,
+    "memoryDeltaMo": 0.07,
+    "scrollFps": 60,
+    "droppedFramesPct": 0,
+    "searchAccessibility": {
+      "offscreenCount": 0,
+      "hasSearchableOffscreen": false,
+      "beforeMatchTriggered": true
+    },
+    "keyboardNavigation": {
+      "worked": true,
+      "initialScroll": 0,
+      "afterHome": 0,
+      "afterEnd": 0,
+      "respondedToHome": true,
+      "respondedToEnd": false
+    }
+  },
+  {
+    "messageCount": 1000,
+    "cpuThrottle": "×1",
+    "openTimeMs": 742,
+    "domNodeCount": 4934,
+    "renderedArticleCount": 0,
+    "heapOpenMo": 8.91,
+    "heapPostScrollMo": 8.98,
+    "memoryDeltaMo": 0.07,
+    "scrollFps": 60,
+    "droppedFramesPct": 0.5,
+    "searchAccessibility": {
+      "offscreenCount": 0,
+      "hasSearchableOffscreen": false,
+      "beforeMatchTriggered": true
+    },
+    "keyboardNavigation": {
+      "worked": true,
+      "initialScroll": 0,
+      "afterHome": 0,
+      "afterEnd": 0,
+      "respondedToHome": true,
+      "respondedToEnd": false
+    }
+  },
+  {
+    "messageCount": 1000,
+    "cpuThrottle": "×4",
+    "openTimeMs": 1444,
+    "domNodeCount": 4934,
+    "renderedArticleCount": 0,
+    "heapOpenMo": 9.35,
+    "heapPostScrollMo": 9.41,
+    "memoryDeltaMo": 0.06,
+    "scrollFps": 60,
+    "droppedFramesPct": 0.2,
+    "searchAccessibility": {
+      "offscreenCount": 0,
+      "hasSearchableOffscreen": false,
+      "beforeMatchTriggered": true
+    },
+    "keyboardNavigation": {
+      "worked": true,
+      "initialScroll": 0,
+      "afterHome": 0,
+      "afterEnd": 0,
+      "respondedToHome": true,
+      "respondedToEnd": false
+    }
+  },
+  {
+    "messageCount": 3000,
+    "cpuThrottle": "×1",
+    "openTimeMs": 933,
+    "domNodeCount": 12918,
+    "renderedArticleCount": 0,
+    "heapOpenMo": 11.12,
+    "heapPostScrollMo": 13.19,
+    "memoryDeltaMo": 2.07,
+    "scrollFps": 60,
+    "droppedFramesPct": 0,
+    "searchAccessibility": {
+      "offscreenCount": 0,
+      "hasSearchableOffscreen": false,
+      "beforeMatchTriggered": true
+    },
+    "keyboardNavigation": {
+      "worked": true,
+      "initialScroll": 0,
+      "afterHome": 0,
+      "afterEnd": 0,
+      "respondedToHome": true,
+      "respondedToEnd": false
+    }
+  },
+  {
+    "messageCount": 3000,
+    "cpuThrottle": "×4",
+    "openTimeMs": 2400,
+    "domNodeCount": 12934,
+    "renderedArticleCount": 0,
+    "heapOpenMo": 10.98,
+    "heapPostScrollMo": 11.04,
+    "memoryDeltaMo": 0.06,
+    "scrollFps": 60,
+    "droppedFramesPct": 0,
+    "searchAccessibility": {
+      "offscreenCount": 0,
+      "hasSearchableOffscreen": false,
+      "beforeMatchTriggered": true
+    },
+    "keyboardNavigation": {
+      "worked": true,
+      "initialScroll": 0,
+      "afterHome": 0,
+      "afterEnd": 0,
+      "respondedToHome": true,
+      "respondedToEnd": false
+    }
+  },
+  {
+    "messageCount": 5000,
+    "cpuThrottle": "×1",
+    "openTimeMs": 987,
+    "domNodeCount": 20918,
+    "renderedArticleCount": 0,
+    "heapOpenMo": 19.49,
+    "heapPostScrollMo": 19.56,
+    "memoryDeltaMo": 0.07,
+    "scrollFps": 60,
+    "droppedFramesPct": 0,
+    "searchAccessibility": {
+      "offscreenCount": 0,
+      "hasSearchableOffscreen": false,
+      "beforeMatchTriggered": true
+    },
+    "keyboardNavigation": {
+      "worked": true,
+      "initialScroll": 0,
+      "afterHome": 0,
+      "afterEnd": 0,
+      "respondedToHome": true,
+      "respondedToEnd": false
+    }
+  },
+  {
+    "messageCount": 5000,
+    "cpuThrottle": "×4",
+    "openTimeMs": 2234,
+    "domNodeCount": 20918,
+    "renderedArticleCount": 0,
+    "heapOpenMo": 35.45,
+    "heapPostScrollMo": 16.3,
+    "memoryDeltaMo": -19.15,
+    "scrollFps": 60,
+    "droppedFramesPct": 0,
+    "searchAccessibility": {
+      "offscreenCount": 0,
+      "hasSearchableOffscreen": false,
+      "beforeMatchTriggered": true
+    },
+    "keyboardNavigation": {
+      "worked": true,
+      "initialScroll": 0,
+      "afterHome": 0,
+      "afterEnd": 0,
+      "respondedToHome": true,
+      "respondedToEnd": false
+    }
+  }
+]

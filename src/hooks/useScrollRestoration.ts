@@ -137,7 +137,7 @@ export function useScrollRestoration(
     } else if (savedAnchor.messageId) {
       // Restauration par ancrage messageId
       const targetElement = el.querySelector<HTMLElement>(`article[data-message-id="${savedAnchor.messageId}"]`);
-      if (targetElement) {
+      if (targetElement && !targetElement.closest('[hidden]')) {
         el.scrollTop = targetElement.offsetTop - savedAnchor.offsetTop;
       } else {
         // Repli déterministe sur le scrollTop enregistré
