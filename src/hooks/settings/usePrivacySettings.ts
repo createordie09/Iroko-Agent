@@ -64,6 +64,16 @@ export function usePrivacySettings() {
       if (res.ok) {
         if (category === 'conversations' || category === 'all') {
           clearAllDrafts();
+          if (category === 'all') {
+            try {
+              localStorage.removeItem('iroko_onboarding_completed');
+              await tokenService.fetch('/api/settings/onboarding_completed', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ value: false })
+              });
+            } catch {}
+          }
         }
         await fetchStorageBreakdown();
         setConfirmCleanCategory(null);

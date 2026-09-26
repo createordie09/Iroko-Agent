@@ -160,7 +160,8 @@ function verifyWcagAA() {
           voiceLang: 'Français',
           voiceURI: '',
           voiceSpeed: 'Normale',
-          notificationsEnabled: false
+          notificationsEnabled: false,
+          onboarding_completed: true
         }
       })
     }));

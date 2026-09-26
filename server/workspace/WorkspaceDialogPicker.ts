@@ -49,6 +49,41 @@ export class WorkspaceDialogPicker {
       };
     }
 
+    // 1. Détection prioritaire de l'environnement Electron natif (Mission R2b / R2c)
+    if (Boolean(process.versions?.electron)) {
+      this.isPickerOpen = true;
+      try {
+        const { dialog, BrowserWindow } = await import('electron');
+        const win = BrowserWindow.getFocusedWindow() || BrowserWindow.getAllWindows()[0] || null;
+        const res = await dialog.showOpenDialog(win as any, {
+          title: 'Sélectionner un dossier de travail pour Iroko',
+          properties: ['openDirectory', 'createDirectory']
+        });
+        this.isPickerOpen = false;
+        if (res.canceled || !res.filePaths || res.filePaths.length === 0) {
+          return { cancelled: true };
+        }
+        const selected = res.filePaths[0];
+        const validation = WorkspaceValidator.validate(selected);
+        if (!validation.valid) {
+          return {
+            cancelled: false,
+            path: selected,
+            error: validation.error,
+            warning: validation.warning
+          };
+        }
+        return {
+          cancelled: false,
+          path: validation.canonicalPath,
+          name: validation.name,
+          warning: validation.warning
+        };
+      } catch (err: any) {
+        this.isPickerOpen = false;
+      }
+    }
+
     this.isPickerOpen = true;
 
     return new Promise((resolve) => {

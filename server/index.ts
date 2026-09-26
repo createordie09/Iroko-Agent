@@ -2763,20 +2763,27 @@ server.listen(PORT, HOST, async () => {
   }
 });
 
-const handleShutdown = () => {
-  logger.info('Arrêt du runtime en cours...');
-  mcpManager.cleanup();
-  processManager.terminateAll();
-  processManager.cleanup();
-  wss.close();
-  server.close(() => {
-    runtimeDatabase.close();
-    logger.info('Runtime arrêté proprement.');
-    process.exit(0);
+export const handleShutdown = (exitProcess = true): Promise<void> => {
+  return new Promise((resolve) => {
+    logger.info('Arrêt du runtime en cours...');
+    mcpManager.cleanup();
+    processManager.terminateAll();
+    processManager.cleanup();
+    wss.close();
+    server.close(() => {
+      runtimeDatabase.close();
+      logger.info('Runtime arrêté proprement.');
+      if (exitProcess) {
+        process.exit(0);
+      } else {
+        resolve();
+      }
+    });
   });
 };
 
-process.on('SIGINT', handleShutdown);
-process.on('SIGTERM', handleShutdown);
+process.on('SIGINT', () => handleShutdown(true));
+process.on('SIGTERM', () => handleShutdown(true));
 
-export { server, wss };
+export { server, wss, runtimeDatabase };
+

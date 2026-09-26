@@ -7,6 +7,9 @@ import { agentClient } from '../../lib/agent-client';
 import { useOverlayFocus } from '../../hooks/useOverlayFocus';
 import { useLiveAnnouncements } from '../../hooks/useLiveAnnouncements';
 import { useVisualViewportHeight } from '../../hooks/useVisualViewportHeight';
+import { OnboardingView } from '../../features/onboarding/OnboardingView';
+import { useOnboarding } from '../../hooks/useOnboarding';
+import { useProviders } from '../../hooks/models/useProviders';
 
 // Chargement dynamique différé (Lot 6 Fiche 19) pour alléger le bundle initial
 const ClaudeChat = lazy(() => import('../../features/chat/ClaudeChat').then(m => ({ default: m.ClaudeChat })));
@@ -20,6 +23,7 @@ export function ZyriconAppShell() {
     messages,
     setMessages,
     setChatStatus,
+    history,
     setHistory,
     isMobileSidebarOpen,
     setIsMobileSidebarOpen,
@@ -30,6 +34,11 @@ export function ZyriconAppShell() {
     setComposerMode,
     activeModel
   } = useApp();
+
+  const { providers } = useProviders();
+  const hasConversations = (history && history.length > 0) || messages.length > 0;
+  const hasConfiguredProviders = providers.some(p => p.keyCount > 0 || p.status === 'READY' || p.status === 'CONFIGURED');
+  const { shouldShowOnboarding, completeOnboarding, skipOnboarding } = useOnboarding(hasConversations, hasConfiguredProviders);
 
   const mobileDrawerRef = useRef<HTMLDivElement>(null);
 
@@ -151,7 +160,9 @@ export function ZyriconAppShell() {
         <ClaudeTopbar />
 
         <main id="main-content" tabIndex={-1} className="flex-1 min-h-0 flex flex-col overflow-hidden relative outline-none">
-          {activeView === 'home' ? (
+          {shouldShowOnboarding ? (
+            <OnboardingView onComplete={completeOnboarding} onSkip={skipOnboarding} />
+          ) : activeView === 'home' ? (
             <ClaudeHero onSendMessage={handleHeroSendMessage} />
           ) : (
             <Suspense fallback={<div className="flex-1 bg-[var(--bg-app)]" />}>
