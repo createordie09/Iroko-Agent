@@ -2,6 +2,7 @@ import React from 'react';
 import { Monitor, Sun, Moon, ChevronDown, Check } from 'lucide-react';
 import { usePreferencesSettings } from '../../../hooks/settings/usePreferencesSettings';
 import { VoiceSpeed } from '../../../services/speech/SpeechService';
+import { DesktopPreferencesSection } from './DesktopPreferencesSection';
 
 export function PreferencesPage() {
   const {
@@ -297,6 +298,9 @@ export function PreferencesPage() {
           </button>
         </div>
       </div>
+
+      {/* ── Section Système & Bureau (Mission R2e) ── */}
+      <DesktopPreferencesSection />
 
       {/* ── Section Instructions personnalisées ── */}
       <div className="pt-2 border-t border-[var(--border-subtle)]">

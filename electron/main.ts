@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, screen, shell } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, screen, shell, Tray, Menu } from 'electron';
 import path from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
 
@@ -9,6 +9,8 @@ let mainWindow: BrowserWindow | null = null;
 let runtimeDb: any = null;
 let shutdownFn: ((exit: boolean) => Promise<void>) | null = null;
 let isQuitting = false;
+let tray: Tray | null = null;
+let closeToTray = false;
 
 // Verrou d'instance unique
 const gotTheLock = app.requestSingleInstanceLock();
@@ -96,9 +98,124 @@ function saveWindowBounds() {
   }
 }
 
+function canSupportTray(): boolean {
+  if (process.platform === 'win32' || process.platform === 'darwin') return true;
+  if (process.platform === 'linux') {
+    return Boolean(process.env.DISPLAY || process.env.WAYLAND_DISPLAY);
+  }
+  return false;
+}
+
+function ensureTray() {
+  if (tray || !canSupportTray()) return;
+  try {
+    const iconPath = path.resolve(__dirname, '../assets/icons/icon-16x16.png');
+    tray = new Tray(iconPath);
+    tray.setToolTip('Iroko');
+    const contextMenu = Menu.buildFromTemplate([
+      {
+        label: 'Ouvrir Iroko',
+        click: () => {
+          if (mainWindow) {
+            if (mainWindow.isMinimized()) mainWindow.restore();
+            mainWindow.show();
+            mainWindow.focus();
+          }
+        }
+      },
+      { type: 'separator' },
+      {
+        label: 'Quitter',
+        click: async () => {
+          isQuitting = true;
+          destroyTray();
+          if (shutdownFn) {
+            try {
+              await shutdownFn(false);
+            } catch {}
+          }
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.destroy();
+          }
+          app.quit();
+        }
+      }
+    ]);
+    tray.setContextMenu(contextMenu);
+    tray.on('click', () => {
+      if (mainWindow) {
+        if (mainWindow.isVisible()) {
+          mainWindow.focus();
+        } else {
+          mainWindow.show();
+          mainWindow.focus();
+        }
+      }
+    });
+    tray.on('double-click', () => {
+      if (mainWindow) {
+        mainWindow.show();
+        mainWindow.focus();
+      }
+    });
+  } catch (err) {
+    console.warn('Zone de notification non supportée sur cet environnement:', err);
+    tray = null;
+  }
+}
+
+function destroyTray() {
+  if (tray) {
+    try {
+      tray.destroy();
+    } catch {}
+    tray = null;
+  }
+}
+
+function setAutoLaunch(enabled: boolean): boolean {
+  try {
+    app.setLoginItemSettings({
+      openAtLogin: enabled
+    });
+    return true;
+  } catch (err) {
+    console.warn('Erreur lors de la configuration du démarrage système:', err);
+    return false;
+  }
+}
+
+function getAutoLaunch(): boolean {
+  try {
+    const settings = app.getLoginItemSettings();
+    return Boolean(settings?.openAtLogin);
+  } catch {
+    return false;
+  }
+}
+
 async function createWindow() {
   // 1. Démarrer le serveur local de manière synchrone et étanche
   await startLocalServer();
+
+  // 1.5. Lire les préférences système (démarrage auto et réduction tray)
+  try {
+    if (runtimeDb) {
+      const savedAutoLaunch = runtimeDb.getSetting('launch_on_startup');
+      if (typeof savedAutoLaunch === 'boolean') {
+        setAutoLaunch(savedAutoLaunch);
+      }
+      const savedMinimizeToTray = runtimeDb.getSetting('minimize_to_tray');
+      if (typeof savedMinimizeToTray === 'boolean') {
+        closeToTray = savedMinimizeToTray;
+        if (closeToTray) {
+          ensureTray();
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('Avertissement lors de la lecture des préférences système:', err);
+  }
 
   // 2. Récupérer les dimensions mémorisées dans les réglages du runtime SQLite
   let savedRaw: any;
@@ -166,12 +283,20 @@ async function createWindow() {
     return { action: 'deny' };
   });
 
-  // 6. Arrêt propre et complet (L8) à la fermeture de la fenêtre
+  // 6. Arrêt propre et complet (L8) OU Réduction dans la zone de notification (R2e)
   mainWindow.on('close', async (e) => {
+    if (closeToTray && !isQuitting) {
+      e.preventDefault();
+      saveWindowBounds();
+      mainWindow?.hide();
+      return;
+    }
+
     if (!isQuitting) {
       isQuitting = true;
       e.preventDefault();
       saveWindowBounds();
+      destroyTray();
 
       if (shutdownFn) {
         try {
@@ -212,11 +337,60 @@ ipcMain.handle('select-directory', async (_event, options) => {
   return { cancelled: false, path: res.filePaths[0] };
 });
 
+// Gestionnaires IPC pour les préférences bureau (Mission R2e)
+ipcMain.handle('get-desktop-capabilities', () => {
+  const canTray = canSupportTray();
+  let currentAutoLaunch = false;
+  try {
+    currentAutoLaunch = getAutoLaunch();
+  } catch {}
+
+  return {
+    isDesktop: true,
+    platform: process.platform,
+    canAutoLaunch: true,
+    canTray,
+    autoLaunch: currentAutoLaunch,
+    closeToTray
+  };
+});
+
+ipcMain.handle('set-auto-launch', (_event, enabled: boolean) => {
+  const success = setAutoLaunch(Boolean(enabled));
+  const effective = getAutoLaunch();
+  if (runtimeDb) {
+    try {
+      runtimeDb.setSetting('launch_on_startup', effective);
+    } catch {}
+  }
+  return { success, enabled: effective };
+});
+
+ipcMain.handle('set-minimize-to-tray', (_event, enabled: boolean) => {
+  closeToTray = Boolean(enabled);
+  if (closeToTray) {
+    ensureTray();
+  } else {
+    destroyTray();
+  }
+  if (runtimeDb) {
+    try {
+      runtimeDb.setSetting('minimize_to_tray', closeToTray);
+    } catch {}
+  }
+  return { success: true, enabled: closeToTray };
+});
+
+app.on('before-quit', () => {
+  isQuitting = true;
+});
+
 app.whenReady().then(createWindow);
 
 app.on('window-all-closed', async () => {
   if (!isQuitting) {
     isQuitting = true;
+    destroyTray();
     if (shutdownFn) {
       try {
         await shutdownFn(false);
