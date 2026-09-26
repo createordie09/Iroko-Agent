@@ -21,6 +21,9 @@ export interface DbConversation {
   metadata: string | null;
   mode: 'chat' | 'code';
   workspace_id: string | null;
+  is_pinned?: number;
+  pinned_at?: string | null;
+  pinned_order?: number;
 }
 
 export interface DbMessage {
@@ -448,7 +451,7 @@ export class RuntimeDatabase {
         CREATE INDEX IF NOT EXISTS idx_events_task ON agent_events(task_id);
         CREATE INDEX IF NOT EXISTS idx_tool_calls_task ON tool_calls(task_id);
 
-        INSERT INTO schema_migrations (version, applied_at) VALUES (1, '${new Date().toISOString()}');
+        INSERT OR IGNORE INTO schema_migrations (version, applied_at) VALUES (1, '${new Date().toISOString()}');
       `);
     }
 
@@ -472,7 +475,7 @@ export class RuntimeDatabase {
         CREATE INDEX IF NOT EXISTS idx_checkpoints_task ON task_checkpoints(task_id);
         CREATE INDEX IF NOT EXISTS idx_checkpoints_session ON task_checkpoints(session_id);
 
-        INSERT INTO schema_migrations (version, applied_at) VALUES (2, '${new Date().toISOString()}');
+        INSERT OR IGNORE INTO schema_migrations (version, applied_at) VALUES (2, '${new Date().toISOString()}');
       `);
     }
 
@@ -490,7 +493,7 @@ export class RuntimeDatabase {
         );
         CREATE INDEX IF NOT EXISTS idx_memories_scope_proj ON project_memories(scope, project_hash);
 
-        INSERT INTO schema_migrations (version, applied_at) VALUES (3, '${new Date().toISOString()}');
+        INSERT OR IGNORE INTO schema_migrations (version, applied_at) VALUES (3, '${new Date().toISOString()}');
       `);
     }
 
@@ -523,7 +526,7 @@ export class RuntimeDatabase {
           updated_at TEXT NOT NULL
         );
 
-        INSERT INTO schema_migrations (version, applied_at) VALUES (4, '${new Date().toISOString()}');
+        INSERT OR IGNORE INTO schema_migrations (version, applied_at) VALUES (4, '${new Date().toISOString()}');
       `);
     }
 
@@ -542,7 +545,7 @@ export class RuntimeDatabase {
           installed_at INTEGER NOT NULL
         );
 
-        INSERT INTO schema_migrations (version, applied_at) VALUES (5, '${new Date().toISOString()}');
+        INSERT OR IGNORE INTO schema_migrations (version, applied_at) VALUES (5, '${new Date().toISOString()}');
       `);
     }
 
@@ -583,7 +586,7 @@ export class RuntimeDatabase {
         }
       } catch {}
 
-      this.db.exec(`INSERT INTO schema_migrations (version, applied_at) VALUES (6, '${new Date().toISOString()}');`);
+      this.db.exec(`INSERT OR IGNORE INTO schema_migrations (version, applied_at) VALUES (6, '${new Date().toISOString()}');`);
     }
 
     if (currentVersion < 7) {
@@ -604,7 +607,7 @@ export class RuntimeDatabase {
         );
         CREATE INDEX IF NOT EXISTS idx_attachments_conv ON attachments(conversation_id);
 
-        INSERT INTO schema_migrations (version, applied_at) VALUES (7, '${new Date().toISOString()}');
+        INSERT OR IGNORE INTO schema_migrations (version, applied_at) VALUES (7, '${new Date().toISOString()}');
       `);
     }
 
@@ -618,7 +621,7 @@ export class RuntimeDatabase {
         );
         CREATE INDEX IF NOT EXISTS idx_recent_workspaces_time ON recent_workspaces(last_opened_at DESC);
 
-        INSERT INTO schema_migrations (version, applied_at) VALUES (8, '${new Date().toISOString()}');
+        INSERT OR IGNORE INTO schema_migrations (version, applied_at) VALUES (8, '${new Date().toISOString()}');
       `);
     }
 
@@ -648,7 +651,7 @@ export class RuntimeDatabase {
         );
         CREATE INDEX IF NOT EXISTS idx_artifact_versions_art ON artifact_versions(artifact_id);
 
-        INSERT INTO schema_migrations (version, applied_at) VALUES (9, '${new Date().toISOString()}');
+        INSERT OR IGNORE INTO schema_migrations (version, applied_at) VALUES (9, '${new Date().toISOString()}');
       `);
     }
 
@@ -659,7 +662,7 @@ export class RuntimeDatabase {
       if (!hasMetadata) {
         this.db.exec("ALTER TABLE artifacts ADD COLUMN metadata TEXT;");
       }
-      this.db.exec(`INSERT INTO schema_migrations (version, applied_at) VALUES (10, '${new Date().toISOString()}');`);
+      this.db.exec(`INSERT OR IGNORE INTO schema_migrations (version, applied_at) VALUES (10, '${new Date().toISOString()}');`);
     }
 
     if (currentVersion < 11) {
@@ -689,7 +692,7 @@ export class RuntimeDatabase {
         CREATE INDEX IF NOT EXISTS idx_video_jobs_conv ON video_jobs(conversation_id);
         CREATE INDEX IF NOT EXISTS idx_video_jobs_status ON video_jobs(status);
 
-        INSERT INTO schema_migrations (version, applied_at) VALUES (11, '${new Date().toISOString()}');
+        INSERT OR IGNORE INTO schema_migrations (version, applied_at) VALUES (11, '${new Date().toISOString()}');
       `);
     }
 
@@ -763,7 +766,7 @@ export class RuntimeDatabase {
         INSERT INTO search_fts (conversation_id, item_type, item_id, title, content)
         SELECT conversation_id, 'artifact', id, name, coalesce(title, name) FROM artifacts;
 
-        INSERT INTO schema_migrations (version, applied_at) VALUES (12, '${new Date().toISOString()}');
+        INSERT OR IGNORE INTO schema_migrations (version, applied_at) VALUES (12, '${new Date().toISOString()}');
       `);
     }
 
@@ -794,7 +797,7 @@ export class RuntimeDatabase {
         CREATE INDEX IF NOT EXISTS idx_model_catalog_tier ON model_catalog(price_tier);
         CREATE INDEX IF NOT EXISTS idx_model_catalog_favorite ON model_catalog(is_favorite);
 
-        INSERT INTO schema_migrations (version, applied_at) VALUES (13, '${new Date().toISOString()}');
+        INSERT OR IGNORE INTO schema_migrations (version, applied_at) VALUES (13, '${new Date().toISOString()}');
       `);
     }
 
@@ -810,7 +813,7 @@ export class RuntimeDatabase {
         this.db.exec("ALTER TABLE skills ADD COLUMN metadata_json TEXT;");
       }
 
-      this.db.exec(`INSERT INTO schema_migrations (version, applied_at) VALUES (14, '${new Date().toISOString()}');`);
+      this.db.exec(`INSERT OR IGNORE INTO schema_migrations (version, applied_at) VALUES (14, '${new Date().toISOString()}');`);
     }
 
     if (currentVersion < 15) {
@@ -826,16 +829,35 @@ export class RuntimeDatabase {
         );
         CREATE INDEX IF NOT EXISTS idx_pending_deletions_purge ON pending_deletions(purge_at);
 
-        INSERT INTO schema_migrations (version, applied_at) VALUES (15, '${new Date().toISOString()}');
+        INSERT OR IGNORE INTO schema_migrations (version, applied_at) VALUES (15, '${new Date().toISOString()}');
       `);
+    }
+
+    if (currentVersion < 16) {
+      // Mission R4e : Épinglage des discussions (is_pinned, pinned_at, pinned_order)
+      const convTableInfo = this.db.prepare("PRAGMA table_info(conversations)").all() as Array<{ name: string }>;
+      const hasIsPinned = convTableInfo.some(c => c.name === 'is_pinned');
+      const hasPinnedAt = convTableInfo.some(c => c.name === 'pinned_at');
+      const hasPinnedOrder = convTableInfo.some(c => c.name === 'pinned_order');
+      if (!hasIsPinned) {
+        this.db.exec("ALTER TABLE conversations ADD COLUMN is_pinned INTEGER NOT NULL DEFAULT 0;");
+      }
+      if (!hasPinnedAt) {
+        this.db.exec("ALTER TABLE conversations ADD COLUMN pinned_at TEXT;");
+      }
+      if (!hasPinnedOrder) {
+        this.db.exec("ALTER TABLE conversations ADD COLUMN pinned_order INTEGER NOT NULL DEFAULT 0;");
+      }
+
+      this.db.exec(`INSERT OR IGNORE INTO schema_migrations (version, applied_at) VALUES (16, '${new Date().toISOString()}');`);
     }
   }
 
   // --- Conversations ---
   public listConversations(includePending = false): DbConversation[] {
     const sql = includePending
-      ? 'SELECT * FROM conversations ORDER BY updated_at DESC'
-      : "SELECT * FROM conversations WHERE id NOT IN (SELECT id FROM pending_deletions WHERE item_type = 'conversation') ORDER BY updated_at DESC";
+      ? 'SELECT * FROM conversations ORDER BY is_pinned DESC, pinned_order ASC, pinned_at DESC, updated_at DESC'
+      : "SELECT * FROM conversations WHERE id NOT IN (SELECT id FROM pending_deletions WHERE item_type = 'conversation') ORDER BY is_pinned DESC, pinned_order ASC, pinned_at DESC, updated_at DESC";
     const stmt = this.db.prepare(sql);
     return stmt.all() as unknown as DbConversation[];
   }
@@ -920,6 +942,46 @@ export class RuntimeDatabase {
       UPDATE conversations SET title = ?, updated_at = ? WHERE id = ?
     `).run(title, new Date().toISOString(), id);
     return Number(res.changes) > 0;
+  }
+
+  public pinConversation(id: string, isPinned = true): { success: boolean; is_pinned: number; pinned_at: string | null; pinned_order: number } | null {
+    const conv = this.db.prepare('SELECT id, is_pinned, pinned_order FROM conversations WHERE id = ?').get(id) as { id: string; is_pinned: number; pinned_order: number } | undefined;
+    if (!conv) return null;
+
+    const now = new Date().toISOString();
+    if (isPinned) {
+      const maxOrderRow = this.db.prepare('SELECT MAX(pinned_order) as max_order FROM conversations WHERE is_pinned = 1').get() as { max_order: number | null };
+      const nextOrder = (maxOrderRow?.max_order ?? 0) + 1;
+
+      this.db.prepare(`
+        UPDATE conversations 
+        SET is_pinned = 1, pinned_at = ?, pinned_order = ? 
+        WHERE id = ?
+      `).run(now, nextOrder, id);
+
+      return { success: true, is_pinned: 1, pinned_at: now, pinned_order: nextOrder };
+    } else {
+      this.db.prepare(`
+        UPDATE conversations 
+        SET is_pinned = 0, pinned_at = NULL, pinned_order = 0 
+        WHERE id = ?
+      `).run(id);
+
+      return { success: true, is_pinned: 0, pinned_at: null, pinned_order: 0 };
+    }
+  }
+
+  public reorderPinnedConversations(orderedIds: string[]): boolean {
+    if (!Array.isArray(orderedIds)) return false;
+    for (let i = 0; i < orderedIds.length; i++) {
+      const id = orderedIds[i];
+      this.db.prepare(`
+        UPDATE conversations 
+        SET pinned_order = ? 
+        WHERE id = ? AND is_pinned = 1
+      `).run(i + 1, id);
+    }
+    return true;
   }
 
   public duplicateConversation(id: string): { conversation: DbConversation; messages: DbMessage[] } | null {

@@ -168,6 +168,81 @@ export function useSidebarConversations({
     });
   }, [selectedIds, history, activeView, setHistory, resetChat, scheduleUndoableDeletion, loadConversation]);
 
+  // ── Épinglage / Désépinglage (Mission R4e) ──
+  const handleTogglePin = useCallback(async (id: string, currentPinned?: boolean) => {
+    const nextPinned = !currentPinned;
+    const now = Date.now();
+
+    // Mise à jour optimiste
+    setHistory(prev => {
+      let maxOrder = 0;
+      prev.forEach(h => {
+        if (h.pinned && typeof h.pinned_order === 'number' && h.pinned_order > maxOrder) {
+          maxOrder = h.pinned_order;
+        }
+      });
+      return prev.map(h => {
+        if (h.id === id) {
+          return {
+            ...h,
+            pinned: nextPinned,
+            pinned_at: nextPinned ? now : undefined,
+            pinned_order: nextPinned ? maxOrder + 1 : undefined
+          };
+        }
+        return h;
+      });
+    });
+
+    try {
+      await tokenService.fetch(`/api/conversations/${encodeURIComponent(id)}/pin`, {
+        method: 'PUT',
+        body: JSON.stringify({ isPinned: nextPinned })
+      });
+    } catch (err) {
+      console.error('[Sidebar] Échec de la mise à jour de l\'épinglage :', err);
+    }
+  }, [setHistory]);
+
+  // ── Réorganisation des discussions épinglées (Monter / Descendre) ──
+  const handleMovePin = useCallback(async (id: string, direction: 'up' | 'down') => {
+    const pinnedItems = history
+      .filter(h => Boolean(h.pinned))
+      .sort((a, b) => (a.pinned_order ?? 0) - (b.pinned_order ?? 0) || (b.pinned_at ?? 0) - (a.pinned_at ?? 0));
+
+    const currentIndex = pinnedItems.findIndex(h => h.id === id);
+    if (currentIndex === -1) return;
+    const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+    if (targetIndex < 0 || targetIndex >= pinnedItems.length) return;
+
+    const newPinned = [...pinnedItems];
+    const [moved] = newPinned.splice(currentIndex, 1);
+    newPinned.splice(targetIndex, 0, moved);
+
+    const idToOrder = new Map<string, number>();
+    newPinned.forEach((item, idx) => {
+      idToOrder.set(item.id, idx + 1);
+    });
+
+    setHistory(prev =>
+      prev.map(h => {
+        if (idToOrder.has(h.id)) {
+          return { ...h, pinned_order: idToOrder.get(h.id) };
+        }
+        return h;
+      })
+    );
+
+    try {
+      await tokenService.fetch('/api/conversations/reorder-pins', {
+        method: 'PUT',
+        body: JSON.stringify({ orderedIds: newPinned.map(h => h.id) })
+      });
+    } catch (err) {
+      console.error('[Sidebar] Échec de la réorganisation des épinglés :', err);
+    }
+  }, [history, setHistory]);
+
   return {
     editingConvId,
     editingTitle,
@@ -182,6 +257,8 @@ export function useSidebarConversations({
     handleToggleSelectionMode,
     handleToggleSelect,
     handleSelectAll,
-    handleBatchDelete
+    handleBatchDelete,
+    handleTogglePin,
+    handleMovePin
   };
 }

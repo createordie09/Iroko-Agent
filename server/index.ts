@@ -420,6 +420,34 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    if (pathname.startsWith('/api/conversations/') && pathname.endsWith('/pin') && req.method === 'PUT') {
+      const id = pathname.replace('/api/conversations/', '').replace('/pin', '').trim();
+      const body = await readJson(64 * 1024);
+      const isPinned = body.isPinned !== undefined ? Boolean(body.isPinned) : true;
+      const resPin = runtimeDatabase.pinConversation(id, isPinned);
+      if (!resPin) {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Conversation introuvable.' }));
+        return;
+      }
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: true, ...resPin }));
+      return;
+    }
+
+    if (pathname === '/api/conversations/reorder-pins' && req.method === 'PUT') {
+      const body = await readJson(64 * 1024);
+      if (!Array.isArray(body.orderedIds)) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'orderedIds doit être un tableau d\'identifiants.' }));
+        return;
+      }
+      const success = runtimeDatabase.reorderPinnedConversations(body.orderedIds);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success }));
+      return;
+    }
+
     if (pathname.startsWith('/api/conversations/') && pathname.endsWith('/duplicate') && req.method === 'POST') {
       const id = pathname.replace('/api/conversations/', '').replace('/duplicate', '').trim();
       const duplicated = runtimeDatabase.duplicateConversation(id);

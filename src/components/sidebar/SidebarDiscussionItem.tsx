@@ -9,7 +9,7 @@
  * Zéro décalage de mise en page (hauteur 28px constante), tokens neutres stricts.
  */
 import React, { useState, useRef, useEffect } from 'react';
-import { Code2, Trash2, MoreHorizontal, Pencil, Copy, Check } from 'lucide-react';
+import { Code2, Trash2, MoreHorizontal, Pencil, Copy, Check, Pin, PinOff, ChevronUp, ChevronDown } from 'lucide-react';
 import { HistoryItem } from '../../types';
 
 export interface SidebarDiscussionItemProps {
@@ -29,6 +29,10 @@ export interface SidebarDiscussionItemProps {
   isSelectionMode: boolean;
   isSelected: boolean;
   onToggleSelect: (id: string) => void;
+  onTogglePin?: (id: string, currentPinned?: boolean) => void;
+  onMovePin?: (id: string, direction: 'up' | 'down') => void;
+  canMoveUp?: boolean;
+  canMoveDown?: boolean;
 }
 
 export function SidebarDiscussionItem({
@@ -46,7 +50,11 @@ export function SidebarDiscussionItem({
   onSelect,
   isSelectionMode,
   isSelected,
-  onToggleSelect
+  onToggleSelect,
+  onTogglePin,
+  onMovePin,
+  canMoveUp = false,
+  canMoveDown = false
 }: SidebarDiscussionItemProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -142,6 +150,8 @@ export function SidebarDiscussionItem({
         >
           {isRunning ? (
             <span className="w-2 h-2 rounded-full bg-[var(--text-secondary)] shrink-0" aria-label="Tâche en cours d'exécution" title="Tâche en cours d'exécution" />
+          ) : item.pinned ? (
+            <Pin className="w-3 h-3 text-[var(--text-secondary)] shrink-0" aria-label="Discussion épinglée" />
           ) : item.mode === 'code' ? (
             <Code2 className="w-3 h-3 text-[var(--text-secondary)] shrink-0" aria-label="Mode Code" />
           ) : (
@@ -174,6 +184,68 @@ export function SidebarDiscussionItem({
                 role="menu"
                 className="absolute right-0 top-[calc(100%+2px)] w-40 bg-[var(--bg-surface)] border border-[var(--border-modal)] rounded-[8px] py-1 z-50 shadow-none text-[12px]"
               >
+                {/* ── Action Épingler / Désépingler ── */}
+                {onTogglePin && (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsMenuOpen(false);
+                      onTogglePin(item.id, item.pinned);
+                    }}
+                    className="w-full px-2.5 py-1.5 text-left flex items-center gap-2 hover:bg-[var(--bg-surface-hover)] text-[var(--text-primary)] transition-colors cursor-pointer"
+                  >
+                    {item.pinned ? (
+                      <>
+                        <PinOff className="w-3 h-3 text-[var(--text-secondary)]" />
+                        <span>Désépingler</span>
+                      </>
+                    ) : (
+                      <>
+                        <Pin className="w-3 h-3 text-[var(--text-secondary)]" />
+                        <span>Épingler</span>
+                      </>
+                    )}
+                  </button>
+                )}
+
+                {/* ── Actions Monter / Descendre (si épinglée) ── */}
+                {item.pinned && onMovePin && (canMoveUp || canMoveDown) && (
+                  <>
+                    {canMoveUp && (
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsMenuOpen(false);
+                          onMovePin(item.id, 'up');
+                        }}
+                        className="w-full px-2.5 py-1.5 text-left flex items-center gap-2 hover:bg-[var(--bg-surface-hover)] text-[var(--text-primary)] transition-colors cursor-pointer"
+                      >
+                        <ChevronUp className="w-3 h-3 text-[var(--text-secondary)]" />
+                        <span>Monter</span>
+                      </button>
+                    )}
+                    {canMoveDown && (
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsMenuOpen(false);
+                          onMovePin(item.id, 'down');
+                        }}
+                        className="w-full px-2.5 py-1.5 text-left flex items-center gap-2 hover:bg-[var(--bg-surface-hover)] text-[var(--text-primary)] transition-colors cursor-pointer"
+                      >
+                        <ChevronDown className="w-3 h-3 text-[var(--text-secondary)]" />
+                        <span>Descendre</span>
+                      </button>
+                    )}
+                  </>
+                )}
+
                 <button
                   type="button"
                   role="menuitem"

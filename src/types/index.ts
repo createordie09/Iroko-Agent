@@ -5,7 +5,10 @@ export type HistoryItem = {
   timestamp: number;
   mode?: 'chat' | 'code';
   workspace_id?: string | null;
+  time?: string;
   pinned?: boolean;
+  pinned_at?: number;
+  pinned_order?: number;
 };
 
 export interface MessageSource {

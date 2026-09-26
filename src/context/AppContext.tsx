@@ -237,7 +237,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
             result: '',
             timestamp: new Date(data.conversation.updated_at).getTime(),
             mode: data.conversation.mode || 'chat',
-            workspace_id: data.conversation.workspace_id || null
+            workspace_id: data.conversation.workspace_id || null,
+            pinned: Boolean(data.conversation.is_pinned),
+            pinned_at: data.conversation.pinned_at ? new Date(data.conversation.pinned_at).getTime() : undefined,
+            pinned_order: typeof data.conversation.pinned_order === 'number' ? data.conversation.pinned_order : undefined
           };
           setHistory(prev => [convItem, ...prev.filter(h => h.id !== convItem.id)]);
           if (data.conversation.mode) {
@@ -281,7 +284,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
                 time: 'Récemment',
                 timestamp: new Date(c.updated_at).getTime(),
                 mode: c.mode || 'chat',
-                workspace_id: c.workspace_id || null
+                workspace_id: c.workspace_id || null,
+                pinned: Boolean(c.is_pinned),
+                pinned_at: c.pinned_at ? new Date(c.pinned_at).getTime() : undefined,
+                pinned_order: typeof c.pinned_order === 'number' ? c.pinned_order : undefined
               }));
               setHistory(runtimeItems);
               localStorage.setItem('iroko_history', JSON.stringify(runtimeItems));
@@ -387,7 +393,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
               time: 'Récemment',
               timestamp: new Date(c.updated_at).getTime(),
               mode: c.mode || 'chat',
-              workspace_id: c.workspace_id || null
+              workspace_id: c.workspace_id || null,
+              pinned: Boolean(c.is_pinned),
+              pinned_at: c.pinned_at ? new Date(c.pinned_at).getTime() : undefined,
+              pinned_order: typeof c.pinned_order === 'number' ? c.pinned_order : undefined
             }));
             if (isMounted) {
               setHistory(runtimeItems);
@@ -420,7 +429,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
                     time: 'Récemment',
                     timestamp: new Date(c.updated_at).getTime(),
                     mode: c.mode || 'chat',
-                    workspace_id: c.workspace_id || null
+                    workspace_id: c.workspace_id || null,
+                    pinned: Boolean(c.is_pinned),
+                    pinned_at: c.pinned_at ? new Date(c.pinned_at).getTime() : undefined,
+                    pinned_order: typeof c.pinned_order === 'number' ? c.pinned_order : undefined
                   }));
                   if (isMounted) {
                     setHistory(items);

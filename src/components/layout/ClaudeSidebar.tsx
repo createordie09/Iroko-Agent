@@ -1,10 +1,11 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { Plus, SlidersHorizontal, PanelLeft, Settings, ListFilter, Search, X, CheckSquare, Trash2 } from 'lucide-react';
+import { Plus, SlidersHorizontal, PanelLeft, Settings, ListFilter, CheckSquare, Trash2 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useUndoDeletion } from '../../hooks/useUndoDeletion';
 import { tokenService } from '../../services/security/TokenService';
 import { agentClient } from '../../lib/agent-client';
 import { SidebarDiscussionItem } from '../sidebar/SidebarDiscussionItem';
+import { SidebarFilterBar } from '../sidebar/SidebarFilterBar';
 import { useSidebarConversations } from '../../hooks/sidebar/useSidebarConversations';
 
 const HISTORY_PAGE_SIZE = 10;
@@ -25,7 +26,7 @@ export function ClaudeSidebar({ onOpenPersonalize }: ClaudeSidebarProps) {
     editingConvId, editingTitle, setEditingTitle, isSelectionMode, selectedIds,
     handleStartRename, handleCancelRename, handleSaveRename, handleDuplicateConversation,
     handleDeleteConversation, handleToggleSelectionMode, handleToggleSelect,
-    handleSelectAll, handleBatchDelete
+    handleSelectAll, handleBatchDelete, handleTogglePin, handleMovePin
   } = useSidebarConversations({
     history, setHistory, activeView, loadConversation, resetChat, scheduleUndoableDeletion, setIsMobileSidebarOpen
   });
@@ -90,8 +91,25 @@ export function ClaudeSidebar({ onOpenPersonalize }: ClaudeSidebarProps) {
     return () => { isMounted = false; unsubscribeWs(); unsubscribeConn(); if (fallbackInterval) clearInterval(fallbackInterval); };
   }, []);
 
+  const pinnedHistory = useMemo(() => {
+    return history
+      .filter(item => Boolean(item.pinned))
+      .sort((a, b) => (a.pinned_order ?? 0) - (b.pinned_order ?? 0) || (b.pinned_at ?? 0) - (a.pinned_at ?? 0));
+  }, [history]);
+
+  const visiblePinnedHistory = useMemo(() => {
+    if (!searchQuery.trim()) return pinnedHistory;
+    return pinnedHistory.filter(item => {
+      const matchesFts = ftsMatchedConvIds.has(item.id);
+      const matchesTopic = item.topic.toLowerCase().includes(searchQuery.trim().toLowerCase());
+      return matchesFts || matchesTopic;
+    });
+  }, [pinnedHistory, searchQuery, ftsMatchedConvIds]);
+
   const filteredHistory = useMemo(() => {
     return history.filter(item => {
+      // Les discussions épinglées sont affichées dans la section Épinglés (sauf en filtre explicite "Épinglées")
+      if (filterMode !== 'pinned' && item.pinned) return false;
       if (searchQuery.trim()) {
         const matchesFts = ftsMatchedConvIds.has(item.id);
         const matchesTopic = item.topic.toLowerCase().includes(searchQuery.trim().toLowerCase());
@@ -113,7 +131,8 @@ export function ClaudeSidebar({ onOpenPersonalize }: ClaudeSidebarProps) {
     setIsMobileSidebarOpen(false);
   };
 
-  const hasPinnedItems = projects.length > 0;
+  const hasPinnedDiscussions = visiblePinnedHistory.length > 0;
+  const hasPinnedItems = hasPinnedDiscussions || projects.length > 0;
 
   return (
     <aside
@@ -176,7 +195,7 @@ export function ClaudeSidebar({ onOpenPersonalize }: ClaudeSidebarProps) {
       <nav aria-label="Navigation" className="flex-1 overflow-y-auto claude-scrollbar px-2 pt-2 space-y-3 scrollbar-hide hover:scrollbar-default">
         {/* ── Section Épinglés : masquée si vide ── */}
         {hasPinnedItems && (
-          <div>
+          <div data-section="pinned">
             <div className="text-[12px] text-[var(--text-secondary)] px-2.5 pb-1 font-normal">Épinglés</div>
             <div className="space-y-0.5">
               {projects.map(p => (
@@ -193,6 +212,30 @@ export function ClaudeSidebar({ onOpenPersonalize }: ClaudeSidebarProps) {
                   <span className="w-1 h-1 rounded-full bg-[var(--text-tertiary)] shrink-0 group-hover:bg-[var(--text-secondary)]" />
                   <span className="truncate mask-fade-right">{p.name}</span>
                 </button>
+              ))}
+              {visiblePinnedHistory.map((item, index) => (
+                <SidebarDiscussionItem
+                  key={`pinned-${item.id}`}
+                  item={item}
+                  isActive={history[0]?.id === item.id && activeView === 'chat'}
+                  isRunning={activeTaskConvIds.includes(item.id)}
+                  isEditing={editingConvId === item.id}
+                  editingTitle={editingTitle}
+                  setEditingTitle={setEditingTitle}
+                  onSaveRename={handleSaveRename}
+                  onCancelRename={handleCancelRename}
+                  onStartRename={handleStartRename}
+                  onDuplicate={handleDuplicateConversation}
+                  onDelete={handleDeleteConversation}
+                  onSelect={() => { loadConversation(item.id); setIsMobileSidebarOpen(false); }}
+                  isSelectionMode={isSelectionMode}
+                  isSelected={selectedIds.has(item.id)}
+                  onToggleSelect={handleToggleSelect}
+                  onTogglePin={handleTogglePin}
+                  onMovePin={handleMovePin}
+                  canMoveUp={index > 0}
+                  canMoveDown={index < visiblePinnedHistory.length - 1}
+                />
               ))}
             </div>
           </div>
@@ -259,42 +302,19 @@ export function ClaudeSidebar({ onOpenPersonalize }: ClaudeSidebarProps) {
               </div>
             )}
 
-            {/* ── Filtre Tout / Chat / Code / Épinglées & Recherche (Ctrl+K) ── */}
+            {/* ── Filtre Tout / Chat / Code / Épinglées & Recherche (Ctrl+K) : sidebar-search-input, token --font-size-search ── */}
             {isFilterOpen && (
-              <div className="space-y-1.5 px-2.5 pb-1.5 pt-0.5">
-                <div data-field-container="true" className="flex items-center gap-1.5 bg-[var(--bg-surface)] border border-[var(--border-modal)] rounded-[6px] px-2 py-1">
-                  <Search className="w-3 h-3 text-[var(--text-secondary)] shrink-0" />
-                  <input
-                    data-search="true"
-                    type="text"
-                    value={searchQuery}
-                    onChange={e => { setSearchQuery(e.target.value); setShowAll(true); }}
-                    onKeyDown={e => {
-                      if (e.key === 'Escape') { e.stopPropagation(); setIsFilterOpen(false); filterBtnRef.current?.focus(); }
-                    }}
-                    placeholder="Rechercher..."
-                    className="w-full bg-transparent text-[var(--font-size-search,12px)] text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] outline-none sidebar-search-input"
-                  />
-                  {searchQuery && (
-                    <button type="button" onClick={() => setSearchQuery('')} className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] tap-target-24" title="Effacer la recherche" aria-label="Effacer la recherche">
-                      <X className="w-3 h-3" />
-                    </button>
-                  )}
-                </div>
-                <div className="flex items-center gap-1">
-                  {(['all', 'chat', 'code', 'pinned'] as const).map(mode => (
-                    <button
-                      key={mode}
-                      type="button"
-                      onClick={() => { setFilterMode(mode); setShowAll(false); }}
-                      aria-pressed={filterMode === mode}
-                      className={`text-[11px] px-1.5 py-0.5 rounded transition-colors tap-target-24 ${filterMode === mode ? 'bg-[var(--bg-active)] text-[var(--text-primary)] font-medium' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-hover)]'}`}
-                    >
-                      {{ all: 'Tout', chat: 'Chat', code: 'Code', pinned: 'Épinglées' }[mode]}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              <SidebarFilterBar
+                searchQuery={searchQuery}
+                setSearchQuery={setSearchQuery}
+                filterMode={filterMode}
+                setFilterMode={setFilterMode}
+                setShowAll={setShowAll}
+                onClose={() => {
+                  setIsFilterOpen(false);
+                  filterBtnRef.current?.focus();
+                }}
+              />
             )}
 
             <div className="space-y-0.5">
@@ -316,6 +336,7 @@ export function ClaudeSidebar({ onOpenPersonalize }: ClaudeSidebarProps) {
                   isSelectionMode={isSelectionMode}
                   isSelected={selectedIds.has(item.id)}
                   onToggleSelect={handleToggleSelect}
+                  onTogglePin={handleTogglePin}
                 />
               ))}
 
