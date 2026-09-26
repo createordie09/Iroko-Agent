@@ -400,6 +400,42 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    if (pathname.startsWith('/api/conversations/') && pathname.endsWith('/title') && req.method === 'PUT') {
+      const id = pathname.replace('/api/conversations/', '').replace('/title', '').trim();
+      const body = await readJson(64 * 1024);
+      if (!body.title || typeof body.title !== 'string' || !body.title.trim()) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Le champ title est requis.' }));
+        return;
+      }
+      const updated = runtimeDatabase.updateConversationTitle(id, body.title.trim());
+      if (!updated) {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Conversation introuvable.' }));
+        return;
+      }
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: true, title: body.title.trim() }));
+      return;
+    }
+
+    if (pathname.startsWith('/api/conversations/') && pathname.endsWith('/duplicate') && req.method === 'POST') {
+      const id = pathname.replace('/api/conversations/', '').replace('/duplicate', '').trim();
+      const duplicated = runtimeDatabase.duplicateConversation(id);
+      if (!duplicated) {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Conversation introuvable.' }));
+        return;
+      }
+      res.writeHead(201, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({
+        success: true,
+        conversation: duplicated.conversation,
+        messagesCount: duplicated.messages.length
+      }));
+      return;
+    }
+
     if (pathname.startsWith('/api/conversations/') && pathname.endsWith('/attachments') && req.method === 'GET') {
       const convId = pathname.replace('/api/conversations/', '').replace('/attachments', '').trim();
       const list = attachmentManager.listAttachments(convId);

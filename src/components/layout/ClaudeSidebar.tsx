@@ -1,9 +1,11 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { Plus, Code2, SlidersHorizontal, PanelLeft, Settings, ListFilter, Search, X, Trash2 } from 'lucide-react';
+import { Plus, SlidersHorizontal, PanelLeft, Settings, ListFilter, Search, X, CheckSquare, Trash2 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useUndoDeletion } from '../../hooks/useUndoDeletion';
 import { tokenService } from '../../services/security/TokenService';
 import { agentClient } from '../../lib/agent-client';
+import { SidebarDiscussionItem } from '../sidebar/SidebarDiscussionItem';
+import { useSidebarConversations } from '../../hooks/sidebar/useSidebarConversations';
 
 const HISTORY_PAGE_SIZE = 10;
 
@@ -19,11 +21,19 @@ export function ClaudeSidebar({ onOpenPersonalize }: ClaudeSidebarProps) {
   } = useApp();
   const { scheduleUndoableDeletion } = useUndoDeletion();
 
+  const {
+    editingConvId, editingTitle, setEditingTitle, isSelectionMode, selectedIds,
+    handleStartRename, handleCancelRename, handleSaveRename, handleDuplicateConversation,
+    handleDeleteConversation, handleToggleSelectionMode, handleToggleSelect,
+    handleSelectAll, handleBatchDelete
+  } = useSidebarConversations({
+    history, setHistory, activeView, loadConversation, resetChat, scheduleUndoableDeletion, setIsMobileSidebarOpen
+  });
+
   const sidebarRef = useRef<HTMLElement>(null);
   const filterBtnRef = useRef<HTMLButtonElement>(null);
   const prevCollapsedRef = useRef(isSidebarCollapsed);
 
-  // Focus transfer au bouton de repli lorsque la sidebar est repliée
   useEffect(() => {
     if (!prevCollapsedRef.current && isSidebarCollapsed) {
       if (sidebarRef.current && sidebarRef.current.contains(document.activeElement)) {
@@ -39,24 +49,17 @@ export function ClaudeSidebar({ onOpenPersonalize }: ClaudeSidebarProps) {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [filterMode, setFilterMode] = useState<'all' | 'chat' | 'code' | 'pinned'>('all');
   const [searchQuery, setSearchQuery] = useState('');
-  /** Afficher toute la liste (true) ou seulement les 10 premières (false) */
   const [showAll, setShowAll] = useState(false);
-
-  // Recherche plein texte FTS5 (Mission M8.3 P2)
   const [ftsMatchedConvIds, setFtsMatchedConvIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    if (!searchQuery.trim()) {
-      setFtsMatchedConvIds(new Set());
-      return;
-    }
+    if (!searchQuery.trim()) { setFtsMatchedConvIds(new Set()); return; }
     const timer = setTimeout(async () => {
       try {
         const res = await tokenService.fetch(`/api/search?q=${encodeURIComponent(searchQuery.trim())}`);
         if (res.ok) {
           const data = await res.json();
-          const ids = new Set<string>((data.results || []).map((r: any) => r.conversationId));
-          setFtsMatchedConvIds(ids);
+          setFtsMatchedConvIds(new Set<string>((data.results || []).map((r: any) => r.conversationId)));
         }
       } catch {}
     }, 150);
@@ -65,75 +68,27 @@ export function ClaudeSidebar({ onOpenPersonalize }: ClaudeSidebarProps) {
 
   // Tâches actives en arrière-plan (Mission M8.3 P6, Optimisation Réseau Lot 6 Fiche 22) [À VALIDER]
   const [activeTaskConvIds, setActiveTaskConvIds] = useState<string[]>([]);
-
   useEffect(() => {
     let isMounted = true;
-
-    // 1. Récupération sobre initiale (un seul appel HTTP au montage)
     const fetchActive = async () => {
       try {
         const res = await tokenService.fetch('/api/agent/active-tasks');
-        if (res.ok && isMounted) {
-          const data = await res.json();
-          setActiveTaskConvIds(data.activeConversationIds || []);
-        }
+        if (res.ok && isMounted) setActiveTaskConvIds((await res.json()).activeConversationIds || []);
       } catch {}
     };
-
     fetchActive();
-
-    // 2. Écoute réactive des événements WebSocket en direct (zéro polling tant que le WS est actif)
     const unsubscribeWs = agentClient.onEvent((event: any) => {
-      if (event.type === 'agent_status_changed' && Array.isArray(event.activeConversationIds)) {
-        if (isMounted) {
-          setActiveTaskConvIds(event.activeConversationIds);
-        }
-      } else if (event.type === 'video_job_updated') {
-        fetchActive();
-      }
+      if (event.type === 'agent_status_changed' && Array.isArray(event.activeConversationIds) && isMounted) {
+        setActiveTaskConvIds(event.activeConversationIds);
+      } else if (event.type === 'video_job_updated') fetchActive();
     });
-
-    // 3. Sondage de repli : activé uniquement si le WebSocket est déconnecté (cadence lente 30s)
     let fallbackInterval: NodeJS.Timeout | null = null;
-    const unsubscribeConn = agentClient.onConnectionChange((connected) => {
-      if (connected) {
-        if (fallbackInterval) {
-          clearInterval(fallbackInterval);
-          fallbackInterval = null;
-        }
-      } else {
-        if (!fallbackInterval && isMounted) {
-          fallbackInterval = setInterval(fetchActive, 30000);
-        }
-      }
+    const unsubscribeConn = agentClient.onConnectionChange(connected => {
+      if (connected && fallbackInterval) { clearInterval(fallbackInterval); fallbackInterval = null; }
+      else if (!connected && !fallbackInterval && isMounted) fallbackInterval = setInterval(fetchActive, 30000);
     });
-
-    return () => {
-      isMounted = false;
-      unsubscribeWs();
-      unsubscribeConn();
-      if (fallbackInterval) {
-        clearInterval(fallbackInterval);
-      }
-    };
+    return () => { isMounted = false; unsubscribeWs(); unsubscribeConn(); if (fallbackInterval) clearInterval(fallbackInterval); };
   }, []);
-
-  const handleDeleteConversation = (e: React.MouseEvent, item: any) => {
-    e.stopPropagation();
-    const wasActive = history[0]?.id === item.id && activeView === 'chat';
-    const oldHistory = [...history];
-    setHistory(prev => prev.filter(h => h.id !== item.id));
-    if (wasActive) resetChat();
-    scheduleUndoableDeletion({
-      itemType: 'conversation',
-      id: item.id,
-      label: 'Discussion supprimée.',
-      onRestore: () => {
-        setHistory(oldHistory);
-        if (wasActive) loadConversation(item.id);
-      }
-    });
-  };
 
   const filteredHistory = useMemo(() => {
     return history.filter(item => {
@@ -149,11 +104,7 @@ export function ClaudeSidebar({ onOpenPersonalize }: ClaudeSidebarProps) {
     });
   }, [history, filterMode, searchQuery, ftsMatchedConvIds]);
 
-  /** Slice affiché selon l'état dépliage */
-  const visibleHistory = showAll
-    ? filteredHistory
-    : filteredHistory.slice(0, HISTORY_PAGE_SIZE);
-
+  const visibleHistory = showAll ? filteredHistory : filteredHistory.slice(0, HISTORY_PAGE_SIZE);
   const hasMore = filteredHistory.length > HISTORY_PAGE_SIZE;
 
   const handleNewChat = () => {
@@ -171,9 +122,7 @@ export function ClaudeSidebar({ onOpenPersonalize }: ClaudeSidebarProps) {
       className={`h-full flex flex-col bg-[var(--bg-sidebar)] border-r border-[var(--border-subtle)] select-none shrink-0 transition-all duration-200 ${
         isSidebarCollapsed ? 'w-0 -translate-x-full overflow-hidden opacity-0' : 'w-[222px] translate-x-0 opacity-100'
       }`}
-      style={{
-        width: isSidebarCollapsed ? 0 : 222
-      }}
+      style={{ width: isSidebarCollapsed ? 0 : 222 }}
     >
       {/* ── En-tête ── */}
       <div className="h-12 flex items-center justify-between px-3 shrink-0">
@@ -210,7 +159,7 @@ export function ClaudeSidebar({ onOpenPersonalize }: ClaudeSidebarProps) {
         </button>
       </div>
 
-      {/* ── Navigation : Personnaliser → ouvre Paramètres onglet Compétences ── */}
+      {/* ── Navigation : Personnaliser → Paramètres Compétences ── */}
       <div className="px-2 py-0.5 space-y-0.5 shrink-0">
         <button
           type="button"
@@ -225,13 +174,10 @@ export function ClaudeSidebar({ onOpenPersonalize }: ClaudeSidebarProps) {
 
       {/* ── Liste avec scroll ── */}
       <nav aria-label="Navigation" className="flex-1 overflow-y-auto claude-scrollbar px-2 pt-2 space-y-3 scrollbar-hide hover:scrollbar-default">
-
         {/* ── Section Épinglés : masquée si vide ── */}
         {hasPinnedItems && (
           <div>
-            <div className="text-[12px] text-[var(--text-secondary)] px-2.5 pb-1 font-normal">
-              Épinglés
-            </div>
+            <div className="text-[12px] text-[var(--text-secondary)] px-2.5 pb-1 font-normal">Épinglés</div>
             <div className="space-y-0.5">
               {projects.map(p => (
                 <button
@@ -257,19 +203,61 @@ export function ClaudeSidebar({ onOpenPersonalize }: ClaudeSidebarProps) {
           <div>
             <div className="flex items-center justify-between px-2.5 pb-1">
               <span className="text-[12px] text-[var(--text-secondary)] font-normal">Discussions</span>
-              <button
-                ref={filterBtnRef}
-                type="button"
-                onClick={() => setIsFilterOpen(prev => !prev)}
-                className={`p-0.5 rounded transition-colors tap-target-24 ${
-                  isFilterOpen || filterMode !== 'all' ? 'text-[var(--text-primary)] bg-[var(--bg-surface-hover)]' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-                }`}
-                title="Filtrer les discussions"
-                aria-label="Filtrer les discussions"
-              >
-                <ListFilter className="w-3.5 h-3.5" />
-              </button>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={handleToggleSelectionMode}
+                  className={`p-0.5 rounded transition-colors tap-target-24 ${
+                    isSelectionMode ? 'text-[var(--text-primary)] bg-[var(--bg-surface-hover)]' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                  }`}
+                  title={isSelectionMode ? 'Quitter la sélection' : 'Sélectionner des discussions'}
+                  aria-label={isSelectionMode ? 'Quitter la sélection' : 'Sélectionner des discussions'}
+                >
+                  <CheckSquare className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  ref={filterBtnRef}
+                  type="button"
+                  onClick={() => setIsFilterOpen(prev => !prev)}
+                  className={`p-0.5 rounded transition-colors tap-target-24 ${
+                    isFilterOpen || filterMode !== 'all' ? 'text-[var(--text-primary)] bg-[var(--bg-surface-hover)]' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                  }`}
+                  title="Filtrer les discussions"
+                  aria-label="Filtrer les discussions"
+                >
+                  <ListFilter className="w-3.5 h-3.5" />
+                </button>
+              </div>
             </div>
+
+            {/* ── Barre d'actions de sélection multiple ── */}
+            {isSelectionMode && (
+              <div className="flex items-center justify-between px-2 py-1 mb-1 text-[11px] bg-[var(--bg-surface)] border border-[var(--border-subtle)] rounded-[var(--radius-item)]">
+                <button
+                  type="button"
+                  onClick={() => handleSelectAll(visibleHistory.map(h => h.id))}
+                  className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors tap-target-24"
+                >
+                  {selectedIds.size === visibleHistory.length && visibleHistory.length > 0 ? 'Désélectionner' : 'Tout sélectionner'}
+                </button>
+                <div className="flex items-center gap-2">
+                  <span className="text-[var(--text-muted)] font-mono">{selectedIds.size}</span>
+                  <button
+                    type="button"
+                    disabled={selectedIds.size === 0}
+                    onClick={handleBatchDelete}
+                    className={`flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded tap-target-24 transition-colors ${
+                      selectedIds.size > 0 ? 'text-[var(--text-primary)] hover:bg-[var(--bg-surface-hover)] cursor-pointer' : 'text-[var(--text-tertiary)] cursor-not-allowed opacity-50'
+                    }`}
+                    title="Supprimer les discussions sélectionnées"
+                    aria-label={`Supprimer ${selectedIds.size} discussion(s)`}
+                  >
+                    <Trash2 className="w-3 h-3 text-[var(--text-secondary)]" />
+                    <span>Supprimer</span>
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* ── Filtre Tout / Chat / Code / Épinglées & Recherche (Ctrl+K) ── */}
             {isFilterOpen && (
@@ -282,90 +270,59 @@ export function ClaudeSidebar({ onOpenPersonalize }: ClaudeSidebarProps) {
                     value={searchQuery}
                     onChange={e => { setSearchQuery(e.target.value); setShowAll(true); }}
                     onKeyDown={e => {
-                      if (e.key === 'Escape') {
-                        e.stopPropagation();
-                        setIsFilterOpen(false);
-                        filterBtnRef.current?.focus();
-                      }
+                      if (e.key === 'Escape') { e.stopPropagation(); setIsFilterOpen(false); filterBtnRef.current?.focus(); }
                     }}
                     placeholder="Rechercher..."
                     className="w-full bg-transparent text-[var(--font-size-search,12px)] text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] outline-none sidebar-search-input"
                   />
                   {searchQuery && (
-                    <button
-                      type="button"
-                      onClick={() => setSearchQuery('')}
-                      className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] tap-target-24"
-                      title="Effacer la recherche"
-                      aria-label="Effacer la recherche"
-                    >
+                    <button type="button" onClick={() => setSearchQuery('')} className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] tap-target-24" title="Effacer la recherche" aria-label="Effacer la recherche">
                       <X className="w-3 h-3" />
                     </button>
                   )}
                 </div>
                 <div className="flex items-center gap-1">
-                {(['all', 'chat', 'code', 'pinned'] as const).map((mode) => {
-                  const labels: Record<string, string> = { all: 'Tout', chat: 'Chat', code: 'Code', pinned: 'Épinglées' };
-                  const active = filterMode === mode;
-                  return (
+                  {(['all', 'chat', 'code', 'pinned'] as const).map(mode => (
                     <button
                       key={mode}
                       type="button"
                       onClick={() => { setFilterMode(mode); setShowAll(false); }}
-                      aria-pressed={active}
-                      className={`text-[11px] px-1.5 py-0.5 rounded transition-colors tap-target-24 ${
-                        active ? 'bg-[var(--bg-active)] text-[var(--text-primary)] font-medium' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-hover)]'
-                      }`}
+                      aria-pressed={filterMode === mode}
+                      className={`text-[11px] px-1.5 py-0.5 rounded transition-colors tap-target-24 ${filterMode === mode ? 'bg-[var(--bg-active)] text-[var(--text-primary)] font-medium' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-hover)]'}`}
                     >
-                      {labels[mode]}
+                      {{ all: 'Tout', chat: 'Chat', code: 'Code', pinned: 'Épinglées' }[mode]}
                     </button>
-                  );
-                })}
+                  ))}
                 </div>
               </div>
             )}
 
             <div className="space-y-0.5">
               {visibleHistory.map(item => (
-                <div
+                <SidebarDiscussionItem
                   key={item.id}
-                  className="w-full flex items-center justify-between rounded-[var(--radius-item)] text-[var(--text-muted)] hover:bg-[var(--bg-surface-hover)] hover:text-[var(--text-primary)] transition-colors group"
-                >
-                  <button
-                    type="button"
-                    onClick={() => { loadConversation(item.id); setIsMobileSidebarOpen(false); }}
-                    className="flex-1 min-w-0 flex items-center gap-2 px-2.5 h-[28px] text-[13px] text-left select-none"
-                    title={item.topic}
-                    aria-label={item.topic || 'Discussion'}
-                  >
-                    {activeTaskConvIds.includes(item.id) ? (
-                      <span className="w-2 h-2 rounded-full bg-[var(--text-secondary)] shrink-0" aria-label="Tâche en cours d'exécution" title="Tâche en cours d'exécution" />
-                    ) : item.mode === 'code' ? (
-                      <Code2 className="w-3 h-3 text-[var(--text-secondary)] shrink-0" aria-label="Mode Code" />
-                    ) : (
-                      <span className="w-1 h-1 rounded-full bg-[var(--text-tertiary)] shrink-0 group-hover:bg-[var(--text-secondary)]" />
-                    )}
-                    <span className="truncate mask-fade-right leading-none">{item.topic}</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={(e) => handleDeleteConversation(e, item)}
-                    className="opacity-0 group-hover:opacity-100 focus:opacity-100 p-1 mr-1 text-[var(--text-secondary)] hover:text-[var(--text-primary)] rounded-[4px] tap-target-24 shrink-0 transition-opacity"
-                    title="Supprimer la discussion"
-                    aria-label={`Supprimer la discussion ${item.topic}`}
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
+                  item={item}
+                  isActive={history[0]?.id === item.id && activeView === 'chat'}
+                  isRunning={activeTaskConvIds.includes(item.id)}
+                  isEditing={editingConvId === item.id}
+                  editingTitle={editingTitle}
+                  setEditingTitle={setEditingTitle}
+                  onSaveRename={handleSaveRename}
+                  onCancelRename={handleCancelRename}
+                  onStartRename={handleStartRename}
+                  onDuplicate={handleDuplicateConversation}
+                  onDelete={handleDeleteConversation}
+                  onSelect={() => { loadConversation(item.id); setIsMobileSidebarOpen(false); }}
+                  isSelectionMode={isSelectionMode}
+                  isSelected={selectedIds.has(item.id)}
+                  onToggleSelect={handleToggleSelect}
+                />
               ))}
 
               {filteredHistory.length === 0 && (
-                <div className="px-2.5 py-2 text-[12px] text-[var(--text-secondary)]">
-                  Aucune discussion
-                </div>
+                <div className="px-2.5 py-2 text-[12px] text-[var(--text-secondary)]">Aucune discussion</div>
               )}
 
-              {/* ── Tout afficher / Afficher moins ── */}
               {hasMore && (
                 <button
                   type="button"
@@ -380,7 +337,7 @@ export function ClaudeSidebar({ onOpenPersonalize }: ClaudeSidebarProps) {
         )}
       </nav>
 
-      {/* ── Pied de sidebar : Paramètres (entrée principale) ── */}
+      {/* ── Pied de sidebar : Paramètres ── */}
       <div className="p-2 border-t border-[var(--border-subtle)] shrink-0 bg-[var(--bg-sidebar)]">
         <button
           type="button"

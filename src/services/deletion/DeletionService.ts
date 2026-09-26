@@ -60,6 +60,32 @@ export class DeletionService {
     });
     return res.json();
   }
+
+  /**
+   * Enregistre une suppression différée groupée (Mission R4c)
+   */
+  public async scheduleBatchPendingDeletion(
+    itemType: DeletableType,
+    ids: string[],
+    durationMs: number = 5000,
+    metadata?: any
+  ): Promise<void> {
+    await Promise.all(
+      ids.map(id => this.schedulePendingDeletion(itemType, id, durationMs, metadata))
+    );
+  }
+
+  /**
+   * Annule une suppression groupée en cours (Mission R4c)
+   */
+  public async cancelBatchPendingDeletion(
+    itemType: DeletableType,
+    ids: string[]
+  ): Promise<void> {
+    await Promise.all(
+      ids.map(id => this.cancelPendingDeletion(itemType, id))
+    );
+  }
 }
 
 export const deletionService = new DeletionService();

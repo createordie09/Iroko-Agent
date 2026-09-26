@@ -9,7 +9,8 @@ import { deletionService, DeletableType } from '../services/deletion/DeletionSer
 
 export interface ActiveDeletionState {
   itemType: DeletableType;
-  id: string;
+  id?: string;
+  ids?: string[];
   label: string;
   onRestore?: () => void;
   onPurge?: () => void;
@@ -17,7 +18,8 @@ export interface ActiveDeletionState {
 
 export interface ScheduleDeletionOptions {
   itemType: DeletableType;
-  id: string;
+  id?: string;
+  ids?: string[];
   label?: string;
   onRestore?: () => void;
   onPurge?: () => void;
@@ -59,15 +61,26 @@ export function UndoDeletionProvider({ children }: { children: ReactNode }) {
     }
     clearTimer();
 
-    const durationMs = options.durationMs ?? 5000;
-    const label = options.label || defaultLabels[options.itemType] || 'Élément supprimé.';
-    const itemKey = `${options.itemType}:${options.id}`;
+    const targetIds = options.ids && options.ids.length > 0
+      ? options.ids
+      : (options.id ? [options.id] : []);
 
-    pendingSetRef.current.add(itemKey);
+    if (targetIds.length === 0) return;
+
+    for (const tid of targetIds) {
+      pendingSetRef.current.add(`${options.itemType}:${tid}`);
+    }
+
+    const durationMs = options.durationMs ?? 5000;
+    const defaultLabel = targetIds.length > 1
+      ? `${targetIds.length} ${options.itemType === 'conversation' ? 'discussions supprimées.' : 'éléments supprimés.'}`
+      : (defaultLabels[options.itemType] || 'Élément supprimé.');
+    const label = options.label || defaultLabel;
 
     const newState: ActiveDeletionState = {
       itemType: options.itemType,
-      id: options.id,
+      id: targetIds[0],
+      ids: targetIds,
       label,
       onRestore: options.onRestore,
       onPurge: options.onPurge
@@ -75,13 +88,19 @@ export function UndoDeletionProvider({ children }: { children: ReactNode }) {
     setActiveDeletion(newState);
 
     try {
-      await deletionService.schedulePendingDeletion(options.itemType, options.id, durationMs);
+      if (targetIds.length === 1) {
+        await deletionService.schedulePendingDeletion(options.itemType, targetIds[0], durationMs);
+      } else {
+        await deletionService.scheduleBatchPendingDeletion(options.itemType, targetIds, durationMs);
+      }
     } catch (err) {
       console.error('[UndoDeletion] Erreur lors de la planification serveur :', err);
     }
 
     timerRef.current = setTimeout(() => {
-      pendingSetRef.current.delete(itemKey);
+      for (const tid of targetIds) {
+        pendingSetRef.current.delete(`${options.itemType}:${tid}`);
+      }
       if (options.onPurge) {
         options.onPurge();
       }
@@ -94,12 +113,21 @@ export function UndoDeletionProvider({ children }: { children: ReactNode }) {
     clearTimer();
 
     const current = activeDeletion;
-    const itemKey = `${current.itemType}:${current.id}`;
-    pendingSetRef.current.delete(itemKey);
+    const targetIds = current.ids && current.ids.length > 0
+      ? current.ids
+      : (current.id ? [current.id] : []);
+
+    for (const tid of targetIds) {
+      pendingSetRef.current.delete(`${current.itemType}:${tid}`);
+    }
     setActiveDeletion(null);
 
     try {
-      await deletionService.cancelPendingDeletion(current.itemType, current.id);
+      if (targetIds.length === 1) {
+        await deletionService.cancelPendingDeletion(current.itemType, targetIds[0]);
+      } else {
+        await deletionService.cancelBatchPendingDeletion(current.itemType, targetIds);
+      }
     } catch (err) {
       console.error('[UndoDeletion] Erreur lors de l\'annulation serveur :', err);
     }

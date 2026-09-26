@@ -915,6 +915,69 @@ export class RuntimeDatabase {
     return Number(res.changes) > 0;
   }
 
+  public updateConversationTitle(id: string, title: string): boolean {
+    const res = this.db.prepare(`
+      UPDATE conversations SET title = ?, updated_at = ? WHERE id = ?
+    `).run(title, new Date().toISOString(), id);
+    return Number(res.changes) > 0;
+  }
+
+  public duplicateConversation(id: string): { conversation: DbConversation; messages: DbMessage[] } | null {
+    const existing = this.getConversation(id, true, true);
+    if (!existing) return null;
+
+    const newConvId = crypto.randomUUID();
+    const originalTitle = existing.conversation.title || 'Discussion';
+    const newTitle = originalTitle.startsWith('Copie de ')
+      ? `Copie de ${originalTitle}`
+      : `Copie de ${originalTitle}`;
+
+    let parsedMeta: any = undefined;
+    if (existing.conversation.metadata) {
+      try {
+        parsedMeta = JSON.parse(existing.conversation.metadata);
+      } catch {}
+    }
+
+    const newConv = this.saveConversation(
+      newConvId,
+      newTitle,
+      existing.conversation.workspace_path || undefined,
+      parsedMeta,
+      existing.conversation.mode as any,
+      existing.conversation.workspace_id
+    );
+
+    const newMessages: DbMessage[] = [];
+    for (const msg of existing.messages) {
+      const newMsgId = crypto.randomUUID();
+      let msgMeta: any = undefined;
+      if (msg.metadata) {
+        try {
+          msgMeta = JSON.parse(msg.metadata);
+        } catch {}
+      }
+      let thinking: any = undefined;
+      if (msg.thinking_logs) {
+        try {
+          thinking = JSON.parse(msg.thinking_logs);
+        } catch {}
+      }
+      const cloned = this.addMessage({
+        id: newMsgId,
+        conversationId: newConvId,
+        role: msg.role as any,
+        content: msg.content,
+        thinkingLogs: thinking,
+        metadata: msgMeta,
+        createdAt: msg.created_at
+      });
+      newMessages.push(cloned);
+    }
+
+    return { conversation: newConv, messages: newMessages };
+  }
+
   public deleteConversation(id: string): boolean {
     this.deleteConversationAttachments(id);
     this.deleteConversationArtifacts(id);
