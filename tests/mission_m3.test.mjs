@@ -16,11 +16,16 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const BASE_URL = 'http://127.0.0.1:3001';
 
+let cachedToken = null;
 async function getAuthToken() {
+  if (cachedToken) return cachedToken;
   const res = await fetch(`${BASE_URL}/api/bootstrap`, {
     headers: { 'Host': '127.0.0.1:3001' }
   });
   const data = await res.json();
+  if (data?.token) {
+    cachedToken = data.token;
+  }
   return data.token;
 }
 

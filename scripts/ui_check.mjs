@@ -140,8 +140,8 @@ function verifyWcagAA() {
     { name: '1920_parametres.png', width: 1920, height: 1080, isMobile: false, status: 'REFERENCE' },
     { name: '375_accueil.png', width: 375, height: 812, isMobile: true, status: 'REFERENCE' },
     { name: '375_tiroir_ouvert.png', width: 375, height: 812, isMobile: true, status: 'REFERENCE' },
-    { name: '1920_accueil_theme_clair.png', width: 1920, height: 1080, isMobile: false, status: 'À VALIDER' },
-    { name: '1920_parametres_theme_clair.png', width: 1920, height: 1080, isMobile: false, status: 'À VALIDER' }
+    { name: '1920_accueil_theme_clair.png', width: 1920, height: 1080, isMobile: false, status: 'REFERENCE' },
+    { name: '1920_parametres_theme_clair.png', width: 1920, height: 1080, isMobile: false, status: 'REFERENCE' }
   ];
 
   let hasErrors = false;
@@ -198,6 +198,16 @@ function verifyWcagAA() {
       localStorage.setItem('iroko_voice_speed', 'Normale');
       localStorage.setItem('iroko_notifications_enabled', 'false');
     }, theme);
+  };
+
+  const stabilizePage = async (p) => {
+    await p.evaluate(() => document.fonts.ready).catch(() => {});
+    await p.evaluate(() => {
+      if (document.activeElement && typeof document.activeElement.blur === 'function') {
+        document.activeElement.blur();
+      }
+    }).catch(() => {});
+    await p.waitForTimeout(300);
   };
 
   // 1. Capture Desktop States (Thème Sombre)
@@ -280,19 +290,22 @@ function verifyWcagAA() {
   await pageLight.waitForTimeout(500);
 
   // 3.1 Accueil thème clair
-  console.log('6/7 Vérification [À VALIDER] 1920_accueil_theme_clair...');
+  console.log('6/7 Vérification 1920_accueil_theme_clair...');
+  await stabilizePage(pageLight);
   const pathLightAccueil = path.join(tempDir, '1920_accueil_theme_clair.png');
-  await pageLight.screenshot({ path: pathLightAccueil });
+  await pageLight.screenshot({ path: pathLightAccueil, caret: 'hide' });
 
   // 3.2 Paramètres thème clair
-  console.log('7/7 Vérification [À VALIDER] 1920_parametres_theme_clair...');
+  console.log('7/7 Vérification 1920_parametres_theme_clair...');
   const settingsBtnLight = await pageLight.$('button[title="Paramètres"]');
   if (settingsBtnLight) {
     await settingsBtnLight.click();
+    await pageLight.waitForSelector('text=Apparence', { timeout: 5000 }).catch(() => {});
     await pageLight.waitForTimeout(400);
   }
+  await stabilizePage(pageLight);
   const pathLightParam = path.join(tempDir, '1920_parametres_theme_clair.png');
-  await pageLight.screenshot({ path: pathLightParam });
+  await pageLight.screenshot({ path: pathLightParam, caret: 'hide' });
   await pageLight.keyboard.press('Escape');
   await pageLight.waitForTimeout(300);
   await lightCtx.close();
@@ -311,7 +324,11 @@ function verifyWcagAA() {
     const refPath = path.join(refDir, s.name);
     const currPath = path.join(tempDir, s.name);
 
-    if (!fs.existsSync(refPath)) {
+    const shouldUpdate = !fs.existsSync(refPath) || 
+      process.env.UPDATE_REF === '1' || 
+      (process.env.UPDATE_LIGHT_REF === '1' && s.name.includes('theme_clair'));
+
+    if (shouldUpdate) {
       console.log(`[INIT] Enregistrement de la référence : ${s.name} (${s.status})`);
       fs.copyFileSync(currPath, refPath);
     } else {

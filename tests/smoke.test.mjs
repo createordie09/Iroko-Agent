@@ -10,13 +10,15 @@ test('Contrôle d\'intégrité des documents et références', () => {
   assert.ok(fs.existsSync('docs/UI_ARCHITECTURE.md'), 'docs/UI_ARCHITECTURE.md manquant');
 });
 
-test('Vérification de la présence des 5 captures de référence UI', () => {
+test('Vérification de la présence des 7 captures de référence UI (sombre et clair)', () => {
   const refFiles = [
     '1920_accueil_sidebar_ouverte.png',
     '1920_accueil_sidebar_repliee.png',
     '1920_parametres.png',
     '375_accueil.png',
-    '375_tiroir_ouvert.png'
+    '375_tiroir_ouvert.png',
+    '1920_accueil_theme_clair.png',
+    '1920_parametres_theme_clair.png'
   ];
   for (const f of refFiles) {
     const p = path.join('docs', 'ui-reference', f);

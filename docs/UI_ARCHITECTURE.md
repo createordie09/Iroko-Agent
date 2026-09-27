@@ -280,4 +280,20 @@ Conformément à WCAG 2.1.1, 2.1.2, 2.4.2, 2.4.3 et aux règles d'intégrité UX
   - Synchronisation réactive : `document.title = activeTopic ? `${activeTopic} — Iroko` : 'Iroko'`.
   - Permet aux lecteurs d'écran et aux onglets de navigateur d'identifier immédiatement le fil de discussion actif.
 
+---
+
+## 10. Jeu officiel de captures de référence (`ui:check`)
+
+Conformément à la règle de non-régression visuelle stricte et à la mission R6d, le jeu officiel de captures de référence comprend 7 états figés (5 en thème sombre, 2 en thème clair) avec un statut `[REFERENCE]` et un seuil d'admissibilité de 0,00 % de divergence :
+
+1. `1920_accueil_sidebar_ouverte.png` (1920×1080, bureau, sombre) : Vue d'accueil avec barre latérale déployée `[REFERENCE]`.
+2. `1920_accueil_sidebar_repliee.png` (1920×1080, bureau, sombre) : Vue d'accueil avec barre latérale repliée `[REFERENCE]`.
+3. `1920_parametres.png` (1920×1080, bureau, sombre) : Modale des réglages ouverte avec onglet actif `[REFERENCE]`.
+4. `375_accueil.png` (375×812, mobile, sombre) : Vue d'accueil responsive sur écran mobile standard `[REFERENCE]`.
+5. `375_tiroir_ouvert.png` (375×812, mobile, sombre) : Tiroir de navigation mobile déployé avec voile sombre `[REFERENCE]`.
+6. `1920_accueil_theme_clair.png` (1920×1080, bureau, clair) : Vue d'accueil sous thème clair officiel `[REFERENCE]`.
+7. `1920_parametres_theme_clair.png` (1920×1080, bureau, clair) : Modale des réglages sous thème clair officiel `[REFERENCE]`.
+
+Les captures du thème clair sont stabilisées via `document.fonts.ready`, neutralisation du curseur Playwright (`caret: 'hide'`) et défocalisation des champs actifs (`document.activeElement.blur()`), garantissant une reproductibilité binaire parfaite à 0,00 %.
+
 
