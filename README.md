@@ -1,5 +1,7 @@
 # Iroko Code Agent
 
+[![CI](https://github.com/createordie09/Iroko-Agent/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/createordie09/Iroko-Agent/actions/workflows/ci.yml)
+
 Agent de développement logiciel autonome et sécurisé, fonctionnant intégralement en local avec une interface utilisateur minimaliste et figée.
 
 ---

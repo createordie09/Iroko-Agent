@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Vérification Continue
+    runs-on: ubuntu-latest
+    steps:
+      - name: Récupérer le code
+        uses: actions/checkout@v4
+
+      - name: Configurer Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Installer les dépendances
+        run: npm ci
+
+      - name: Installer les navigateurs Playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: Compilation de l'application (npm run build)
+        run: npm run build
+
+      - name: Tests automatisés (npm test)
+        run: npm test
+
+      - name: Vérification des types TypeScript (npm run lint)
+        run: npm run lint
+
+      - name: Contrôle des tokens de design (npm run lint:tokens)
+        run: npm run lint:tokens
+
+      - name: Linter typographique français (npm run lint:fr)
+        run: npm run lint:fr
+
+      - name: Contrôle visuel et contrastes (npm run ui:check)
+        run: npm run ui:check
+
+      - name: Sauvegarder les captures en cas d'échec
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-check-failures
+          path: docs/ui-reference/.current/
+          if-no-files-found: ignore
