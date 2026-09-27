@@ -58,10 +58,47 @@ Toutes les modifications doivent respecter le protocole de conformité :
 
 ---
 
-## 5. Documentation de Référence
+## 5. Avant de lancer les tests
+
+Sur une **machine neuve** (clone frais du dépôt), une seule commande installe toutes les préconditions :
+
+```bash
+npm run setup:test
+```
+
+Cette commande exécute dans l'ordre :
+1. `npm ci` — installe les dépendances Node.js depuis `package-lock.json` (reproductible).
+2. `npx playwright install --with-deps chromium` — installe le navigateur Chromium et ses dépendances système, requis par `npm run ui:check` et les tests d'intégration Playwright.
+
+Ensuite, lancer la suite complète :
+
+```bash
+npm test
+```
+
+> **Note :** `npm test` déclenche automatiquement `npm run build` (via le script `pretest`) avant d'exécuter les suites. Il n'est pas nécessaire de compiler manuellement au préalable.
+
+**Récapitulatif pour CI / machine neuve :**
+
+```bash
+# 1. Cloner le dépôt
+git clone https://github.com/createordie09/Iroko-Agent.git
+cd Iroko-Agent
+
+# 2. Installer les dépendances et les navigateurs
+npm run setup:test
+
+# 3. Lancer les tests (build automatique inclus)
+npm test
+```
+
+---
+
+## 6. Documentation de Référence
 
 - `docs/FEATURES.md` : Registre exhaustif des fonctionnalités réelles et de leur statut.
 - `docs/ROADMAP.md` : Feuille de route d'implémentation des lots et missions.
 - `docs/UI_ARCHITECTURE.md` : Spécifications figées de l'interface et de la carte des composants.
 - `docs/NETWORK.md` : Liste fermée et contractuelle des destinations réseau autorisées.
 - `docs/ADAPTATION.md` : Directives d'adaptation entre le cahier des charges et l'interface utilisateur.
+
