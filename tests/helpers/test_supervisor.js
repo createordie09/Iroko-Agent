@@ -111,6 +111,7 @@ async function start() {
       ? [compiledServer]
       : ['--import', 'tsx', 'server/index.ts'];
 
+    let backendErr = '';
     backendProc = spawn(process.execPath, serverArgs, {
       cwd: rootDir,
       env: {
@@ -122,12 +123,19 @@ async function start() {
         AGENT_PORT: '3001',
         IROKO_PORT: '3001'
       },
-      stdio: 'ignore'
+      stdio: ['ignore', 'ignore', 'pipe']
+    });
+    backendProc.stderr?.on('data', (d) => { backendErr += d.toString(); });
+    backendProc.on('exit', (code) => {
+      if (code !== 0 && code !== null && statusFile) {
+        try { fs.writeFileSync(statusFile, `ERROR: backend a quitté avec le code ${code} : ${backendErr.slice(0, 500)}`); } catch {}
+      }
     });
   }
 
   if (!is5173Open) {
     const viteBin = path.join(rootDir, 'node_modules', 'vite', 'bin', 'vite.js');
+    let viteErr = '';
     viteProc = spawn(process.execPath, [viteBin, '--port', '5173', '--strictPort'], {
       cwd: rootDir,
       env: {
@@ -135,7 +143,13 @@ async function start() {
         NODE_ENV: 'test',
         DISABLE_HMR: 'true'
       },
-      stdio: 'ignore'
+      stdio: ['ignore', 'ignore', 'pipe']
+    });
+    viteProc.stderr?.on('data', (d) => { viteErr += d.toString(); });
+    viteProc.on('exit', (code) => {
+      if (code !== 0 && code !== null && statusFile) {
+        try { fs.writeFileSync(statusFile, `ERROR: vite a quitté avec le code ${code} : ${viteErr.slice(0, 500)}`); } catch {}
+      }
     });
   }
 

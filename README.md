@@ -22,7 +22,7 @@ Agent de développement logiciel autonome et sécurisé, fonctionnant intégrale
 
 ## 2. Prérequis
 
-- **Node.js** version 20 ou supérieure.
+- **Node.js** version 22 ou supérieure (module standard `node:sqlite`).
 - **npm** version 9 ou supérieure.
 
 ---
