@@ -177,7 +177,8 @@ describe('MISSION R6a : Serveur de langage pour le mode Code (Cahier §14)', () 
     assert.ok(rDef.error?.includes('Accès refusé') || rDef.error?.includes('workspace'));
 
     // 3. find_references avec chemin absolu interdit
-    const rRef = await refTool.execute({ file: 'C:\\Windows\\System32\\drivers.ts', line: 1, column: 1 }, context);
+    const absPath = process.platform === 'win32' ? 'C:\\Windows\\System32\\drivers.ts' : '/etc/shadow.ts';
+    const rRef = await refTool.execute({ file: absPath, line: 1, column: 1 }, context);
     assert.strictEqual(rRef.success, false);
     assert.ok(rRef.error?.includes('Accès refusé') || rRef.error?.includes('workspace'));
 
