@@ -224,6 +224,7 @@ test('9. Persistance Runtime : CRUD Conversations & Messages', async () => {
 
 test('10. Migration localStorage vers Runtime SQLite', async () => {
   const bootRes = await fetch(`${BASE_URL}/api/bootstrap`, { headers: { 'Host': '127.0.0.1:3001' } });
+  assert.strictEqual(bootRes.status, 200, `L'amorçage initial doit renvoyer 200 (reçu ${bootRes.status})`);
   const { token } = await bootRes.json();
 
   const migrationPayload = {

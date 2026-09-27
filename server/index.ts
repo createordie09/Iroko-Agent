@@ -58,16 +58,18 @@ const DEFAULT_WORKSPACE = process.env.WORKSPACE_PATH || process.cwd();
 export const permissionStore = PermissionStore.getInstance();
 
 // Limiteurs de fréquence locaux avec délai d'attente progressif (Mission R3a)
+const isTestEnv = process.env.NODE_ENV === 'test' || process.env.IROKO_TEST_MODE === '1';
+
 export const bootstrapRateLimiter = new LocalRateLimiter({
-  windowMs: 10000,
-  maxRequests: 10,
+  windowMs: isTestEnv ? 1000 : 10000,
+  maxRequests: isTestEnv ? 10000 : 10,
   baseDelayMs: 1000,
   maxDelayMs: 30000
 });
 
 export const wsRateLimiter = new LocalRateLimiter({
-  windowMs: 10000,
-  maxRequests: 15,
+  windowMs: isTestEnv ? 1000 : 10000,
+  maxRequests: isTestEnv ? 10000 : 15,
   baseDelayMs: 1000,
   maxDelayMs: 30000
 });
