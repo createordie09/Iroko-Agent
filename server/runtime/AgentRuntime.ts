@@ -56,7 +56,9 @@ export class AgentRuntime {
       executionMode: options.executionMode || 'execute',
       conversationMode: options.conversationMode || 'chat',
       conversationId: options.conversationId,
-      isReadOnly: options.conversationId ? workspaceLockManager.isReadOnly(this.workspacePath, options.conversationId) : false
+      isReadOnly: options.conversationId ? workspaceLockManager.isReadOnly(this.workspacePath, options.conversationId) : false,
+      currentModelId: options.modelId,
+      currentProviderId: options.preferredProviderId
     };
 
     try {

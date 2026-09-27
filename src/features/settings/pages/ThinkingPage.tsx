@@ -4,7 +4,9 @@ import { useThinkingSettings } from '../../../hooks/settings/useThinkingSettings
 export function ThinkingPage() {
   const {
     thinkingLevel,
-    handleUpdateThinkingLevel
+    handleUpdateThinkingLevel,
+    subagentAutoRouting,
+    handleUpdateSubagentAutoRouting
   } = useThinkingSettings();
 
   return (
@@ -17,6 +19,7 @@ export function ThinkingPage() {
           Configuration du niveau de réflexion et du budget de raisonnement des modèles (§22, §37).
         </p>
 
+        {/* Budget de réflexion */}
         <div className="py-3 border-b border-[var(--border-subtle)]">
           <div className="flex items-center justify-between">
             <div>
@@ -74,6 +77,39 @@ export function ThinkingPage() {
             {thinkingLevel === 'low' && 'Analyse succincte (~1 024 tokens) adaptée aux requêtes simples.'}
             {thinkingLevel === 'medium' && 'Analyse équilibrée (~4 096 tokens) recommandée pour le code et l\'architecture.'}
             {thinkingLevel === 'high' && 'Raisonnement approfondi (~16 384 tokens) pour les résolutions complexes et le débogage.'}
+          </div>
+        </div>
+
+        {/* Routage des sous-agents spécialisés (§11) */}
+        <div className="py-3 border-b border-[var(--border-subtle)]">
+          <div className="flex items-center justify-between">
+            <div className="max-w-xs">
+              <div className="text-[13px] text-[var(--text-primary)]">Routage automatique des sous-agents</div>
+              <p className="text-[12px] text-[var(--text-secondary)] mt-0.5">
+                Adapte dynamiquement le modèle selon la complexité de la tâche (rapide pour l'exploration, puissant pour le débogage ou la revue). Si désactivé, le modèle actif de la conversation est utilisé.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => handleUpdateSubagentAutoRouting(!subagentAutoRouting)}
+              className={`w-9 h-5 rounded-full relative transition-colors ${
+                subagentAutoRouting ? 'bg-[var(--text-primary)]' : 'bg-[var(--bg-active)]'
+              }`}
+              aria-label="Activer ou désactiver le routage automatique des sous-agents"
+            >
+              <span
+                className={`w-4 h-4 rounded-full absolute top-0.5 transition-transform ${
+                  subagentAutoRouting
+                    ? 'left-[18px] bg-[var(--bg-app)]'
+                    : 'left-0.5 bg-[var(--text-secondary)]'
+                }`}
+              />
+            </button>
+          </div>
+          <div className="mt-2 text-[12px] text-[var(--text-secondary)]">
+            {subagentAutoRouting
+              ? 'Routage actif\u00A0: sélection automatique entre modèles rapides et modèles de raisonnement.'
+              : 'Routage manuel\u00A0: les sous-agents exécutent toutes leurs tâches avec le modèle sélectionné dans le fil de discussion.'}
           </div>
         </div>
       </div>

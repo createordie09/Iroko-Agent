@@ -28,6 +28,8 @@ export interface ToolContext {
   conversationMode?: 'chat' | 'code';
   conversationId?: string;
   isReadOnly?: boolean;
+  currentModelId?: string;
+  currentProviderId?: string;
 }
 
 export interface ToolResult<T = any> {

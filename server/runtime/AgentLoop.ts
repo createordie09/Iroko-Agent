@@ -72,6 +72,8 @@ export class AgentLoop {
     context.conversationId = options.conversationId;
     context.executionMode = options.executionMode || 'execute';
     context.abortSignal = options.abortSignal;
+    if (options.modelId) context.currentModelId = options.modelId;
+    if (options.preferredProviderId) context.currentProviderId = options.preferredProviderId;
 
     if (context.conversationMode === 'chat' && options.executionMode === 'plan') {
       context.emitEvent({

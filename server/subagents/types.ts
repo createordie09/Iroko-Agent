@@ -7,6 +7,8 @@ export type SubagentType = 'explore' | 'debug' | 'review' | 'test';
 
 export type ModelProfile = 'fast' | 'powerful' | 'local';
 
+export type TaskComplexity = 'simple' | 'complex';
+
 export interface SubagentRequest {
   type: SubagentType;
   task: string;
@@ -26,6 +28,8 @@ export interface SubagentResult<T = any> {
   modelUsed: string;
   providerUsed: string;
   durationMs: number;
+  complexityEstimated?: TaskComplexity;
+  routingMode?: 'auto' | 'manual';
   error?: string;
 }
 
@@ -50,7 +54,8 @@ export const SUBAGENT_DEFINITIONS: Record<SubagentType, SubagentDefinition> = {
       'search_text',
       'get_diagnostics',
       'find_definition',
-      'find_references'
+      'find_references',
+      'get_document_symbols'
     ],
     systemInstructions: [
       'Tu es un sous-agent d\'exploration interne et invisible.',
@@ -70,9 +75,11 @@ export const SUBAGENT_DEFINITIONS: Record<SubagentType, SubagentDefinition> = {
       'get_diagnostics',
       'find_definition',
       'find_references',
+      'get_document_symbols',
       'git_diff',
       'git_status',
-      'git_log'
+      'git_log',
+      'browser_get_logs'
     ],
     systemInstructions: [
       'Tu es un sous-agent de débogage interne et invisible.',
@@ -91,7 +98,9 @@ export const SUBAGENT_DEFINITIONS: Record<SubagentType, SubagentDefinition> = {
       'search_text',
       'git_diff',
       'git_status',
-      'git_log'
+      'git_log',
+      'get_diagnostics',
+      'get_document_symbols'
     ],
     systemInstructions: [
       'Tu es un sous-agent de revue de code interne et invisible.',
@@ -110,7 +119,13 @@ export const SUBAGENT_DEFINITIONS: Record<SubagentType, SubagentDefinition> = {
       'execute_command',
       'read_file',
       'get_process_output',
-      'list_processes'
+      'list_processes',
+      'browser_navigate',
+      'browser_screenshot',
+      'browser_click',
+      'browser_fill',
+      'browser_close',
+      'browser_get_logs'
     ],
     systemInstructions: [
       'Tu es un sous-agent de test interne et invisible.',
