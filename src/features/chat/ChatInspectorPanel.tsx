@@ -99,7 +99,7 @@ export function ChatInspectorPanel({
         {inspectorTab === 'preview' ? (
           <div className="p-3 space-y-3 overflow-y-auto claude-scrollbar h-full text-[13px]">
             {isPreviewLoading ? (
-              <div className="text-[13px] text-[var(--text-secondary)] p-4 text-center">Chargement de l'aperçu...</div>
+              <div className="text-[13px] text-[var(--text-secondary)] p-4 text-center animate-pulse">Chargement de l'aperçu…</div>
             ) : !previewData ? (
               <div className="text-[13px] text-[var(--text-secondary)] p-4 text-center">Sélectionnez une pièce jointe pour afficher son aperçu.</div>
             ) : (

@@ -308,7 +308,7 @@ export function ArtifactInspector({
       {/* ── Contenu & Aperçu Sécurisé de l'artéfact ── */}
       <div className="flex-1 min-h-0 overflow-y-auto claude-scrollbar p-3">
         {isLoading ? (
-          <div className="p-4 text-center text-[var(--text-secondary)] text-[13px]">Chargement du contenu...</div>
+          <div className="p-4 text-center text-[var(--text-secondary)] text-[13px] animate-pulse">Chargement du contenu…</div>
         ) : isHtml ? (
           /* APERÇU HTML SÉCURISÉ : Iframe sandboxée SANS allow-same-origin, avec CSP sans réseau */
           <div className="space-y-2">
@@ -384,7 +384,7 @@ export function ArtifactInspector({
               </button>
             </div>
             <div className="p-3.5 bg-[var(--bg-app)] border border-[var(--border-subtle)] rounded-[8px] text-[13px] leading-relaxed whitespace-pre-wrap select-text text-[var(--text-muted)]">
-              {previewData?.text || 'Document Word vide ou en cours de chargement...'}
+              {previewData?.text || 'Document Word vide ou en cours de chargement\u2026'}
             </div>
           </div>
         ) : isXlsx ? (

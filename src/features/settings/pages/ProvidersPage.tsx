@@ -275,7 +275,7 @@ export function ProvidersPage() {
                 disabled={isSavingImageSettings}
                 className="px-3 py-1.5 bg-[var(--text-primary)] text-[var(--bg-app)] text-[12px] rounded-[6px] font-medium hover:bg-[var(--text-title)] transition-colors"
               >
-                {isSavingImageSettings ? 'Enregistrement...' : 'Enregistrer les réglages d\'image'}
+                {isSavingImageSettings ? 'Enregistrement\u2026' : 'Enregistrer les réglages d\'image'}
               </button>
             </div>
           </div>
@@ -359,7 +359,7 @@ export function ProvidersPage() {
                 disabled={isSavingVideoSettings}
                 className="px-3 py-1.5 bg-[var(--text-primary)] text-[var(--bg-app)] text-[12px] rounded-[6px] font-medium hover:bg-[var(--text-title)] transition-colors"
               >
-                {isSavingVideoSettings ? 'Enregistrement...' : 'Enregistrer les réglages vidéo'}
+                {isSavingVideoSettings ? 'Enregistrement\u2026' : 'Enregistrer les réglages vidéo'}
               </button>
             </div>
           </div>

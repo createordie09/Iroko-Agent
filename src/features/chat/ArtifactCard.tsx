@@ -164,7 +164,7 @@ export function ArtifactCard({ artifact, onOpen, onRegenerate, onReuseAsAttachme
               className="w-full h-auto max-h-[440px] block"
             />
           ) : (
-            <div className="py-8 text-[12px] text-[var(--text-secondary)]">Chargement du flux vidéo sécurisé...</div>
+            <div className="py-8 text-[12px] text-[var(--text-secondary)] animate-pulse">Chargement du flux vidéo sécurisé…</div>
           )}
         </div>
       )}

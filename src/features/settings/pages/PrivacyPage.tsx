@@ -62,7 +62,7 @@ export function PrivacyPage() {
             Emplacement local unique où sont stockées la base SQLite, la mémoire et les clés chiffrées (hors workspace).
           </p>
           <div className="bg-[var(--bg-app)] border border-[var(--border-modal)] rounded-[6px] p-2 text-[12px] font-mono text-[var(--text-primary)] select-text break-all">
-            {privacyInfo?.dataDir || 'Chargement...'}
+            {privacyInfo?.dataDir || 'Chargement\u2026'}
           </div>
           {privacyInfo?.stats && (
             <div className="flex gap-4 mt-2 text-[11px] text-[var(--text-secondary)]">
@@ -348,7 +348,7 @@ export function PrivacyPage() {
                 )}
               </>
             ) : (
-              <div>Chargement du diagnostic...</div>
+              <div className="text-[12px] text-[var(--text-secondary)] animate-pulse">Chargement du diagnostic…</div>
             )}
           </div>
         </div>

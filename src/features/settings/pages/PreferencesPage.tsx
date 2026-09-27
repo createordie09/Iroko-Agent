@@ -341,7 +341,7 @@ export function PreferencesPage() {
               disabled={isSavingCustomInstructions || customInstructions.length > 4000}
               className="px-3 py-1.5 bg-[var(--bg-active)] hover:bg-[var(--bg-surface-hover)] border border-[var(--border-modal)] text-[var(--text-primary)] text-xs rounded-[6px] transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
             >
-              {isSavingCustomInstructions ? 'Enregistrement...' : 'Enregistrer'}
+              {isSavingCustomInstructions ? 'Enregistrement\u2026' : 'Enregistrer'}
             </button>
           </div>
         </div>
