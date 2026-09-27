@@ -30,6 +30,7 @@ import { BrowserScreenshotTool } from './browser/browser_screenshot';
 import { BrowserClickTool } from './browser/browser_click';
 import { BrowserFillTool } from './browser/browser_fill';
 import { BrowserCloseTool } from './browser/browser_close';
+import { BrowserGetLogsTool } from './browser/browser_get_logs';
 import { InvokeSubagentTool } from './subagents/invoke_subagent';
 import { ReadAttachmentTool } from './attachments/read_attachment';
 import { CreateArtifactTool } from './artifacts/create_artifact';
@@ -103,6 +104,7 @@ export class ToolRegistry {
     this.register(new BrowserClickTool());
     this.register(new BrowserFillTool());
     this.register(new BrowserCloseTool());
+    this.register(new BrowserGetLogsTool());
 
     // Outils Sous-Agents (§11)
     this.register(new InvokeSubagentTool());

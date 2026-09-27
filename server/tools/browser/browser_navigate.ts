@@ -1,3 +1,6 @@
+// server/tools/browser/browser_navigate.ts
+// Cahier §16 & §26 : Outil de navigation web sécurisé dans Playwright
+
 import { IrokoTool, ToolContext, ToolResult } from '../types';
 import { browserManager, NavigateResult } from '../../browser/BrowserManager';
 import { BrowserSecurity } from '../../browser/BrowserSecurity';
@@ -8,7 +11,7 @@ export interface BrowserNavigateInput {
 
 export class BrowserNavigateTool implements IrokoTool<BrowserNavigateInput, NavigateResult> {
   public readonly name = 'browser_navigate';
-  public readonly description = 'Navigue vers une URL web dans le navigateur Playwright headless. Localhost est autorisé par défaut pour tester l\'application ; les URL externes et réseaux privés nécessitent une autorisation explicite.';
+  public readonly description = 'Navigue vers une URL web dans le navigateur Playwright headless. Localhost et les ports locaux sont autorisés par défaut pour tester l\'application ; les adresses externes et réseaux privés nécessitent une autorisation explicite.';
   public readonly category = 'browser';
   public readonly permission = 'MEDIUM' as const;
 
@@ -43,7 +46,14 @@ export class BrowserNavigateTool implements IrokoTool<BrowserNavigateInput, Navi
       }
 
       // Si l'URL nécessite une autorisation (externe, réseau privé, file://)
-      if (classification.requiresPermission && context.permissionEngine) {
+      if (classification.requiresPermission) {
+        if (!context.permissionEngine) {
+          return {
+            success: false,
+            error: `Navigation vers "${input.url}" refusée : une autorisation explicite est requise (${classification.reason || 'adresse externe ou réseau privé'}).`
+          };
+        }
+
         const riskLevel = classification.type === 'PRIVATE_NETWORK' || classification.type === 'FILE' ? 'HIGH' : 'MEDIUM';
         const allowed = await context.permissionEngine.requestPermission(
           this.name,
