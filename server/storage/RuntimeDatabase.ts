@@ -205,14 +205,14 @@ export class RuntimeDatabase {
       this.ensureDatabaseIntegrityAndConnect();
     }
 
-    // Activer les clés étrangères et le mode WAL pour la robustesse
-    this.db.exec('PRAGMA foreign_keys = ON;');
+    // Activer le délai d'attente sur verrou, le mode WAL et les clés étrangères
     if (this.dbPath !== ':memory:') {
       try {
+        this.db.exec('PRAGMA busy_timeout = 10000;');
         this.db.exec('PRAGMA journal_mode = WAL;');
-        this.db.exec('PRAGMA busy_timeout = 5000;');
       } catch {}
     }
+    this.db.exec('PRAGMA foreign_keys = ON;');
     this.runMigrations();
   }
 
@@ -256,6 +256,9 @@ export class RuntimeDatabase {
 
     try {
       testDb = new DatabaseSync(this.dbPath);
+      try {
+        testDb.exec('PRAGMA busy_timeout = 10000;');
+      } catch {}
       const rows = testDb.prepare('PRAGMA integrity_check').all() as Array<Record<string, any>>;
       const firstVal = rows.length > 0 ? Object.values(rows[0])[0] : null;
       if (firstVal !== 'ok') {
@@ -263,8 +266,15 @@ export class RuntimeDatabase {
         corruptionReason = `PRAGMA integrity_check: ${JSON.stringify(rows)}`;
       }
     } catch (err: any) {
-      isCorrupted = true;
-      corruptionReason = err.message || 'Échec lors de l\'ouverture de la base SQLite';
+      const errMsg = err?.message || '';
+      if (errMsg.includes('locked') || errMsg.includes('busy')) {
+        // En cas de verrouillage concurrent temporaire (multi-processus ou tests parallèles),
+        // il ne s'agit aucunement d'une corruption de données.
+        isCorrupted = false;
+      } else {
+        isCorrupted = true;
+        corruptionReason = errMsg || 'Échec lors de l\'ouverture de la base SQLite';
+      }
     } finally {
       if (testDb) {
         try { testDb.close(); } catch {}
