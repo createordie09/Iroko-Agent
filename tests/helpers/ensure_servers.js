@@ -28,7 +28,26 @@ export function isPortOpen(port) {
   });
 }
 
+export function registerTestClient(pid) {
+  const clientsFile = path.join(os.tmpdir(), 'iroko-test-clients.json');
+  let clients = [];
+  try {
+    if (fs.existsSync(clientsFile)) {
+      clients = JSON.parse(fs.readFileSync(clientsFile, 'utf8'));
+    }
+  } catch {}
+  if (!Array.isArray(clients)) clients = [];
+  if (!clients.includes(pid)) clients.push(pid);
+  try {
+    fs.writeFileSync(clientsFile, JSON.stringify(clients));
+  } catch {}
+}
+
 export async function ensureServersRunning(isolatedDataDir) {
+  registerTestClient(process.pid);
+  const runnerPid = process.ppid || process.pid;
+  registerTestClient(runnerPid);
+
   const is3001 = await isPortOpen(3001);
   const is5173 = await isPortOpen(5173);
 
@@ -38,7 +57,6 @@ export async function ensureServersRunning(isolatedDataDir) {
 
   const lockDir = path.join(os.tmpdir(), 'iroko-test-bootstrap.lock');
   const statusFile = path.join(os.tmpdir(), 'iroko-test-supervisor-status.txt');
-  const runnerPid = process.ppid || process.pid;
 
   let isLeader = false;
 

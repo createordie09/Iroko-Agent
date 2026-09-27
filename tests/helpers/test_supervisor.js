@@ -78,19 +78,52 @@ const cleanup = () => {
       fs.unlinkSync(statusFile);
     }
   } catch {}
+  try {
+    const cf = path.join(os.tmpdir(), 'iroko-test-clients.json');
+    if (fs.existsSync(cf)) {
+      fs.unlinkSync(cf);
+    }
+  } catch {}
   process.exit(0);
 };
 
-// Arrêt automatique si le runner de test parent meurt
+const clientsFile = path.join(os.tmpdir(), 'iroko-test-clients.json');
+
+// Arrêt automatique si tous les runners de test et clients parents meurent
 const heartbeat = setInterval(() => {
+  let hasLivingClient = false;
+
+  // 1. Vérifier si des clients enregistrés sont encore vivants
   try {
-    process.kill(runnerPid, 0);
-  } catch (err) {
-    // Seul ESRCH confirme que le processus parent n'existe plus
-    if (err.code === 'ESRCH') {
-      clearInterval(heartbeat);
-      cleanup();
+    if (fs.existsSync(clientsFile)) {
+      const clients = JSON.parse(fs.readFileSync(clientsFile, 'utf8'));
+      if (Array.isArray(clients) && clients.length > 0) {
+        const stillAlive = [];
+        for (const p of clients) {
+          try {
+            process.kill(p, 0);
+            stillAlive.push(p);
+          } catch {}
+        }
+        if (stillAlive.length > 0) {
+          hasLivingClient = true;
+          try { fs.writeFileSync(clientsFile, JSON.stringify(stillAlive)); } catch {}
+        }
+      }
     }
+  } catch {}
+
+  // 2. Vérifier le runnerPid initial
+  if (!hasLivingClient && runnerPid) {
+    try {
+      process.kill(runnerPid, 0);
+      hasLivingClient = true;
+    } catch {}
+  }
+
+  if (!hasLivingClient) {
+    clearInterval(heartbeat);
+    cleanup();
   }
 }, 500);
 

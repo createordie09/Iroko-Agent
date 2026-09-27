@@ -217,7 +217,7 @@ function verifyWcagAA() {
   });
   await setupIsolatedContext(desktopCtx, 'dark');
   const pageDesk = await desktopCtx.newPage();
-  await pageDesk.goto('http://localhost:5173');
+  await pageDesk.goto('http://127.0.0.1:5173');
   await pageDesk.waitForSelector('textarea:not([disabled])', { timeout: 10000 }).catch(() => {});
   await pageDesk.waitForTimeout(500);
 
@@ -261,7 +261,7 @@ function verifyWcagAA() {
   });
   await setupIsolatedContext(mobileCtx, 'dark');
   const pageMob = await mobileCtx.newPage();
-  await pageMob.goto('http://localhost:5173');
+  await pageMob.goto('http://127.0.0.1:5173');
   await pageMob.waitForSelector('textarea:not([disabled])', { timeout: 10000 }).catch(() => {});
   await pageMob.waitForTimeout(500);
 
@@ -290,7 +290,7 @@ function verifyWcagAA() {
   });
   await setupIsolatedContext(lightCtx, 'light');
   const pageLight = await lightCtx.newPage();
-  await pageLight.goto('http://localhost:5173');
+  await pageLight.goto('http://127.0.0.1:5173');
   await pageLight.waitForSelector('textarea:not([disabled])', { timeout: 10000 }).catch(() => {});
   await pageLight.waitForTimeout(500);
 
