@@ -626,7 +626,7 @@ export function ClaudeComposer({
       {(attachmentError || workspaceError) && (
         <div className="text-[12px] text-[var(--text-primary)] bg-[var(--bg-error-subtle)] border border-[var(--border-error-subtle)] rounded-[6px] px-2.5 py-1 mb-2 flex items-center justify-between">
           <span>{attachmentError || workspaceError}</span>
-          <button type="button" onClick={() => { setAttachmentError(null); setWorkspaceError(null); }} className="text-[var(--text-secondary)] hover:text-[var(--text-primary)]">
+          <button type="button" onClick={() => { setAttachmentError(null); setWorkspaceError(null); }} className="text-[var(--text-secondary)] hover:text-[var(--text-primary)]" title="Fermer le message d'erreur" aria-label="Fermer le message d'erreur">
             <X className="w-3 h-3" />
           </button>
         </div>

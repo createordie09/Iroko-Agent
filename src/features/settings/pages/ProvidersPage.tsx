@@ -97,6 +97,7 @@ export function ProvidersPage() {
                         onClick={() => handleDeleteProviderKeys(p.id)}
                         className="p-1.5 text-[var(--text-secondary)] hover:text-[var(--text-primary)] rounded-[4px] hover:bg-[var(--bg-active)] transition-colors cursor-pointer"
                         title="Supprimer la clé"
+                        aria-label={`Supprimer la clé ${p.name}`}
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>

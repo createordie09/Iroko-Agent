@@ -228,6 +228,7 @@ export function ConnectorsPage() {
                       onClick={() => handleDeleteMcpServer(server.name)}
                       className="p-1 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
                       title="Supprimer le connecteur"
+                      aria-label={`Supprimer le connecteur ${server.name}`}
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>

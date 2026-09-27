@@ -88,6 +88,7 @@ export function ChatInspectorPanel({
             onClick={onClose}
             className="p-1 rounded text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
             title="Fermer l'inspecteur"
+            aria-label="Fermer l'inspecteur"
           >
             <X className="w-4 h-4" />
           </button>

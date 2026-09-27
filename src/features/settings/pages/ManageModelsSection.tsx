@@ -121,6 +121,7 @@ export function ManageModelsSection({ onBack }: ManageModelsSectionProps) {
                     model.isFavorite ? 'text-[var(--text-primary)]' : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'
                   }`}
                   title={model.isFavorite ? 'Retirer des favoris' : 'Marquer comme favori'}
+                  aria-label={model.isFavorite ? 'Retirer des favoris' : 'Marquer comme favori'}
                 >
                   <Star className={`w-3.5 h-3.5 ${model.isFavorite ? 'fill-current' : ''}`} />
                 </button>
@@ -133,6 +134,7 @@ export function ManageModelsSection({ onBack }: ManageModelsSectionProps) {
                     model.isHidden ? 'text-[var(--text-tertiary)]' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
                   }`}
                   title={model.isHidden ? 'Afficher dans le sélecteur' : 'Masquer du sélecteur'}
+                  aria-label={model.isHidden ? 'Afficher dans le sélecteur' : 'Masquer du sélecteur'}
                 >
                   {model.isHidden ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                 </button>

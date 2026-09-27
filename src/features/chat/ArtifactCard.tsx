@@ -210,6 +210,7 @@ export function ArtifactCard({ artifact, onOpen, onRegenerate, onReuseAsAttachme
               onClick={handleRegenerate}
               className="p-1.5 rounded text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-hover)] transition-colors"
               title="Régénérer cette image"
+              aria-label="Régénérer cette image"
             >
               <RotateCw className="w-3.5 h-3.5" />
             </button>
@@ -222,6 +223,7 @@ export function ArtifactCard({ artifact, onOpen, onRegenerate, onReuseAsAttachme
               onClick={handleReuseAttachment}
               className="p-1.5 rounded text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-hover)] transition-colors"
               title="Réutiliser comme pièce jointe"
+              aria-label="Réutiliser comme pièce jointe"
             >
               <Paperclip className="w-3.5 h-3.5" />
             </button>
@@ -265,6 +267,7 @@ export function ArtifactCard({ artifact, onOpen, onRegenerate, onReuseAsAttachme
             disabled={isDownloading}
             className="p-1.5 rounded text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-hover)] transition-colors"
             title="Télécharger l'artéfact"
+            aria-label="Télécharger l'artéfact"
           >
             <Download className="w-3.5 h-3.5" />
           </button>

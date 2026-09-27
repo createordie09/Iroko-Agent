@@ -266,6 +266,7 @@ export function ArtifactInspector({
               onClick={handleDownload}
               className="p-1 rounded text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface)] transition-colors flex items-center gap-1 text-[11px]"
               title="Télécharger le fichier"
+              aria-label="Télécharger le fichier"
             >
               <Download className="w-3.5 h-3.5" />
             </button>

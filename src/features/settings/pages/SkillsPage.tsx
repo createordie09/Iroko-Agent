@@ -230,6 +230,7 @@ export function SkillsPage() {
                     }}
                     className="p-1 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
                     title="Modifier les instructions"
+                    aria-label={`Modifier les instructions de ${skill.name}`}
                   >
                     <Edit2 className="w-3.5 h-3.5" />
                   </button>

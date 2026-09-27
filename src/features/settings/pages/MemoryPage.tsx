@@ -298,6 +298,7 @@ export function MemoryPage() {
                       }}
                       className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] p-0.5"
                       title="Modifier ce fait"
+                      aria-label="Modifier ce fait"
                     >
                       <Edit2 className="w-3.5 h-3.5" />
                     </button>
@@ -307,6 +308,7 @@ export function MemoryPage() {
                       disabled={deletingMemoryId === m.id}
                       className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] p-0.5 disabled:opacity-40"
                       title="Supprimer ce fait"
+                      aria-label="Supprimer ce fait"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
