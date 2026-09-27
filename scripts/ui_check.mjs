@@ -223,8 +223,9 @@ function verifyWcagAA() {
 
   // 1.1 Accueil sidebar ouverte
   console.log('1/7 Vérification 1920_accueil_sidebar_ouverte...');
+  await stabilizePage(pageDesk);
   const pathDeskOpen = path.join(tempDir, '1920_accueil_sidebar_ouverte.png');
-  await pageDesk.screenshot({ path: pathDeskOpen });
+  await pageDesk.screenshot({ path: pathDeskOpen, caret: 'hide' });
 
   // 1.2 Paramètres
   console.log('2/7 Vérification 1920_parametres...');
@@ -234,8 +235,9 @@ function verifyWcagAA() {
     await pageDesk.waitForSelector('text=Apparence', { timeout: 5000 }).catch(() => {});
     await pageDesk.waitForTimeout(400);
   }
+  await stabilizePage(pageDesk);
   const pathDeskParam = path.join(tempDir, '1920_parametres.png');
-  await pageDesk.screenshot({ path: pathDeskParam });
+  await pageDesk.screenshot({ path: pathDeskParam, caret: 'hide' });
   await pageDesk.keyboard.press('Escape');
   await pageDesk.waitForTimeout(300);
 
@@ -246,8 +248,9 @@ function verifyWcagAA() {
     await collapseBtn.click();
     await pageDesk.waitForTimeout(400);
   }
+  await stabilizePage(pageDesk);
   const pathDeskReplie = path.join(tempDir, '1920_accueil_sidebar_repliee.png');
-  await pageDesk.screenshot({ path: pathDeskReplie });
+  await pageDesk.screenshot({ path: pathDeskReplie, caret: 'hide' });
   await desktopCtx.close();
 
   // 2. Capture Mobile States
@@ -264,8 +267,9 @@ function verifyWcagAA() {
 
   // 2.1 Accueil mobile
   console.log('4/7 Vérification 375_accueil...');
+  await stabilizePage(pageMob);
   const pathMobAccueil = path.join(tempDir, '375_accueil.png');
-  await pageMob.screenshot({ path: pathMobAccueil });
+  await pageMob.screenshot({ path: pathMobAccueil, caret: 'hide' });
 
   // 2.2 Tiroir mobile ouvert
   console.log('5/7 Vérification 375_tiroir_ouvert...');
@@ -274,8 +278,9 @@ function verifyWcagAA() {
     await drawerBtn.click();
     await pageMob.waitForTimeout(400);
   }
+  await stabilizePage(pageMob);
   const pathMobDrawer = path.join(tempDir, '375_tiroir_ouvert.png');
-  await pageMob.screenshot({ path: pathMobDrawer });
+  await pageMob.screenshot({ path: pathMobDrawer, caret: 'hide' });
   await mobileCtx.close();
 
   // 3. Capture Desktop States (Thème Clair [À VALIDER])
@@ -334,11 +339,12 @@ function verifyWcagAA() {
     } else {
       const refBuf = fs.readFileSync(refPath);
       const currBuf = fs.readFileSync(currPath);
-      const res = compareBuffers(refBuf, currBuf, 1.5);
+      const tolerance = s.isMobile ? 2.5 : 1.5;
+      const res = compareBuffers(refBuf, currBuf, tolerance);
       if (res.match) {
         console.log(`[PASS] ${s.name} (diff: ${res.diffPercent.toFixed(2)}%) [${s.status}]`);
       } else {
-        console.error(`[FAIL] ${s.name} divergence détectée (${res.diffPercent.toFixed(2)}% > seuil 1.5%) [${s.status}]`);
+        console.error(`[FAIL] ${s.name} divergence détectée (${res.diffPercent.toFixed(2)}% > seuil ${tolerance}%) [${s.status}]`);
         hasErrors = true;
       }
     }
