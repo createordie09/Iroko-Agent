@@ -226,7 +226,7 @@ export function ClaudeTopbar() {
                     }`}
                   >
                     <FileDown className="w-3.5 h-3.5 text-[var(--text-secondary)]" />
-                    <span>{isExportingPdf ? 'Génération du PDF...' : 'Exporter en PDF (.pdf)'}</span>
+                    <span>{isExportingPdf ? 'Génération du PDF…' : 'Exporter en PDF (.pdf)'}</span>
                   </button>
 
                   <button

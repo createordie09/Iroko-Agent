@@ -213,7 +213,7 @@ export function ZyriconAppShell() {
         <ClaudeTopbar />
 
         <main id="main-content" tabIndex={-1} className="flex-1 min-h-0 flex flex-col overflow-hidden relative outline-none">
-          <ZoneErrorBoundary zoneName="zone de conversation">
+          <ZoneErrorBoundary zoneName="zone de discussion">
             {simulatedErrorZone === 'chat' ? (
               <BuggyFallback message="Défaillance simulée de la zone de discussion" />
             ) : shouldShowOnboarding ? (

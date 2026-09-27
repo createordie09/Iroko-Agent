@@ -576,7 +576,7 @@ export function ClaudeComposer({
   };
 
   // Référence typographique normée (§ Lot 6) : "Comment puis-je vous aider aujourd'hui\u00A0?"
-  const defaultPlaceholder = "Écrivez un message...";
+  const defaultPlaceholder = "Écrivez un message…";
 
   const maxWidth = isConversation ? 720 : 576;
 
@@ -776,7 +776,7 @@ export function ClaudeComposer({
       {/* ── Ligne Runtime Hors Ligne (§ Mission M8.2) ── */}
       {!runtimeConnected && (
         <div className="pb-2 text-[12px] text-[var(--text-secondary)] flex items-center gap-2 select-none border-b border-[var(--border-subtle)] mb-2">
-          <span>Runtime hors ligne — tentative de reconnexion...</span>
+          <span>Runtime hors ligne — tentative de reconnexion…</span>
         </div>
       )}
 
@@ -798,7 +798,7 @@ export function ClaudeComposer({
         onChange={e => setInput(e.target.value)}
         onKeyDown={handleKeyDown}
         onPaste={handlePaste}
-        placeholder={!runtimeConnected ? "En attente de connexion au runtime local..." : (placeholder || defaultPlaceholder)}
+        placeholder={!runtimeConnected ? "En attente de connexion au runtime local…" : (placeholder || defaultPlaceholder)}
         aria-label="Message"
         disabled={!runtimeConnected}
         aria-disabled={!runtimeConnected}
@@ -995,7 +995,8 @@ export function ClaudeComposer({
                             type="text"
                             value={manualPathInput}
                             onChange={e => setManualPathInput(e.target.value)}
-                            placeholder="Chemin du dossier..."
+                            aria-label="Chemin du dossier de travail"
+                            placeholder="Chemin du dossier…"
                             className="w-full bg-[var(--bg-app)] border border-[var(--border-composer)] rounded px-2 py-1 text-[12px] text-[var(--text-primary)] outline-none"
                             autoFocus
                           />

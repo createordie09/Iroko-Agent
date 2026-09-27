@@ -122,11 +122,12 @@ test('MISSION R3b — 4. ZoneErrorBoundary : confinement d\'erreur dans la zone 
   );
 
   assert.ok(
+    appShellSource.includes('<ZoneErrorBoundary zoneName="zone de discussion">') ||
     appShellSource.includes('<ZoneErrorBoundary zoneName="zone de conversation">'),
-    'La zone principale de conversation doit être isolée par ZoneErrorBoundary'
+    'La zone principale de discussion doit être isolée par ZoneErrorBoundary'
   );
 
-  const boundary = new ZoneErrorBoundary({ zoneName: 'zone de conversation' });
+  const boundary = new ZoneErrorBoundary({ zoneName: 'zone de discussion' });
   const nextState = ZoneErrorBoundary.getDerivedStateFromError(new Error('Erreur de streaming Markdown'));
   assert.equal(nextState.hasError, true);
 });

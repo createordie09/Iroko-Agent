@@ -105,7 +105,7 @@ export function PermissionPrompt({ request, onRespond }: PermissionPromptProps) 
             type="button"
             onClick={() => onRespond(true, 'project')}
             className="px-3 py-1.5 rounded-[6px] text-[12px] text-[var(--text-primary)] hover:bg-[var(--bg-surface)] border border-[var(--bg-active)] transition-colors"
-            title="Mémoriser durablement pour ce projet (hors workspace)"
+            title="Mémoriser durablement pour ce projet (stockage local sécurisé)"
           >
             Toujours pour ce projet
           </button>

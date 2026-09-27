@@ -51,6 +51,7 @@ export function EditMessageModal({
             value={data.content}
             onChange={e => onChangeContent(e.target.value)}
             rows={4}
+            aria-label="Contenu du message à modifier"
             className="w-full bg-[var(--bg-app)] border border-[var(--border-modal)] rounded-[6px] p-2.5 text-[13px] text-[var(--text-primary)] focus:outline-none focus:border-[var(--border-focus)] resize-none"
             placeholder="Modifiez votre message…"
           />

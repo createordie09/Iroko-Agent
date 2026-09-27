@@ -247,7 +247,7 @@ export function PrivacyPage() {
               className="flex items-center gap-1.5 px-2.5 py-1.5 bg-[var(--bg-surface)] hover:bg-[var(--bg-active)] border border-[var(--border-modal)] text-[var(--text-primary)] text-xs rounded-[6px] transition-colors disabled:opacity-40 cursor-pointer"
             >
               <Download className="w-3.5 h-3.5 text-[var(--text-secondary)]" />
-              <span>{isBackingUp ? 'Création de la sauvegarde...' : 'Sauvegarder la base (ZIP)'}</span>
+              <span>{isBackingUp ? 'Création de la sauvegarde…' : 'Sauvegarder la base (ZIP)'}</span>
             </button>
 
             <button

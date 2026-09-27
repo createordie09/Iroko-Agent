@@ -167,7 +167,8 @@ export function MemoryPage() {
               <textarea
                 value={memoryFactInput}
                 onChange={e => setMemoryFactInput(e.target.value)}
-                placeholder="Ex: Utiliser PostgreSQL pour les migrations, ne pas modifier l'architecture du store..."
+                aria-label="Fait ou décision à mémoriser"
+                placeholder={"Ex\u00A0: Utiliser PostgreSQL pour les migrations, ne pas modifier l'architecture du store…"}
                 rows={3}
                 className="w-full bg-[var(--bg-app)] border border-[var(--border-modal)] rounded-[6px] p-2 text-[12px] text-[var(--text-primary)] placeholder:text-[var(--text-placeholder)] focus:outline-none focus:border-[var(--border-focus)] resize-none"
               />

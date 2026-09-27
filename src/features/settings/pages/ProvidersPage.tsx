@@ -151,7 +151,8 @@ export function ProvidersPage() {
                 type={showSecret ? 'text' : 'password'}
                 value={newKeyRaw}
                 onChange={e => setNewKeyRaw(e.target.value)}
-                placeholder="sk-..."
+                aria-label="Clé secrète d'API"
+                placeholder="sk-…"
                 className="w-full bg-[var(--bg-app)] border border-[var(--bg-active)] rounded-[6px] px-3 py-1.5 text-[13px] text-[var(--text-primary)] font-mono focus:outline-none"
                 autoFocus
               />
@@ -163,7 +164,8 @@ export function ProvidersPage() {
                 type="text"
                 value={newKeyLabel}
                 onChange={e => setNewKeyLabel(e.target.value)}
-                placeholder="Ex: Clé personnelle"
+                aria-label="Libellé facultatif de la clé"
+                placeholder={"Ex\u00A0: Clé personnelle"}
                 className="w-full bg-[var(--bg-app)] border border-[var(--bg-active)] rounded-[6px] px-3 py-1.5 text-[13px] text-[var(--text-primary)] focus:outline-none"
               />
             </div>
@@ -246,7 +248,8 @@ export function ProvidersPage() {
                   type="password"
                   value={imageApiKey}
                   onChange={e => setImageApiKey(e.target.value)}
-                  placeholder={imageHasKey ? "Laisser vide pour conserver la clé actuelle" : "Clé ou jeton d'API..."}
+                  aria-label="Clé ou jeton d'API image"
+                  placeholder={imageHasKey ? "Laisser vide pour conserver la clé actuelle" : "Clé ou jeton d'API…"}
                   className="w-full bg-[var(--bg-app)] border border-[var(--bg-active)] rounded-[6px] px-3 py-1.5 text-[13px] text-[var(--text-primary)] font-mono outline-none"
                 />
               </div>
@@ -259,7 +262,8 @@ export function ProvidersPage() {
                   type="text"
                   value={imageAccountId}
                   onChange={e => setImageAccountId(e.target.value)}
-                  placeholder="ID de compte Cloudflare..."
+                  aria-label="Identifiant de compte Cloudflare"
+                  placeholder="ID de compte Cloudflare…"
                   className="w-full bg-[var(--bg-app)] border border-[var(--bg-active)] rounded-[6px] px-3 py-1.5 text-[13px] text-[var(--text-primary)] font-mono outline-none"
                 />
               </div>
@@ -330,7 +334,8 @@ export function ProvidersPage() {
                   type="password"
                   value={videoApiKey}
                   onChange={e => setVideoApiKey(e.target.value)}
-                  placeholder={videoHasKey ? "Laisser vide pour conserver la clé actuelle" : "Clé ou jeton d'API..."}
+                  aria-label="Clé ou jeton d'API vidéo"
+                  placeholder={videoHasKey ? "Laisser vide pour conserver la clé actuelle" : "Clé ou jeton d'API…"}
                   className="w-full bg-[var(--bg-app)] border border-[var(--bg-active)] rounded-[6px] px-3 py-1.5 text-[13px] text-[var(--text-primary)] font-mono outline-none"
                 />
               </div>

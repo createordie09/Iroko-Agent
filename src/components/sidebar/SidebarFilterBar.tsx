@@ -37,7 +37,8 @@ export function SidebarFilterBar({
               onClose();
             }
           }}
-          placeholder="Rechercher..."
+          aria-label="Rechercher dans les discussions"
+          placeholder="Rechercher…"
           className="w-full bg-transparent text-[var(--font-size-search,12px)] text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] outline-none sidebar-search-input"
         />
         {searchQuery && (

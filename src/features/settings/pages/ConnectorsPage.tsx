@@ -100,7 +100,8 @@ export function ConnectorsPage() {
                 type="text"
                 value={newMcpName}
                 onChange={e => setNewMcpName(e.target.value)}
-                placeholder="Ex: filesystem-mcp"
+                aria-label="Nom unique du connecteur"
+                placeholder={"Ex\u00A0: filesystem-mcp"}
                 className="w-full bg-[var(--bg-surface)] border border-[var(--border-modal)] rounded-[6px] px-2.5 py-1 text-[12px] text-[var(--text-primary)] font-mono focus:outline-none focus:border-[var(--border-focus)]"
               />
             </div>
@@ -130,7 +131,8 @@ export function ConnectorsPage() {
                     type="text"
                     value={newMcpCommand}
                     onChange={e => setNewMcpCommand(e.target.value)}
-                    placeholder="Ex: npx -y @modelcontextprotocol/server-filesystem"
+                    aria-label="Commande exécutable"
+                    placeholder={"Ex\u00A0: npx -y @modelcontextprotocol/server-filesystem"}
                     className="w-full bg-[var(--bg-surface)] border border-[var(--border-modal)] rounded-[6px] px-2.5 py-1 text-[12px] text-[var(--text-primary)] font-mono focus:outline-none focus:border-[var(--border-focus)]"
                   />
                 </div>
@@ -140,7 +142,8 @@ export function ConnectorsPage() {
                     type="text"
                     value={newMcpArgs}
                     onChange={e => setNewMcpArgs(e.target.value)}
-                    placeholder="Ex: C:\Users\..."
+                    aria-label="Arguments séparés par un espace"
+                    placeholder={"Ex\u00A0: C:\\Users\\…"}
                     className="w-full bg-[var(--bg-surface)] border border-[var(--border-modal)] rounded-[6px] px-2.5 py-1 text-[12px] text-[var(--text-primary)] font-mono focus:outline-none focus:border-[var(--border-focus)]"
                   />
                 </div>
@@ -155,7 +158,8 @@ export function ConnectorsPage() {
                   type="text"
                   value={newMcpUrl}
                   onChange={e => setNewMcpUrl(e.target.value)}
-                  placeholder="Ex: http://localhost:8000/mcp"
+                  aria-label="URL du serveur MCP"
+                  placeholder={"Ex\u00A0: http://localhost:8000/mcp"}
                   className="w-full bg-[var(--bg-surface)] border border-[var(--border-modal)] rounded-[6px] px-2.5 py-1 text-[12px] text-[var(--text-primary)] font-mono focus:outline-none focus:border-[var(--border-focus)]"
                 />
               </div>

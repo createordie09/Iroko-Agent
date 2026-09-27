@@ -58,7 +58,7 @@ export function useLiveAnnouncements(): UseLiveAnnouncementsReturn {
 
         case 'error':
           currentPhaseRef.current = 'idle';
-          setAlertAnnouncement(`Erreur\u00A0: ${event.message || 'Une erreur est survenue.'}`);
+          setAlertAnnouncement(`Erreur\u00A0: ${event.message || 'L\'exécution a rencontré une erreur. Veuillez réessayer.'}`);
           break;
 
         case 'permission_required':

@@ -112,7 +112,8 @@ export function ClaudeSettingsModal() {
               type="text"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              placeholder="Rechercher"
+              placeholder="Rechercher…"
+              aria-label="Rechercher dans les réglages"
               className="w-full bg-[var(--bg-surface)] border border-[var(--border-modal)] rounded-[6px] pl-8 pr-2 py-1 text-[13px] text-[var(--text-primary)] placeholder:text-[var(--text-placeholder)] focus:outline-none focus:border-[var(--border-focus)]"
             />
           </div>

@@ -280,7 +280,7 @@ export function ClaudeChat() {
             {/* Message d'erreur avec réessai */}
             {chatStatus === 'error' && (
               <div className="p-3 rounded-[8px] bg-[var(--bg-surface)] border border-[var(--border-modal)] text-[13px] text-[var(--text-secondary)] flex items-center justify-between">
-                <span>{errorMessage || 'Une erreur est survenue lors de la communication avec le modèle.'}</span>
+                <span>{errorMessage || 'La communication avec le modèle a échoué. Veuillez vérifier la configuration de votre fournisseur ou cliquer sur Réessayer.'}</span>
                 <button
                   type="button"
                   onClick={handleRetry}

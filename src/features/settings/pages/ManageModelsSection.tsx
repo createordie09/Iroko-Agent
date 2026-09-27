@@ -73,7 +73,8 @@ export function ManageModelsSection({ onBack }: ManageModelsSectionProps) {
           type="text"
           value={searchQuery}
           onChange={e => setSearchQuery(e.target.value)}
-          placeholder="Rechercher par nom, éditeur ou fournisseur..."
+          aria-label="Rechercher par nom, éditeur ou fournisseur"
+          placeholder="Rechercher par nom, éditeur ou fournisseur…"
           className="w-full bg-[var(--bg-app)] border border-[var(--border-subtle)] rounded-[6px] pl-8 pr-3 py-1.5 text-[12px] text-[var(--text-primary)] placeholder-[var(--text-tertiary)] focus:outline-none"
         />
         <Search className="w-3.5 h-3.5 text-[var(--text-tertiary)] absolute left-2.5 top-1/2 -translate-y-1/2" />

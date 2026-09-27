@@ -204,7 +204,8 @@ export function SearchProvidersSection({
               type="password"
               value={keyRaw}
               onChange={e => setKeyRaw(e.target.value)}
-              placeholder="Clé secrète..."
+              aria-label="Clé secrète d'API de recherche"
+              placeholder="Clé secrète…"
               className="w-full bg-[var(--bg-app)] border border-[var(--bg-active)] rounded-[6px] px-3 py-1.5 text-[13px] text-[var(--text-primary)] font-mono focus:outline-none"
               autoFocus
             />
@@ -216,7 +217,8 @@ export function SearchProvidersSection({
               type="text"
               value={keyLabel}
               onChange={e => setKeyLabel(e.target.value)}
-              placeholder="Ex&nbsp;: Clé personnelle"
+              aria-label="Libellé facultatif de la clé"
+              placeholder={"Ex\u00A0: Clé personnelle"}
               className="w-full bg-[var(--bg-app)] border border-[var(--bg-active)] rounded-[6px] px-3 py-1.5 text-[13px] text-[var(--text-primary)] focus:outline-none"
             />
           </div>
