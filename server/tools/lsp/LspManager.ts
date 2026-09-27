@@ -1,9 +1,16 @@
 // server/tools/lsp/LspManager.ts
-// Cahier §14 : Language Server Protocol (LSP) - Diagnostics, Définitions et Références TypeScript
+// Cahier §14 : Language Server Protocol (LSP) - Diagnostics, Définitions, Références et Symboles
 
 import path from 'path';
 import fs from 'fs';
-import ts from 'typescript';
+import { fork, ChildProcess } from 'child_process';
+import { fileURLToPath } from 'url';
+import { createRequire } from 'module';
+import { ProcessManager, processManager } from '../terminal/ProcessManager';
+
+const nodeRequire = createRequire(import.meta.url);
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export interface LspDiagnostic {
   file: string;
@@ -36,286 +43,353 @@ export interface LspReferencesResult {
   references: LspLocation[];
 }
 
-class TypeScriptServiceHost implements ts.LanguageServiceHost {
-  private files: Map<string, { version: number }> = new Map();
-  private compilerOptions: ts.CompilerOptions;
+export interface LspDocumentSymbol {
+  name: string;
+  kind: string;
+  containerName?: string;
+  line: number;
+  column: number;
+  file: string;
+}
 
-  constructor(public readonly workspacePath: string, parsedConfig: ts.ParsedCommandLine) {
-    this.compilerOptions = parsedConfig.options;
-    for (const file of parsedConfig.fileNames) {
-      this.files.set(path.resolve(workspacePath, file), { version: 0 });
+function getWorkerScriptPath(): string {
+  const candidates = [
+    path.join(__dirname, 'lsp_worker.cjs'),
+    path.join(process.cwd(), 'server', 'tools', 'lsp', 'lsp_worker.cjs'),
+    path.join(process.cwd(), 'dist-server', 'lsp_worker.cjs')
+  ];
+  for (const c of candidates) {
+    if (fs.existsSync(c)) return c;
+  }
+  return candidates[0];
+}
+
+class LspWorkerProcess {
+  public child?: ChildProcess;
+  public pid?: number;
+  public status: 'idle' | 'starting' | 'ready' | 'stopped' | 'failed' = 'idle';
+  public failureReason?: string;
+  private pendingRequests: Map<number, {
+    resolve: (val: any) => void;
+    reject: (err: any) => void;
+    timer: NodeJS.Timeout;
+  }> = new Map();
+  private nextReqId = 1;
+  private startupPromise?: Promise<void>;
+  private startupTimer?: NodeJS.Timeout;
+
+  constructor(public readonly workspacePath: string) {}
+
+  public async start(): Promise<void> {
+    if (this.status === 'ready') return;
+    if (this.status === 'starting' && this.startupPromise) return this.startupPromise;
+
+    this.status = 'starting';
+    this.startupPromise = new Promise<void>((resolve, reject) => {
+      const scriptPath = getWorkerScriptPath();
+      if (!fs.existsSync(scriptPath)) {
+        this.status = 'failed';
+        this.failureReason = `Script de travailleur LSP introuvable : ${scriptPath}`;
+        return reject(new Error(this.failureReason));
+      }
+
+      // Délai de démarrage maximal de 20 secondes (§14)
+      this.startupTimer = setTimeout(() => {
+        this.status = 'failed';
+        this.failureReason = 'Délai d\'initialisation du serveur de langage dépassé (20 s).';
+        this.stop();
+        reject(new Error(this.failureReason));
+      }, 20000);
+
+      try {
+        const child = fork(scriptPath, [this.workspacePath], {
+          cwd: this.workspacePath,
+          execArgv: [],
+          env: ProcessManager.getSanitizedEnv(),
+          stdio: ['pipe', 'pipe', 'pipe', 'ipc']
+        });
+
+        this.child = child;
+        this.pid = child.pid;
+        let stderrData = '';
+
+        child.stderr?.on('data', (d) => {
+          stderrData += d.toString();
+        });
+
+        child.on('message', (msg: any) => {
+          if (!msg) return;
+
+          if (msg.type === 'ready') {
+            if (this.startupTimer) {
+              clearTimeout(this.startupTimer);
+              this.startupTimer = undefined;
+            }
+            this.status = 'ready';
+            resolve();
+            return;
+          }
+
+          if (msg.type === 'init_error') {
+            if (this.startupTimer) {
+              clearTimeout(this.startupTimer);
+              this.startupTimer = undefined;
+            }
+            this.status = 'failed';
+            this.failureReason = msg.error || 'Erreur d\'initialisation du serveur de langage.';
+            this.stop();
+            reject(new Error(this.failureReason));
+            return;
+          }
+
+          if (typeof msg.id === 'number') {
+            const req = this.pendingRequests.get(msg.id);
+            if (req) {
+              clearTimeout(req.timer);
+              this.pendingRequests.delete(msg.id);
+              if (msg.success) {
+                req.resolve(msg.data);
+              } else {
+                req.reject(new Error(msg.error || 'Erreur d\'exécution LSP.'));
+              }
+            }
+          }
+        });
+
+        child.on('error', (err) => {
+          if (this.status === 'starting') {
+            if (this.startupTimer) clearTimeout(this.startupTimer);
+            this.status = 'failed';
+            this.failureReason = err.message;
+            reject(err);
+          }
+          this.stop();
+        });
+
+        child.on('exit', (code) => {
+          if (this.status === 'starting') {
+            if (this.startupTimer) clearTimeout(this.startupTimer);
+            this.status = 'failed';
+            this.failureReason = stderrData.trim() || `Le serveur de langage s'est arrêté prématurément avec le code ${code}.`;
+            reject(new Error(this.failureReason));
+          }
+          this.stop();
+        });
+      } catch (err: any) {
+        if (this.startupTimer) clearTimeout(this.startupTimer);
+        this.status = 'failed';
+        this.failureReason = err.message;
+        reject(err);
+      }
+    });
+
+    return this.startupPromise;
+  }
+
+  public async sendRequest<T>(method: string, params?: any): Promise<T> {
+    if (this.status !== 'ready') {
+      await this.start();
     }
-  }
 
-  public updateFile(fileName: string): void {
-    const resolved = path.resolve(this.workspacePath, fileName);
-    const existing = this.files.get(resolved);
-    if (existing) {
-      existing.version++;
-    } else {
-      this.files.set(resolved, { version: 0 });
+    if (!this.child || !this.child.connected) {
+      throw new Error('Le processus serveur de langage n\'est pas connecté.');
     }
+
+    const id = this.nextReqId++;
+    return new Promise<T>((resolve, reject) => {
+      // Délai maximal par requête de 10 secondes (§14)
+      const timer = setTimeout(() => {
+        this.pendingRequests.delete(id);
+        reject(new Error(`Délai maximal de 10 s dépassé pour la requête LSP "${method}".`));
+      }, 10000);
+
+      this.pendingRequests.set(id, { resolve, reject, timer });
+
+      try {
+        this.child!.send({ id, method, params });
+      } catch (sendErr: any) {
+        clearTimeout(timer);
+        this.pendingRequests.delete(id);
+        reject(sendErr);
+      }
+    });
   }
 
-  getCompilationSettings(): ts.CompilerOptions {
-    return this.compilerOptions;
-  }
-
-  getScriptFileNames(): string[] {
-    return Array.from(this.files.keys());
-  }
-
-  getScriptVersion(fileName: string): string {
-    const file = this.files.get(fileName);
-    return file ? String(file.version) : '0';
-  }
-
-  getScriptSnapshot(fileName: string): ts.IScriptSnapshot | undefined {
-    if (!fs.existsSync(fileName)) return undefined;
-    try {
-      const content = fs.readFileSync(fileName, 'utf-8');
-      return ts.ScriptSnapshot.fromString(content);
-    } catch {
-      return undefined;
+  public stop(): void {
+    this.status = 'stopped';
+    if (this.startupTimer) {
+      clearTimeout(this.startupTimer);
+      this.startupTimer = undefined;
     }
-  }
-
-  getCurrentDirectory(): string {
-    return this.workspacePath;
-  }
-
-  getDefaultLibFileName(options: ts.CompilerOptions): string {
-    return ts.getDefaultLibFilePath(options);
-  }
-
-  fileExists(filePath: string): boolean {
-    return fs.existsSync(filePath);
-  }
-
-  readFile(filePath: string, encoding?: string): string | undefined {
-    try {
-      return fs.existsSync(filePath)
-        ? fs.readFileSync(filePath, (encoding as BufferEncoding) || 'utf-8')
-        : undefined;
-    } catch {
-      return undefined;
+    for (const [, req] of this.pendingRequests.entries()) {
+      clearTimeout(req.timer);
+      req.reject(new Error('Serveur de langage TypeScript arrêté.'));
     }
-  }
+    this.pendingRequests.clear();
 
-  readDirectory(
-    dirPath: string,
-    extensions?: readonly string[],
-    exclude?: readonly string[],
-    include?: readonly string[],
-    depth?: number
-  ): string[] {
-    return ts.sys.readDirectory(dirPath, extensions, exclude, include, depth);
-  }
-
-  directoryExists(dirPath: string): boolean {
-    try {
-      return fs.existsSync(dirPath) && fs.statSync(dirPath).isDirectory();
-    } catch {
-      return false;
+    if (this.pid) {
+      ProcessManager.killProcessTree(this.pid);
     }
-  }
 
-  getDirectories(dirPath: string): string[] {
-    return ts.sys.getDirectories(dirPath);
+    if (this.child) {
+      try {
+        this.child.removeAllListeners();
+        this.child.disconnect();
+      } catch {}
+      try {
+        this.child.kill();
+      } catch {}
+      this.child = undefined;
+    }
   }
 }
 
 export class LspManager {
-  private servicesCache: Map<string, {
-    service: ts.LanguageService;
-    host: TypeScriptServiceHost;
-    timestamp: number;
-  }> = new Map();
+  private workers: Map<string, LspWorkerProcess> = new Map();
+  private registeredShutdown = false;
 
-  private getOrUpdateLanguageService(workspacePath: string): { service: ts.LanguageService; host: TypeScriptServiceHost } | null {
-    const tsconfigPath = ts.findConfigFile(workspacePath, ts.sys.fileExists, 'tsconfig.json');
-    if (!tsconfigPath) return null;
+  constructor() {
+    this.registerShutdown();
+  }
 
-    const configFile = ts.readConfigFile(tsconfigPath, ts.sys.readFile);
-    if (configFile.error) return null;
-
-    const parsedConfig = ts.parseJsonConfigFileContent(
-      configFile.config,
-      ts.sys,
-      path.dirname(tsconfigPath)
-    );
-
-    const now = Date.now();
-    const cached = this.servicesCache.get(workspacePath);
-    // Invalider le service après 30 secondes pour rafraîchir la liste de fichiers
-    if (cached && (now - cached.timestamp < 30000)) {
-      return { service: cached.service, host: cached.host };
-    }
-
-    const host = new TypeScriptServiceHost(workspacePath, parsedConfig);
-    const service = ts.createLanguageService(host, ts.createDocumentRegistry());
-
-    this.servicesCache.set(workspacePath, { service, host, timestamp: now });
-    return { service, host };
+  private registerShutdown(): void {
+    if (this.registeredShutdown) return;
+    this.registeredShutdown = true;
+    const cleanup = () => this.stop();
+    process.on('exit', cleanup);
+    process.on('SIGINT', cleanup);
+    process.on('SIGTERM', cleanup);
   }
 
   /**
-   * Récupère les diagnostics d'un fichier ou de l'ensemble du workspace.
+   * Vérifie si le serveur LSP est disponible pour le workspace donné sans installation implicite.
    */
-  public getDiagnostics(workspacePath: string, targetFile?: string): LspDiagnostic[] {
-    const ls = this.getOrUpdateLanguageService(workspacePath);
-    if (!ls) return [];
+  public isAvailable(workspacePath: string): { available: boolean; reasonDisabled?: string } {
+    if (!workspacePath || !fs.existsSync(workspacePath)) {
+      return { available: false, reasonDisabled: 'Dossier de workspace introuvable.' };
+    }
 
-    const { service, host } = ls;
-    const diagnostics: LspDiagnostic[] = [];
+    const tsconfigPath = path.join(workspacePath, 'tsconfig.json');
+    const jsconfigPath = path.join(workspacePath, 'jsconfig.json');
+    if (!fs.existsSync(tsconfigPath) && !fs.existsSync(jsconfigPath)) {
+      return {
+        available: false,
+        reasonDisabled: 'Serveur de langage TypeScript indisponible : aucun fichier tsconfig.json ou jsconfig.json détecté dans le workspace.'
+      };
+    }
 
-    const filesToDiagnose = targetFile
-      ? [path.resolve(workspacePath, targetFile)]
-      : host.getScriptFileNames().filter(f => !f.endsWith('.d.ts') && f.includes(workspacePath));
-
-    for (const fileName of filesToDiagnose) {
-      if (!fs.existsSync(fileName)) continue;
-
-      host.updateFile(fileName);
-      const syntactic = service.getSyntacticDiagnostics(fileName);
-      const semantic = service.getSemanticDiagnostics(fileName);
-      const all = [...syntactic, ...semantic];
-
-      for (const diag of all) {
-        if (diag.file && diag.start !== undefined) {
-          const { line, character } = diag.file.getLineAndCharacterOfPosition(diag.start);
-          const rawMessage = ts.flattenDiagnosticMessageText(diag.messageText, '\n');
-
-          let category: LspDiagnostic['category'] = 'error';
-          if (diag.category === ts.DiagnosticCategory.Warning) category = 'warning';
-          else if (diag.category === ts.DiagnosticCategory.Suggestion) category = 'suggestion';
-          else if (diag.category === ts.DiagnosticCategory.Message) category = 'message';
-
-          const relPath = path.relative(workspacePath, diag.file.fileName).replace(/\\/g, '/');
-
-          diagnostics.push({
-            file: relPath,
-            line: line + 1,
-            column: character + 1,
-            code: diag.code,
-            category,
-            message: rawMessage
-          });
-        }
+    // Vérifier la présence du module TypeScript
+    const localTs = path.join(workspacePath, 'node_modules', 'typescript');
+    let hasTs = fs.existsSync(localTs);
+    if (!hasTs) {
+      try {
+        nodeRequire.resolve('typescript');
+        hasTs = true;
+      } catch {
+        hasTs = false;
       }
     }
 
-    return diagnostics;
+    if (!hasTs) {
+      return {
+        available: false,
+        reasonDisabled: 'Serveur de langage TypeScript indisponible : TypeScript n\'est pas installé (aucune installation implicite autorisée).'
+      };
+    }
+
+    const canonical = path.resolve(workspacePath);
+    const existing = this.workers.get(canonical);
+    if (existing && existing.status === 'failed') {
+      return {
+        available: false,
+        reasonDisabled: existing.failureReason || 'Serveur de langage TypeScript indisponible (échec de démarrage précédent).'
+      };
+    }
+
+    return { available: true };
   }
 
-  /**
-   * Trouve la définition d'un symbole à un emplacement précis (fichier, ligne, colonne).
-   */
-  public getDefinition(
+  private getOrCreateWorker(workspacePath: string): LspWorkerProcess {
+    const canonical = path.resolve(workspacePath);
+    let worker = this.workers.get(canonical);
+    if (!worker || worker.status === 'stopped' || worker.status === 'failed') {
+      worker = new LspWorkerProcess(canonical);
+      this.workers.set(canonical, worker);
+    }
+    return worker;
+  }
+
+  public getActivePid(workspacePath: string): number | undefined {
+    const canonical = path.resolve(workspacePath);
+    return this.workers.get(canonical)?.pid;
+  }
+
+  public async getDiagnostics(workspacePath: string, targetFile?: string): Promise<LspDiagnostic[]> {
+    const avail = this.isAvailable(workspacePath);
+    if (!avail.available) {
+      throw new Error(avail.reasonDisabled || 'Serveur de langage TypeScript indisponible.');
+    }
+    const worker = this.getOrCreateWorker(workspacePath);
+    return worker.sendRequest<LspDiagnostic[]>('get_diagnostics', { targetFile });
+  }
+
+  public async getDefinition(
     workspacePath: string,
     filePath: string,
     line: number,
     column: number
-  ): LspDefinitionResult {
-    const ls = this.getOrUpdateLanguageService(workspacePath);
-    if (!ls) return { found: false, definitions: [] };
-
-    const { service, host } = ls;
-    const absPath = path.resolve(workspacePath, filePath);
-    if (!fs.existsSync(absPath)) return { found: false, definitions: [] };
-
-    host.updateFile(absPath);
-    const program = service.getProgram();
-    const sourceFile = program?.getSourceFile(absPath);
-    if (!sourceFile) return { found: false, definitions: [] };
-
-    const position = sourceFile.getPositionOfLineAndCharacter(line - 1, column - 1);
-    const definitions = service.getDefinitionAtPosition(absPath, position);
-
-    if (!definitions || definitions.length === 0) {
+  ): Promise<LspDefinitionResult> {
+    const avail = this.isAvailable(workspacePath);
+    if (!avail.available) {
       return { found: false, definitions: [] };
     }
-
-    const results: LspLocation[] = [];
-    let symbolName: string | undefined;
-
-    for (const def of definitions) {
-      const defSource = program?.getSourceFile(def.fileName);
-      if (!defSource) continue;
-
-      const { line: dLine, character: dCol } = defSource.getLineAndCharacterOfPosition(def.textSpan.start);
-      const text = defSource.text.slice(def.textSpan.start, def.textSpan.start + def.textSpan.length);
-      if (!symbolName) symbolName = def.name;
-
-      results.push({
-        file: path.relative(workspacePath, def.fileName).replace(/\\/g, '/'),
-        line: dLine + 1,
-        column: dCol + 1,
-        text
-      });
-    }
-
-    return {
-      found: results.length > 0,
-      symbol: symbolName,
-      definitions: results
-    };
+    const worker = this.getOrCreateWorker(workspacePath);
+    return worker.sendRequest<LspDefinitionResult>('find_definition', { filePath, line, column });
   }
 
-  /**
-   * Trouve toutes les références d'un symbole dans le workspace.
-   */
-  public getReferences(
+  public async getReferences(
     workspacePath: string,
     filePath: string,
     line: number,
     column: number
-  ): LspReferencesResult {
-    const ls = this.getOrUpdateLanguageService(workspacePath);
-    if (!ls) return { found: false, total: 0, references: [] };
-
-    const { service, host } = ls;
-    const absPath = path.resolve(workspacePath, filePath);
-    if (!fs.existsSync(absPath)) return { found: false, total: 0, references: [] };
-
-    host.updateFile(absPath);
-    const program = service.getProgram();
-    const sourceFile = program?.getSourceFile(absPath);
-    if (!sourceFile) return { found: false, total: 0, references: [] };
-
-    const position = sourceFile.getPositionOfLineAndCharacter(line - 1, column - 1);
-    const references = service.getReferencesAtPosition(absPath, position);
-
-    if (!references || references.length === 0) {
+  ): Promise<LspReferencesResult> {
+    const avail = this.isAvailable(workspacePath);
+    if (!avail.available) {
       return { found: false, total: 0, references: [] };
     }
+    const worker = this.getOrCreateWorker(workspacePath);
+    return worker.sendRequest<LspReferencesResult>('find_references', { filePath, line, column });
+  }
 
-    const results: LspLocation[] = [];
-    let symbolName: string | undefined;
-
-    for (const ref of references) {
-      const refSource = program?.getSourceFile(ref.fileName);
-      if (!refSource) continue;
-
-      const { line: rLine, character: rCol } = refSource.getLineAndCharacterOfPosition(ref.textSpan.start);
-      const text = refSource.text.slice(ref.textSpan.start, ref.textSpan.start + ref.textSpan.length);
-
-      results.push({
-        file: path.relative(workspacePath, ref.fileName).replace(/\\/g, '/'),
-        line: rLine + 1,
-        column: rCol + 1,
-        text,
-        isDefinition: (ref as any).isDefinition,
-        isWriteAccess: ref.isWriteAccess
-      });
+  public async getDocumentSymbols(
+    workspacePath: string,
+    filePath: string
+  ): Promise<LspDocumentSymbol[]> {
+    const avail = this.isAvailable(workspacePath);
+    if (!avail.available) {
+      return [];
     }
+    const worker = this.getOrCreateWorker(workspacePath);
+    return worker.sendRequest<LspDocumentSymbol[]>('get_document_symbols', { filePath });
+  }
 
-    return {
-      found: results.length > 0,
-      symbol: symbolName,
-      total: results.length,
-      references: results
-    };
+  /**
+   * Arrête proprement le processus du serveur de langage (et tout son arbre de processus).
+   */
+  public stop(workspacePath?: string): void {
+    if (workspacePath) {
+      const canonical = path.resolve(workspacePath);
+      const worker = this.workers.get(canonical);
+      if (worker) {
+        worker.stop();
+        this.workers.delete(canonical);
+      }
+    } else {
+      for (const [, worker] of this.workers.entries()) {
+        worker.stop();
+      }
+      this.workers.clear();
+    }
   }
 }
 

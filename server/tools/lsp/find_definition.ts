@@ -1,5 +1,9 @@
+// server/tools/lsp/find_definition.ts
+// Cahier §14 : Outil SAFE pour trouver la définition d'un symbole TypeScript
+
 import { IrokoTool, ToolContext, ToolResult } from '../types';
 import { lspManager, LspDefinitionResult } from './LspManager';
+import { PathSanitizer } from '../../security/PathSanitizer';
 
 export interface FindDefinitionInput {
   file: string;
@@ -42,10 +46,31 @@ export class FindDefinitionTool implements IrokoTool<FindDefinitionInput, LspDef
         };
       }
 
-      const result = lspManager.getDefinition(context.workspacePath, input.file, input.line, input.column);
+      // Confinement strict au workspace (§14, §26)
+      const pathValidation = PathSanitizer.validatePath(input.file, context.workspacePath);
+      if (!pathValidation.valid) {
+        return {
+          success: false,
+          error: pathValidation.error || 'Accès refusé : tentative de sortie du workspace.'
+        };
+      }
+
+      // Vérification de la disponibilité du LSP
+      const avail = lspManager.isAvailable(context.workspacePath);
+      if (!avail.available) {
+        return {
+          success: false,
+          error: avail.reasonDisabled || 'Serveur de langage TypeScript indisponible.'
+        };
+      }
+
+      const result = await lspManager.getDefinition(context.workspacePath, input.file, input.line, input.column);
       return {
         success: true,
-        data: result
+        data: {
+          ...result,
+          definitions: result.definitions.slice(0, 20)
+        }
       };
     } catch (err: any) {
       return {

@@ -75,6 +75,7 @@ describe('MISSION L15a : Language Server Protocol (LSP) TypeScript', () => {
   });
 
   after(() => {
+    lspManager.stop();
     try {
       fs.rmSync(workspaceDir, { recursive: true, force: true });
       fs.rmSync(testDataDir, { recursive: true, force: true });
@@ -85,22 +86,26 @@ describe('MISSION L15a : Language Server Protocol (LSP) TypeScript', () => {
     const diagTool = toolRegistry.getTool('get_diagnostics');
     const defTool = toolRegistry.getTool('find_definition');
     const refTool = toolRegistry.getTool('find_references');
+    const symTool = toolRegistry.getTool('get_document_symbols');
 
     assert.ok(diagTool, 'get_diagnostics doit être enregistré');
     assert.ok(defTool, 'find_definition doit être enregistré');
     assert.ok(refTool, 'find_references doit être enregistré');
+    assert.ok(symTool, 'get_document_symbols doit être enregistré');
 
     assert.strictEqual(diagTool.category, 'lsp');
     assert.strictEqual(defTool.category, 'lsp');
     assert.strictEqual(refTool.category, 'lsp');
+    assert.strictEqual(symTool.category, 'lsp');
 
     assert.strictEqual(diagTool.permission, 'SAFE');
     assert.strictEqual(defTool.permission, 'SAFE');
     assert.strictEqual(refTool.permission, 'SAFE');
+    assert.strictEqual(symTool.permission, 'SAFE');
 
     const status = toolRegistry.getAllToolsStatus();
     const lspTools = status.filter(t => t.category === 'lsp');
-    assert.strictEqual(lspTools.length, 3);
+    assert.strictEqual(lspTools.length, 4);
     assert.ok(lspTools.every(t => t.enabled && t.available));
   });
 

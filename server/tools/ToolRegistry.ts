@@ -22,6 +22,8 @@ import { VerifyProjectTool } from './testing/verify_project';
 import { GetDiagnosticsTool } from './lsp/get_diagnostics';
 import { FindDefinitionTool } from './lsp/find_definition';
 import { FindReferencesTool } from './lsp/find_references';
+import { GetDocumentSymbolsTool } from './lsp/get_document_symbols';
+import { lspManager } from './lsp/LspManager';
 import { RememberFactTool } from './memory/remember_fact';
 import { BrowserNavigateTool } from './browser/browser_navigate';
 import { BrowserScreenshotTool } from './browser/browser_screenshot';
@@ -90,6 +92,7 @@ export class ToolRegistry {
     this.register(new GetDiagnosticsTool());
     this.register(new FindDefinitionTool());
     this.register(new FindReferencesTool());
+    this.register(new GetDocumentSymbolsTool());
 
     // Outils Mémoire (§20)
     this.register(new RememberFactTool());
@@ -196,9 +199,18 @@ export class ToolRegistry {
       return { available: true };
     }
 
-    // Outil LSP dépendant d'un serveur ou d'une configuration
-    if (name === 'get_diagnostics') {
-      // Vérifier si le gestionnaire LSP est configuré
+    // Outils LSP dépendants de la configuration TypeScript et du workspace
+    if (
+      name === 'get_diagnostics' ||
+      name === 'find_definition' ||
+      name === 'find_references' ||
+      name === 'get_document_symbols'
+    ) {
+      const activeWs = process.env.IROKO_ACTIVE_WORKSPACE || process.cwd();
+      const avail = lspManager.isAvailable(activeWs);
+      if (!avail.available) {
+        return { available: false, reasonDisabled: avail.reasonDisabled };
+      }
       return { available: true };
     }
 

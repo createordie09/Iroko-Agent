@@ -1,8 +1,12 @@
+// server/verification/VerificationEngine.ts
+// Cahier §18 : Moteur de vérification avec intégration LSP (§14) et repli transparent sur tsc
+
 import path from 'path';
 import fs from 'fs';
 import { WorkspaceMetadata, workspaceManager } from '../workspace/WorkspaceManager';
 import { AgentEvent } from '../types/events';
 import { processManager } from '../tools/terminal/ProcessManager';
+import { lspManager } from '../tools/lsp/LspManager';
 
 export interface VerificationErrorLocation {
   file?: string;
@@ -47,9 +51,6 @@ export interface VerificationOptions {
   timeoutMs?: number;
 }
 
-/**
- * Interface d'adaptateur pour les gestionnaires de paquets (extensible pour d'autres écosystèmes).
- */
 export interface PackageManagerAdapter {
   name: string;
   runScript(scriptName: string, extraArgs?: string[]): string;
@@ -59,37 +60,31 @@ export interface PackageManagerAdapter {
 export const PACKAGE_MANAGER_ADAPTERS: Record<string, PackageManagerAdapter> = {
   npm: {
     name: 'npm',
-    runScript: (script, extra) => `npm run ${script}${extra?.length ? ' ' + extra.join(' ') : ''}`,
+    runScript: (s, extra) => `npm run ${s}${extra?.length ? ' ' + extra.join(' ') : ''}`,
     execBinary: (bin, args) => `npx ${bin}${args?.length ? ' ' + args.join(' ') : ''}`
   },
   pnpm: {
     name: 'pnpm',
-    runScript: (script, extra) => `pnpm run ${script}${extra?.length ? ' ' + extra.join(' ') : ''}`,
+    runScript: (s, extra) => `pnpm run ${s}${extra?.length ? ' ' + extra.join(' ') : ''}`,
     execBinary: (bin, args) => `pnpm exec ${bin}${args?.length ? ' ' + args.join(' ') : ''}`
   },
   yarn: {
     name: 'yarn',
-    runScript: (script, extra) => `yarn run ${script}${extra?.length ? ' ' + extra.join(' ') : ''}`,
+    runScript: (s, extra) => `yarn run ${s}${extra?.length ? ' ' + extra.join(' ') : ''}`,
     execBinary: (bin, args) => `yarn exec ${bin}${args?.length ? ' ' + args.join(' ') : ''}`
   },
   bun: {
     name: 'bun',
-    runScript: (script, extra) => `bun run ${script}${extra?.length ? ' ' + extra.join(' ') : ''}`,
+    runScript: (s, extra) => `bun run ${s}${extra?.length ? ' ' + extra.join(' ') : ''}`,
     execBinary: (bin, args) => `bun x ${bin}${args?.length ? ' ' + args.join(' ') : ''}`
   }
 };
 
 export class VerificationEngine {
-  /**
-   * Obtient l'adaptateur pour le gestionnaire de paquets détecté (repli sur npm).
-   */
   public getAdapter(packageManager: string): PackageManagerAdapter {
     return PACKAGE_MANAGER_ADAPTERS[packageManager] || PACKAGE_MANAGER_ADAPTERS.npm;
   }
 
-  /**
-   * Détermine les commandes applicables et les contrôles ignorés avec raison explicite.
-   */
   public planChecks(
     workspacePath: string,
     meta: WorkspaceMetadata,
@@ -119,31 +114,23 @@ export class VerificationEngine {
         skipped.push({
           type: 'typecheck',
           name: 'Typecheck TypeScript',
-          reason: 'Ignoré : aucun script de typage (typecheck, check-types, tsc) ni tsconfig.json détecté.'
+          reason: 'Ignoré : aucun script de typage ni tsconfig.json détecté.'
         });
       }
     }
 
     // 2. Lint
     if (!requested || requested.includes('lint')) {
-      const isLintAlreadyUsedForTsc = planned.some(p => p.command.includes('run lint'));
-      if (scripts['lint'] && !isLintAlreadyUsedForTsc) {
+      const isLintUsedForTsc = planned.some(p => p.command.includes('run lint'));
+      if (scripts['lint'] && !isLintUsedForTsc) {
         planned.push({ name: 'Linter (ESLint)', type: 'lint', command: adapter.runScript('lint') });
       } else {
-        const eslintConfigs = [
-          '.eslintrc.js', '.eslintrc.cjs', '.eslintrc.json', '.eslintrc.yaml', '.eslintrc.yml',
-          '.eslintrc', 'eslint.config.js', 'eslint.config.mjs', 'eslint.config.ts', 'eslint.config.cjs'
-        ];
-        const hasEslintConfig = eslintConfigs.some(cfg => fs.existsSync(path.join(workspacePath, cfg)));
-
-        if (hasEslintConfig && !isLintAlreadyUsedForTsc) {
+        const eslintConfigs = ['.eslintrc.js', '.eslintrc.cjs', '.eslintrc.json', '.eslintrc.yaml', '.eslintrc.yml', '.eslintrc', 'eslint.config.js', 'eslint.config.mjs', 'eslint.config.ts', 'eslint.config.cjs'];
+        const hasEslint = eslintConfigs.some(cfg => fs.existsSync(path.join(workspacePath, cfg)));
+        if (hasEslint && !isLintUsedForTsc) {
           planned.push({ name: 'Linter (ESLint direct)', type: 'lint', command: adapter.execBinary('eslint', ['.']) });
-        } else if (!isLintAlreadyUsedForTsc) {
-          skipped.push({
-            type: 'lint',
-            name: 'Linter',
-            reason: 'Ignoré : aucun script "lint" ni fichier de configuration ESLint détecté.'
-          });
+        } else if (!isLintUsedForTsc) {
+          skipped.push({ type: 'lint', name: 'Linter', reason: 'Ignoré : aucun script "lint" ni configuration ESLint détecté.' });
         }
       }
     }
@@ -152,18 +139,11 @@ export class VerificationEngine {
     if (!requested || requested.includes('test')) {
       if (scripts['test'] && !scripts['test'].includes('no test specified')) {
         let testCmd = adapter.runScript('test');
-        if (scripts['test'].includes('vitest')) {
-          testCmd = adapter.runScript('test', ['--', '--run']);
-        } else if (scripts['test'].includes('jest')) {
-          testCmd = adapter.runScript('test', ['--', '--watchAll=false']);
-        }
+        if (scripts['test'].includes('vitest')) testCmd = adapter.runScript('test', ['--', '--run']);
+        else if (scripts['test'].includes('jest')) testCmd = adapter.runScript('test', ['--', '--watchAll=false']);
         planned.push({ name: 'Tests Unitaires', type: 'test', command: testCmd });
       } else {
-        skipped.push({
-          type: 'test',
-          name: 'Tests Unitaires',
-          reason: 'Ignoré : aucun script "test" configuré dans package.json.'
-        });
+        skipped.push({ type: 'test', name: 'Tests Unitaires', reason: 'Ignoré : aucun script "test" configuré dans package.json.' });
       }
     }
 
@@ -172,99 +152,61 @@ export class VerificationEngine {
       if (scripts['build']) {
         planned.push({ name: 'Build de Production', type: 'build', command: adapter.runScript('build') });
       } else {
-        skipped.push({
-          type: 'build',
-          name: 'Build de Production',
-          reason: 'Ignoré : aucun script "build" configuré dans package.json.'
-        });
+        skipped.push({ type: 'build', name: 'Build de Production', reason: 'Ignoré : aucun script "build" configuré dans package.json.' });
       }
     }
 
     return { planned, skipped };
   }
 
-  /**
-   * Analyse et extrait les erreurs structurées (fichier:ligne:colonne) depuis la sortie.
-   */
   public static parseErrorLocations(output: string): VerificationErrorLocation[] {
     const locations: VerificationErrorLocation[] = [];
     const lines = output.split(/\r?\n/);
-
-    // Motifs courants :
-    // TypeScript : src/App.tsx(12,5): error TS2322: ...
-    // TypeScript : src/App.tsx:12:5 - error TS2322: ...
-    // ESLint :   12:5  error  Unexpected any  @typescript-eslint/no-explicit-any
-    // Général : src/file.ts:12:5 ou src/file.ts:12
-    const tsParenRegex = /^([a-zA-Z0-9._/\\]+)\((\d+),(\d+)\):\s*(?:error|warning)\s*TS\d+:\s*(.+)$/i;
-    const tsColonRegex = /^([a-zA-Z0-9._/\\]+):(\d+):(\d+)\s*-\s*(?:error|warning)\s*TS\d+:\s*(.+)$/i;
-    const generalRegex = /^([a-zA-Z0-9._/\\]+\.[a-zA-Z0-9]+):(\d+)(?::(\d+))?\s*(?:-\s*)?(.+)$/i;
-
+    const tsParen = /^([a-zA-Z0-9._/\\]+)\((\d+),(\d+)\):\s*(?:error|warning)\s*TS\d+:\s*(.+)$/i;
+    const tsColon = /^([a-zA-Z0-9._/\\]+):(\d+):(\d+)\s*-\s*(?:error|warning)\s*TS\d+:\s*(.+)$/i;
+    const genRegex = /^([a-zA-Z0-9._/\\]+\.[a-zA-Z0-9]+):(\d+)(?::(\d+))?\s*(?:-\s*)?(.+)$/i;
     let currentFile = '';
 
-    for (const line of lines) {
-      const trimmed = line.trim();
+    for (const rawLine of lines) {
+      const trimmed = rawLine.trim();
       if (!trimmed) continue;
-
-      // Détection de nom de fichier seul (ex: ESLint groupe par fichier)
       if (/^[a-zA-Z0-9._/\\]+\.[a-zA-Z0-9]+$/.test(trimmed)) {
         currentFile = trimmed;
         continue;
       }
-
-      // Format TypeScript avec parenthèses
-      const parenMatch = trimmed.match(tsParenRegex);
-      if (parenMatch) {
+      const matchTs = trimmed.match(tsParen) || trimmed.match(tsColon);
+      if (matchTs) {
         locations.push({
-          file: parenMatch[1].replace(/\\/g, '/'),
-          line: parseInt(parenMatch[2], 10),
-          column: parseInt(parenMatch[3], 10),
-          message: parenMatch[4].trim()
+          file: matchTs[1].replace(/\\/g, '/'),
+          line: parseInt(matchTs[2], 10),
+          column: parseInt(matchTs[3], 10),
+          message: matchTs[4].trim()
         });
         continue;
       }
-
-      // Format TypeScript avec deux-points
-      const colonMatch = trimmed.match(tsColonRegex);
-      if (colonMatch) {
-        locations.push({
-          file: colonMatch[1].replace(/\\/g, '/'),
-          line: parseInt(colonMatch[2], 10),
-          column: parseInt(colonMatch[3], 10),
-          message: colonMatch[4].trim()
-        });
-        continue;
-      }
-
-      // Format ESLint sous un fichier courant : "  12:5  error  ..."
-      const eslintMatch = trimmed.match(/^(\d+):(\d+)\s+(?:error|warning)\s+(.+)$/i);
-      if (eslintMatch && currentFile) {
+      const matchEs = trimmed.match(/^(\d+):(\d+)\s+(?:error|warning)\s+(.+)$/i);
+      if (matchEs && currentFile) {
         locations.push({
           file: currentFile.replace(/\\/g, '/'),
-          line: parseInt(eslintMatch[1], 10),
-          column: parseInt(eslintMatch[2], 10),
-          message: eslintMatch[3].trim()
+          line: parseInt(matchEs[1], 10),
+          column: parseInt(matchEs[2], 10),
+          message: matchEs[3].trim()
         });
         continue;
       }
-
-      // Format général file:line:col
-      const genMatch = trimmed.match(generalRegex);
-      if (genMatch) {
+      const matchGen = trimmed.match(genRegex);
+      if (matchGen) {
         locations.push({
-          file: genMatch[1].replace(/\\/g, '/'),
-          line: parseInt(genMatch[2], 10),
-          column: genMatch[3] ? parseInt(genMatch[3], 10) : undefined,
-          message: genMatch[4].trim()
+          file: matchGen[1].replace(/\\/g, '/'),
+          line: parseInt(matchGen[2], 10),
+          column: matchGen[3] ? parseInt(matchGen[3], 10) : undefined,
+          message: matchGen[4].trim()
         });
       }
     }
-
-    return locations.slice(0, 10); // Limiter aux 10 premières erreurs
+    return locations.slice(0, 10);
   }
 
-  /**
-   * Exécute le pipeline de vérification complet et structuré.
-   */
   public async runVerification(
     workspacePath: string,
     emitEvent?: (event: AgentEvent) => void,
@@ -272,7 +214,6 @@ export class VerificationEngine {
   ): Promise<VerificationResult> {
     const meta = await workspaceManager.analyze(workspacePath);
 
-    // Vérification de la présence de node_modules (si package.json existe)
     if (meta.keyFiles.includes('package.json') && !meta.hasNodeModules) {
       const msg = `Dépendances manquantes : le répertoire "node_modules" est absent. Une installation préalable (${meta.packageManager} install) est requise.`;
       return {
@@ -281,17 +222,12 @@ export class VerificationEngine {
         checks: [],
         skippedChecks: [],
         summary: msg,
-        firstFailure: {
-          checkName: 'Dépendances',
-          command: `${meta.packageManager} install`,
-          output: msg
-        }
+        firstFailure: { checkName: 'Dépendances', command: `${meta.packageManager} install`, output: msg }
       };
     }
 
     const { planned, skipped } = this.planChecks(workspacePath, meta, options.checksToRun);
-    const timeoutMs = options.timeoutMs || 60000; // 60s max par étape
-
+    const timeoutMs = options.timeoutMs || 60000;
     const checksResults: VerificationCheck[] = [];
     let firstFailure: VerificationResult['firstFailure'] | undefined;
 
@@ -312,24 +248,51 @@ export class VerificationEngine {
         status: 'running'
       };
 
-      if (emitEvent) {
-        emitEvent({
-          type: 'verification_step',
-          check: { ...check }
-        });
+      if (emitEvent) emitEvent({ type: 'verification_step', check: { ...check } });
+
+      // Compléter le contrôle typecheck existant par le LSP avec repli transparent sur tsc (Cahier §14)
+      let handledByLsp = false;
+      if (plan.type === 'typecheck' && lspManager.isAvailable(workspacePath).available) {
+        try {
+          const lspStart = Date.now();
+          const diags = await lspManager.getDiagnostics(workspacePath);
+          const errors = diags.filter(d => d.category === 'error');
+          if (errors.length === 0) {
+            check.status = 'passed';
+            check.durationMs = Date.now() - lspStart;
+            check.output = `Diagnostics LSP réussis : 0 erreur détectée (${diags.length} diagnostic(s) total).`;
+            checksResults.push(check);
+            if (emitEvent) emitEvent({ type: 'verification_step', check: { ...check } });
+            handledByLsp = true;
+            continue;
+          } else {
+            check.status = 'failed';
+            check.durationMs = Date.now() - lspStart;
+            const errLocations: VerificationErrorLocation[] = errors.map(e => ({
+              file: e.file,
+              line: e.line,
+              column: e.column,
+              message: `${e.message} [TS${e.code}]`
+            }));
+            const formatted = errors.slice(0, 10).map(e => `${e.file}:${e.line}:${e.column} - error TS${e.code}: ${e.message}`).join('\n');
+            check.output = formatted;
+            check.errors = errLocations;
+            if (!firstFailure) {
+              firstFailure = { checkName: plan.name, command: 'lsp:get_diagnostics', output: formatted, errors: errLocations };
+            }
+            checksResults.push(check);
+            if (emitEvent) emitEvent({ type: 'verification_step', check: { ...check } });
+            handledByLsp = true;
+            break;
+          }
+        } catch {
+          // Repli transparent sur la commande CLI tsc
+        }
       }
 
       const startTime = Date.now();
-
-      // Exécution sécurisée via ProcessManager (environnement assaini L8, destruction récursive, timeout)
-      const executionResult = await processManager.executeCommand(
-        plan.command,
-        workspacePath,
-        timeoutMs
-      );
-
-      const durationMs = Date.now() - startTime;
-      check.durationMs = durationMs;
+      const executionResult = await processManager.executeCommand(plan.command, workspacePath, timeoutMs);
+      check.durationMs = Date.now() - startTime;
 
       if (executionResult.exitCode === 0 && !executionResult.timedOut) {
         check.status = 'passed';
@@ -337,7 +300,6 @@ export class VerificationEngine {
       } else {
         check.status = 'failed';
         const rawError = executionResult.stderr || executionResult.stdout || 'Échec de la commande de vérification.';
-        // Plafonner la sortie d'erreur à 50 Ko
         const cappedError = rawError.length > 50 * 1024
           ? `${rawError.slice(0, 50 * 1024)}\n\n[Sortie d'erreur tronquée : limite de 50 Ko atteinte]`
           : rawError;
@@ -357,18 +319,9 @@ export class VerificationEngine {
       }
 
       checksResults.push(check);
+      if (emitEvent) emitEvent({ type: 'verification_step', check: { ...check } });
 
-      if (emitEvent) {
-        emitEvent({
-          type: 'verification_step',
-          check: { ...check }
-        });
-      }
-
-      // En cas d'échec, interrompre la chaîne immédiatement pour remonter l'erreur (§18)
-      if (check.status === 'failed') {
-        break;
-      }
+      if (check.status === 'failed') break;
     }
 
     const allPassed = checksResults.length > 0 && checksResults.every(c => c.status === 'passed');
@@ -378,8 +331,7 @@ export class VerificationEngine {
     if (allPassed) {
       summary = `Toutes les vérifications requises ont réussi (${passedCount}/${planned.length} contrôles validés).`;
       if (skipped.length > 0) {
-        const skippedReasons = skipped.map(s => `${s.name} (${s.reason})`).join(' ; ');
-        summary += ` Contrôles ignorés : ${skippedReasons}.`;
+        summary += ` Contrôles ignorés : ${skipped.map(s => `${s.name} (${s.reason})`).join(' ; ')}.`;
       }
     } else {
       summary = `Échec de vérification sur "${firstFailure?.checkName}" (${firstFailure?.command}). ${passedCount}/${planned.length} contrôle(s) validé(s).`;
@@ -389,13 +341,7 @@ export class VerificationEngine {
       }
     }
 
-    return {
-      allPassed,
-      checks: checksResults,
-      skippedChecks: skipped,
-      summary,
-      firstFailure
-    };
+    return { allPassed, checks: checksResults, skippedChecks: skipped, summary, firstFailure };
   }
 }
 
