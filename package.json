@@ -46,8 +46,10 @@
     "pptxgenjs": "^4.0.1",
     "react": "^19.0.1",
     "react-dom": "^19.0.1",
+    "unzipper": "^0.10.14",
     "vite": "^6.2.3",
     "ws": "^8.21.3",
+    "zip-stream": "^4.1.1",
     "zod": "^4.6.5"
   },
   "devDependencies": {

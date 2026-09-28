@@ -10,10 +10,11 @@ import fs from 'fs';
 const testDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'iroko-r6c-subagents-'));
 process.env.IROKO_DATA_DIR = testDataDir;
 
-import { subagentManager } from '../server/subagents/SubagentManager.ts';
-import { SUBAGENT_DEFINITIONS } from '../server/subagents/types.ts';
-import { runtimeDatabase } from '../server/storage/RuntimeDatabase.ts';
-import { ToolRegistry } from '../server/tools/ToolRegistry.ts';
+// Imports dynamiques pour garantir la prise en compte préalable de IROKO_DATA_DIR
+const { subagentManager } = await import('../server/subagents/SubagentManager.ts');
+const { SUBAGENT_DEFINITIONS } = await import('../server/subagents/types.ts');
+const { runtimeDatabase } = await import('../server/storage/RuntimeDatabase.ts');
+const { ToolRegistry } = await import('../server/tools/ToolRegistry.ts');
 
 describe('MISSION R6c : Sous-Agents Spécialisés et Routage (§11)', () => {
   const toolRegistry = new ToolRegistry();

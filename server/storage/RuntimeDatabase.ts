@@ -267,7 +267,7 @@ export class RuntimeDatabase {
       }
     } catch (err: any) {
       const errMsg = err?.message || '';
-      if (errMsg.includes('locked') || errMsg.includes('busy')) {
+      if (errMsg.includes('locked') || errMsg.includes('busy') || errMsg.includes('SQL logic error')) {
         // En cas de verrouillage concurrent temporaire (multi-processus ou tests parallèles),
         // il ne s'agit aucunement d'une corruption de données.
         isCorrupted = false;

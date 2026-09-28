@@ -3,6 +3,7 @@ import { WebSocketServer, WebSocket } from 'ws';
 import path from 'path';
 import crypto from 'crypto';
 import os from 'os';
+import { fileURLToPath } from 'url';
 import { AgentEvent, ClientMessage } from './types/events';
 import { modelGateway } from './models/ModelGateway';
 import { toolRegistry } from './tools/ToolRegistry';
@@ -2852,7 +2853,10 @@ const server = http.createServer(async (req, res) => {
 
     // Service de fichiers statiques avec repli SPA (§ Mission M8.2)
     if (req.method === 'GET' && !pathname.startsWith('/api/') && !pathname.startsWith('/ws') && pathname !== '/health') {
-      const distDir = path.resolve(process.cwd(), 'dist');
+      const defaultDist = path.resolve(process.cwd(), 'dist');
+      const distDir = fs.existsSync(defaultDist)
+        ? defaultDist
+        : path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../dist');
 
       // 1. Validation de sécurité : interdiction absolue de traversée de chemin
       if (
