@@ -37,6 +37,14 @@ export function registerTestClient(pid) {
     }
   } catch {}
   if (!Array.isArray(clients)) clients = [];
+  clients = clients.filter((p) => {
+    try {
+      process.kill(p, 0);
+      return true;
+    } catch {
+      return false;
+    }
+  });
   if (!clients.includes(pid)) clients.push(pid);
   try {
     fs.writeFileSync(clientsFile, JSON.stringify(clients));

@@ -12,7 +12,14 @@ async function extractPdfText(buffer: Buffer): Promise<{
   isEncrypted: boolean;
 }> {
   try {
-    const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.js');
+    let pdfjsLib: any;
+    try {
+      // @ts-ignore
+      pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs');
+    } catch {
+      // @ts-ignore
+      pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.js');
+    }
     // Convert Buffer to Uint8Array for pdfjs-dist
     const uint8Array = new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength);
 

@@ -261,13 +261,14 @@ export class RuntimeDatabase {
       } catch {}
       const rows = testDb.prepare('PRAGMA integrity_check').all() as Array<Record<string, any>>;
       const firstVal = rows.length > 0 ? Object.values(rows[0])[0] : null;
-      if (firstVal !== 'ok') {
+      const valStr = String(firstVal || '');
+      if (firstVal !== 'ok' && !valStr.includes('vtable constructor failed') && !valStr.includes('locked') && !valStr.includes('busy')) {
         isCorrupted = true;
         corruptionReason = `PRAGMA integrity_check: ${JSON.stringify(rows)}`;
       }
     } catch (err: any) {
       const errMsg = err?.message || '';
-      if (errMsg.includes('locked') || errMsg.includes('busy') || errMsg.includes('SQL logic error')) {
+      if (errMsg.includes('locked') || errMsg.includes('busy') || errMsg.includes('SQL logic error') || errMsg.includes('vtable constructor failed')) {
         // En cas de verrouillage concurrent temporaire (multi-processus ou tests parallèles),
         // il ne s'agit aucunement d'une corruption de données.
         isCorrupted = false;

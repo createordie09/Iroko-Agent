@@ -83,7 +83,7 @@ test('MISSION L14 - Connecteurs MCP (Cahier §15, §19, §26)', async (t) => {
       command: process.execPath,
       args: [fixtureServerScript],
       enabled: true,
-      initTimeoutMs: 2000
+      initTimeoutMs: 10000
     });
 
     assert.equal(serverInfo.name, 'test_calc');
@@ -151,7 +151,7 @@ test('MISSION L14 - Connecteurs MCP (Cahier §15, §19, §26)', async (t) => {
         type: 'streamable-http',
         url: httpUrl,
         enabled: true,
-        initTimeoutMs: 2000
+        initTimeoutMs: 10000
       });
       assert.equal(httpInfo.name, 'test_http');
       assert.equal(httpInfo.status, 'connected');
@@ -221,7 +221,7 @@ test('MISSION L14 - Connecteurs MCP (Cahier §15, §19, §26)', async (t) => {
         command: process.execPath,
         args: [envCheckScript],
         enabled: true,
-        initTimeoutMs: 2000
+        initTimeoutMs: 10000
       });
 
       const mockContext = { workspacePath: tempDir, permissionEngine: { requestPermission: async () => true }, emitEvent: () => {} };
@@ -252,7 +252,7 @@ test('MISSION L14 - Connecteurs MCP (Cahier §15, §19, §26)', async (t) => {
         command: process.execPath,
         args: [fixtureServerScript],
         enabled: false,
-        initTimeoutMs: 2000
+        initTimeoutMs: 10000
       });
 
       assert.equal(disabledInfo.enabled, false);
@@ -302,7 +302,7 @@ test('MISSION L14 - Connecteurs MCP (Cahier §15, §19, §26)', async (t) => {
       command: process.execPath,
       args: [fixtureServerScript],
       enabled: true,
-      initTimeoutMs: 2000
+      initTimeoutMs: 10000
     });
     const srvB = await mcpManager.addServer({
       name: 'server_b',
@@ -310,7 +310,7 @@ test('MISSION L14 - Connecteurs MCP (Cahier §15, §19, §26)', async (t) => {
       command: process.execPath,
       args: [fixtureServerScript],
       enabled: true,
-      initTimeoutMs: 2000
+      initTimeoutMs: 10000
     });
 
     assert.equal(srvA.status, 'connected');

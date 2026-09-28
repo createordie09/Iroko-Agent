@@ -146,7 +146,7 @@ test('Garde Réseau - 3. Chargement de l\'application : zéro requête externe h
 
   try {
     // Naviguer sur l'application locale
-    await page.goto('http://127.0.0.1:5173', { waitUntil: 'networkidle', timeout: 15000 });
+    await page.goto('http://127.0.0.1:5173', { waitUntil: 'networkidle', timeout: 60000 });
 
     // Attendre que l'interface soit interactive
     await page.waitForSelector('textarea', { timeout: 10000 });

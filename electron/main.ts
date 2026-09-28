@@ -368,23 +368,14 @@ ipcMain.handle('set-auto-launch', (_event, enabled: boolean) => {
 
 ipcMain.handle('set-minimize-to-tray', (_event, enabled: boolean) => {
   closeToTray = Boolean(enabled);
-  if (closeToTray) {
-    ensureTray();
-  } else {
-    destroyTray();
-  }
+  if (closeToTray) ensureTray(); else destroyTray();
   if (runtimeDb) {
-    try {
-      runtimeDb.setSetting('minimize_to_tray', closeToTray);
-    } catch {}
+    try { runtimeDb.setSetting('minimize_to_tray', closeToTray); } catch {}
   }
   return { success: true, enabled: closeToTray };
 });
 
-app.on('before-quit', () => {
-  isQuitting = true;
-});
-
+app.on('before-quit', () => { isQuitting = true; });
 app.whenReady().then(createWindow);
 
 app.on('window-all-closed', async () => {
@@ -392,9 +383,7 @@ app.on('window-all-closed', async () => {
     isQuitting = true;
     destroyTray();
     if (shutdownFn) {
-      try {
-        await shutdownFn(false);
-      } catch {}
+      try { await shutdownFn(false); } catch {}
     }
     app.quit();
   }
