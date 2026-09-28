@@ -6,21 +6,19 @@ import { SearchProvidersSection } from './SearchProvidersSection';
 
 export function ProvidersPage() {
   const {
-    providers, credentials, selectedProviderId, setSelectedProviderId,
-    newKeyLabel, setNewKeyLabel, newKeyRaw, setNewKeyRaw,
-    showAddKeyForm, setShowAddKeyForm, showSecret, testingKeyId, testStatus,
-    showManageModels, setShowManageModels, refreshingProviderId,
-    handleTestCredential, handleTestProvider, handleRefreshProvider,
+    providers, credentials, selectedProviderId, setSelectedProviderId, newKeyLabel, setNewKeyLabel,
+    newKeyRaw, setNewKeyRaw, showAddKeyForm, setShowAddKeyForm, showSecret, testingKeyId, testStatus,
+    showManageModels, setShowManageModels, refreshingProviderId, handleTestCredential, handleTestProvider, handleRefreshProvider,
     handleDeleteProviderKeys, getProviderStatusText, handleAddCredential, handleDeleteCredential,
-    handleAddCredentialDirect,
-    imageProviders, imageModels, activeImageProvider, activeImageModel, setActiveImageModel,
-    imageApiKey, setImageApiKey, imageAccountId, setImageAccountId,
-    imageHasKey, imageMaskedKey, imageSaveSuccess, isSavingImageSettings,
-    handleSelectImageProvider, handleSaveMediaSettings,
-    videoProviders, videoModels, activeVideoProvider, activeVideoModel, setActiveVideoModel,
-    videoApiKey, setVideoApiKey, videoHasKey, videoMaskedKey, videoTimeoutMs, setVideoTimeoutMs,
-    videoSaveSuccess, isSavingVideoSettings, handleSelectVideoProvider, handleSaveVideoSettings
+    handleAddCredentialDirect, imageProviders, imageModels, activeImageProvider, activeImageModel, setActiveImageModel,
+    imageApiKey, setImageApiKey, imageAccountId, setImageAccountId, imageHasKey, imageMaskedKey,
+    imageSaveSuccess, isSavingImageSettings, handleSelectImageProvider, handleSaveMediaSettings,
+    videoProviders, videoModels, activeVideoProvider, activeVideoModel, setActiveVideoModel, videoApiKey,
+    setVideoApiKey, videoHasKey, videoMaskedKey, videoTimeoutMs, setVideoTimeoutMs, videoSaveSuccess,
+    isSavingVideoSettings, handleSelectVideoProvider, handleSaveVideoSettings
   } = useProvidersSettings();
+
+  const [confirmDeleteProviderId, setConfirmDeleteProviderId] = React.useState<string | null>(null);
 
   if (showManageModels) {
     return <ManageModelsSection onBack={() => setShowManageModels(false)} />;
@@ -92,15 +90,38 @@ export function ProvidersPage() {
                       >
                         {isRefreshing ? 'Actualisation…' : 'Actualiser'}
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteProviderKeys(p.id)}
-                        className="p-1.5 text-[var(--text-secondary)] hover:text-[var(--text-primary)] rounded-[4px] hover:bg-[var(--bg-active)] transition-colors cursor-pointer"
-                        title="Supprimer la clé"
-                        aria-label={`Supprimer la clé ${p.name}`}
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                      {confirmDeleteProviderId === p.id ? (
+                        <div className="flex items-center gap-1 text-xs bg-[var(--bg-surface)] px-1.5 py-0.5 rounded border border-[var(--border-modal)]">
+                          <span className="text-[11px] text-[var(--text-secondary)]">Supprimer{'\u00A0'}?</span>
+                          <button
+                            type="button"
+                            onClick={() => setConfirmDeleteProviderId(null)}
+                            className="px-1 text-[11px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] cursor-pointer"
+                          >
+                            Annuler
+                          </button>
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              await handleDeleteProviderKeys(p.id);
+                              setConfirmDeleteProviderId(null);
+                            }}
+                            className="px-1.5 py-0.5 bg-[var(--bg-active)] border border-[var(--border-modal)] text-[var(--text-primary)] hover:bg-[var(--bg-surface-hover)] rounded text-[11px] font-medium cursor-pointer"
+                          >
+                            Confirmer
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setConfirmDeleteProviderId(p.id)}
+                          className="p-1.5 text-[var(--text-secondary)] hover:text-[var(--text-primary)] rounded-[4px] hover:bg-[var(--bg-active)] transition-colors cursor-pointer"
+                          title="Supprimer la clé"
+                          aria-label={`Supprimer la clé ${p.name}`}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                     </>
                   ) : (
                     <button

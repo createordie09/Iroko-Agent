@@ -34,6 +34,7 @@ export function SearchProvidersSection({
   const [keyLabel, setKeyLabel] = useState('');
   const [customUrl, setCustomUrl] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
+  const [confirmDeleteSearchKeyId, setConfirmDeleteSearchKeyId] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -141,15 +142,38 @@ export function SearchProvidersSection({
                     >
                       {testingKeyId === pCreds[0].id ? 'Test…' : 'Tester'}
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => onDeleteCredential(pCreds[0].id)}
-                      className="p-1.5 text-[var(--text-secondary)] hover:text-[var(--text-primary)] rounded-[4px] hover:bg-[var(--bg-active)] transition-colors cursor-pointer"
-                      title="Supprimer la clé"
-                      aria-label={`Supprimer la clé ${p.name}`}
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                    {confirmDeleteSearchKeyId === pCreds[0].id ? (
+                      <div className="flex items-center gap-1 text-xs bg-[var(--bg-surface)] px-1.5 py-0.5 rounded border border-[var(--border-modal)]">
+                        <span className="text-[11px] text-[var(--text-secondary)]">Supprimer{'\u00A0'}?</span>
+                        <button
+                          type="button"
+                          onClick={() => setConfirmDeleteSearchKeyId(null)}
+                          className="px-1 text-[11px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] cursor-pointer"
+                        >
+                          Annuler
+                        </button>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            await onDeleteCredential(pCreds[0].id);
+                            setConfirmDeleteSearchKeyId(null);
+                          }}
+                          className="px-1.5 py-0.5 bg-[var(--bg-active)] border border-[var(--border-modal)] text-[var(--text-primary)] hover:bg-[var(--bg-surface-hover)] rounded text-[11px] font-medium cursor-pointer"
+                        >
+                          Confirmer
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setConfirmDeleteSearchKeyId(pCreds[0].id)}
+                        className="p-1.5 text-[var(--text-secondary)] hover:text-[var(--text-primary)] rounded-[4px] hover:bg-[var(--bg-active)] transition-colors cursor-pointer"
+                        title="Supprimer la clé"
+                        aria-label={`Supprimer la clé ${p.name}`}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                   </>
                 ) : (
                   <button

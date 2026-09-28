@@ -105,11 +105,18 @@ export function ChatMessageItem({
             <button
               type="button"
               onClick={() => onCopy(msg.content, index)}
-              className="p-1 rounded text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface)] transition-colors cursor-pointer"
-              title="Copier"
-              aria-label="Copier le message"
+              className={`p-1 rounded transition-colors cursor-pointer ${
+                copiedIndex === index
+                  ? 'text-[var(--text-primary)] bg-[var(--bg-surface)]'
+                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface)]'
+              }`}
+              title={copiedIndex === index ? 'Copié' : 'Copier'}
+              aria-label={copiedIndex === index ? 'Message copié' : 'Copier le message'}
             >
-              {copiedIndex === index ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+              {copiedIndex === index ? <Check className="w-3.5 h-3.5 text-[var(--text-primary)]" /> : <Copy className="w-3.5 h-3.5" />}
+              <span className="sr-only" aria-live="polite">
+                {copiedIndex === index ? 'Message copié dans le presse-papier' : ''}
+              </span>
             </button>
             <button
               type="button"
@@ -255,11 +262,18 @@ export function ChatMessageItem({
             <button
               type="button"
               onClick={() => onCopy(msg.content, index)}
-              className="p-1 rounded text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface)] transition-colors cursor-pointer"
-              title="Copier"
-              aria-label="Copier la réponse"
+              className={`p-1 rounded transition-colors cursor-pointer ${
+                copiedIndex === index
+                  ? 'text-[var(--text-primary)] bg-[var(--bg-surface)]'
+                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface)]'
+              }`}
+              title={copiedIndex === index ? 'Copié' : 'Copier'}
+              aria-label={copiedIndex === index ? 'Réponse copiée' : 'Copier la réponse'}
             >
-              {copiedIndex === index ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+              {copiedIndex === index ? <Check className="w-3.5 h-3.5 text-[var(--text-primary)]" /> : <Copy className="w-3.5 h-3.5" />}
+              <span className="sr-only" aria-live="polite">
+                {copiedIndex === index ? 'Réponse copiée dans le presse-papier' : ''}
+              </span>
             </button>
             <button
               type="button"

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { ChevronRight, ChevronDown } from 'lucide-react';
+import { ChevronRight, ChevronDown, Copy, Check } from 'lucide-react';
 import { MessageSource } from '../../types';
+import { useCopyFeedback } from '../../hooks/useCopyFeedback';
 
 export interface MessageSourcesProps {
   sources?: MessageSource[];
@@ -8,6 +9,7 @@ export interface MessageSourcesProps {
 
 export function MessageSources({ sources }: MessageSourcesProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const { copy, isCopied } = useCopyFeedback();
 
   if (!sources || sources.length === 0) {
     return null;
@@ -23,23 +25,57 @@ export function MessageSources({ sources }: MessageSourcesProps) {
       </div>
 
       <div className="flex flex-col gap-1.5 max-w-full">
-        {displayedSources.map((source, idx) => (
-          <a
-            key={`${source.url}-${idx}`}
-            href={source.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label={`${source.title} (${source.domain})`}
-            className="group flex items-center justify-between gap-3 px-3 py-1.5 min-h-[30px] rounded-[var(--radius-button)] bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-hover)] border border-[var(--border-subtle)] text-[12px] text-[var(--text-primary)] transition-colors focus-visible:outline-2 focus-visible:outline-[var(--border-active)] focus-visible:outline-offset-2 tap-target-24"
-          >
-            <span className="truncate flex-1 text-[var(--text-primary)]">
-              {source.title || source.domain}
-            </span>
-            <span className="text-[11px] text-[var(--text-tertiary)] group-hover:text-[var(--text-secondary)] shrink-0 font-mono">
-              {source.domain}
-            </span>
-          </a>
-        ))}
+        {displayedSources.map((source, idx) => {
+          const copied = isCopied(idx);
+          return (
+            <div
+              key={`${source.url}-${idx}`}
+              className="group flex items-center justify-between gap-2 px-3 py-1.5 min-h-[30px] rounded-[var(--radius-button)] bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-hover)] border border-[var(--border-subtle)] text-[12px] text-[var(--text-primary)] transition-colors"
+            >
+              <a
+                href={source.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={`${source.title} (${source.domain})`}
+                className="flex-1 min-w-0 flex items-center justify-between gap-3 text-[12px] text-[var(--text-primary)] focus-visible:outline-2 focus-visible:outline-[var(--border-active)] focus-visible:outline-offset-2 tap-target-24"
+              >
+                <span className="truncate flex-1 text-[var(--text-primary)]">
+                  {source.title || source.domain}
+                </span>
+                <span className="text-[11px] text-[var(--text-tertiary)] group-hover:text-[var(--text-secondary)] shrink-0 font-mono">
+                  {source.domain}
+                </span>
+              </a>
+
+              <button
+                type="button"
+                onClick={() => copy(source.url, idx)}
+                className={`w-[58px] py-0.5 rounded text-[11px] font-sans transition-colors flex items-center justify-center gap-1 shrink-0 tap-target-24 cursor-pointer ${
+                  copied
+                    ? 'text-[var(--text-primary)] bg-[var(--bg-surface-hover)]'
+                    : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface)]'
+                }`}
+                title="Copier le lien"
+                aria-label={`Copier le lien de la source ${source.title || source.domain}`}
+              >
+                {copied ? (
+                  <>
+                    <Check className="w-3 h-3 text-[var(--text-primary)]" />
+                    <span className="text-[var(--text-primary)]">Copié</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3 h-3 text-[var(--text-secondary)]" />
+                    <span>Copier</span>
+                  </>
+                )}
+                <span className="sr-only" aria-live="polite">
+                  {copied ? 'Lien de la source copié dans le presse-papier' : ''}
+                </span>
+              </button>
+            </div>
+          );
+        })}
       </div>
 
       {hasMore && (

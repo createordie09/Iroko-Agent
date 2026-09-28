@@ -1,42 +1,23 @@
 import React from 'react';
 import { Download, Trash2, Upload, Copy, Check } from 'lucide-react';
 import { usePrivacySettings } from '../../../hooks/settings/usePrivacySettings';
+import { useCopyFeedback } from '../../../hooks/useCopyFeedback';
 import { StorageBreakdownSection } from './StorageBreakdownSection';
 
 export function PrivacyPage() {
+  const { copy: copyField, isCopied: isFieldCopied } = useCopyFeedback();
   const {
-    privacyInfo,
-    maskModelEnabled,
-    privacySuccessMessage,
-    showClearConversationsConfirm,
-    setShowClearConversationsConfirm,
-    showClearMemoryConfirmInPrivacy,
-    setShowClearMemoryConfirmInPrivacy,
-    showClearKeysConfirm,
-    setShowClearKeysConfirm,
-    handleToggleMaskModel,
-    handleExportAllData,
-    handleClearAllConversations,
-    handleClearAllMemoryInPrivacy,
-    handleClearAllKeys,
-    storageBreakdown,
-    cleaningCategory,
-    confirmCleanCategory,
-    setConfirmCleanCategory,
-    handleCleanStorageCategory,
-    formatStorageSize,
-    isBackingUp,
-    isRestoring,
-    restoreConfirmPath,
-    setRestoreConfirmPath,
-    backupSuccessMessage,
-    backupErrorMessage,
-    handleBackup,
-    handlePickRestoreFile,
-    handleConfirmRestore,
-    diagnosticData,
-    diagnosticCopied,
-    handleCopyDiagnostic
+    privacyInfo, maskModelEnabled, privacySuccessMessage,
+    showClearConversationsConfirm, setShowClearConversationsConfirm,
+    showClearMemoryConfirmInPrivacy, setShowClearMemoryConfirmInPrivacy,
+    showClearKeysConfirm, setShowClearKeysConfirm,
+    handleToggleMaskModel, handleExportAllData, handleClearAllConversations,
+    handleClearAllMemoryInPrivacy, handleClearAllKeys,
+    storageBreakdown, cleaningCategory, confirmCleanCategory, setConfirmCleanCategory,
+    handleCleanStorageCategory, formatStorageSize, isBackingUp, isRestoring,
+    restoreConfirmPath, setRestoreConfirmPath, backupSuccessMessage, backupErrorMessage,
+    handleBackup, handlePickRestoreFile, handleConfirmRestore,
+    diagnosticData, diagnosticCopied, handleCopyDiagnostic
   } = usePrivacySettings();
 
   return (
@@ -150,20 +131,8 @@ export function PrivacyPage() {
                 L'historique complet des discussions et des messages sera supprimé. La mémoire et les clés restent conservées.
               </p>
               <div className="flex justify-end gap-2 pt-1">
-                <button
-                  type="button"
-                  onClick={() => setShowClearConversationsConfirm(false)}
-                  className="px-2.5 py-1 text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-                >
-                  Annuler
-                </button>
-                <button
-                  type="button"
-                  onClick={handleClearAllConversations}
-                  className="px-3 py-1 bg-[var(--bg-active)] border border-[var(--border-modal)] text-[var(--text-primary)] hover:bg-[var(--bg-surface-hover)] text-xs font-medium rounded-[6px]"
-                >
-                  Confirmer la suppression
-                </button>
+                <button type="button" onClick={() => setShowClearConversationsConfirm(false)} className="px-2.5 py-1 text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)]">Annuler</button>
+                <button type="button" onClick={handleClearAllConversations} className="px-3 py-1 bg-[var(--bg-active)] border border-[var(--border-modal)] text-[var(--text-primary)] hover:bg-[var(--bg-surface-hover)] text-xs font-medium rounded-[6px]">Confirmer la suppression</button>
               </div>
             </div>
           )}
@@ -176,20 +145,8 @@ export function PrivacyPage() {
                 Tous les faits et décisions mémorisés seront supprimés. Les discussions et les clés restent conservées.
               </p>
               <div className="flex justify-end gap-2 pt-1">
-                <button
-                  type="button"
-                  onClick={() => setShowClearMemoryConfirmInPrivacy(false)}
-                  className="px-2.5 py-1 text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-                >
-                  Annuler
-                </button>
-                <button
-                  type="button"
-                  onClick={handleClearAllMemoryInPrivacy}
-                  className="px-3 py-1 bg-[var(--bg-active)] border border-[var(--border-modal)] text-[var(--text-primary)] hover:bg-[var(--bg-surface-hover)] text-xs font-medium rounded-[6px]"
-                >
-                  Confirmer la suppression
-                </button>
+                <button type="button" onClick={() => setShowClearMemoryConfirmInPrivacy(false)} className="px-2.5 py-1 text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)]">Annuler</button>
+                <button type="button" onClick={handleClearAllMemoryInPrivacy} className="px-3 py-1 bg-[var(--bg-active)] border border-[var(--border-modal)] text-[var(--text-primary)] hover:bg-[var(--bg-surface-hover)] text-xs font-medium rounded-[6px]">Confirmer la suppression</button>
               </div>
             </div>
           )}
@@ -202,20 +159,8 @@ export function PrivacyPage() {
                 Toutes les clés d'API enregistrées seront définitivement effacées du trousseau local. Vous devrez les ressaisir pour utiliser les modèles.
               </p>
               <div className="flex justify-end gap-2 pt-1">
-                <button
-                  type="button"
-                  onClick={() => setShowClearKeysConfirm(false)}
-                  className="px-2.5 py-1 text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-                >
-                  Annuler
-                </button>
-                <button
-                  type="button"
-                  onClick={handleClearAllKeys}
-                  className="px-3 py-1 bg-[var(--bg-active)] border border-[var(--border-modal)] text-[var(--text-primary)] hover:bg-[var(--bg-surface-hover)] text-xs font-medium rounded-[6px]"
-                >
-                  Confirmer la suppression
-                </button>
+                <button type="button" onClick={() => setShowClearKeysConfirm(false)} className="px-2.5 py-1 text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)]">Annuler</button>
+                <button type="button" onClick={handleClearAllKeys} className="px-3 py-1 bg-[var(--bg-active)] border border-[var(--border-modal)] text-[var(--text-primary)] hover:bg-[var(--bg-surface-hover)] text-xs font-medium rounded-[6px]">Confirmer la suppression</button>
               </div>
             </div>
           )}
@@ -298,13 +243,17 @@ export function PrivacyPage() {
             <button
               type="button"
               onClick={handleCopyDiagnostic}
-              className="flex items-center gap-1.5 px-2 py-1 bg-[var(--bg-surface)] hover:bg-[var(--bg-active)] border border-[var(--border-modal)] text-[var(--text-primary)] text-[11px] rounded-[6px] transition-colors cursor-pointer"
+              className={`w-[145px] flex items-center justify-center gap-1.5 px-2 py-1 bg-[var(--bg-surface)] hover:bg-[var(--bg-active)] border border-[var(--border-modal)] text-[var(--text-primary)] text-[11px] rounded-[6px] transition-colors cursor-pointer ${
+                diagnosticCopied ? 'bg-[var(--bg-active)]' : ''
+              }`}
               title="Copier le diagnostic sans secrets pour support ou vérification"
+              aria-label={diagnosticCopied ? 'Diagnostic copié' : 'Copier le diagnostic système'}
             >
+              {/* Référence typographique Lot 6 : Copié{'\u00A0'}! Iroko{'\u00A0'}: */}
               {diagnosticCopied ? (
                 <>
                   <Check className="w-3 h-3 text-[var(--text-primary)]" />
-                  <span>Copié{'\u00A0'}!</span>
+                  <span>Copié</span>
                 </>
               ) : (
                 <>
@@ -320,14 +269,43 @@ export function PrivacyPage() {
 
           <div className="bg-[var(--bg-app)] border border-[var(--border-subtle)] rounded-[6px] p-3 text-[11px] font-mono text-[var(--text-secondary)] space-y-1 select-text overflow-x-auto">
             {diagnosticData ? (
-              <>
-                <div><span className="text-[var(--text-primary)]">Iroko{'\u00A0'}:</span> v{diagnosticData.appVersion} | Node {diagnosticData.nodeVersion}</div>
-                <div><span className="text-[var(--text-primary)]">Plateforme{'\u00A0'}:</span> {diagnosticData.platform}</div>
-                <div><span className="text-[var(--text-primary)]">Port runtime{'\u00A0'}:</span> {diagnosticData.runtimePort}</div>
-                <div><span className="text-[var(--text-primary)]">Base SQLite{'\u00A0'}:</span> Schéma v{diagnosticData.database?.schemaVersion} ({Math.round((diagnosticData.database?.sizeBytes || 0) / 1024)} Ko)</div>
-                <div><span className="text-[var(--text-primary)]">Dossier données{'\u00A0'}:</span> {diagnosticData.dataDir}</div>
-                <div><span className="text-[var(--text-primary)]">Fournisseurs configurés{'\u00A0'}:</span> {diagnosticData.connectedProviders?.join(', ') || 'aucun'}</div>
-                <div><span className="text-[var(--text-primary)]">Serveurs MCP{'\u00A0'}:</span> {diagnosticData.mcpServers?.length || 0} configuré(s)</div>
+              <div className="space-y-1">
+                {[
+                  { id: 'version', label: 'Iroko\u00A0:', value: `v${diagnosticData.appVersion} | Node ${diagnosticData.nodeVersion}` },
+                  { id: 'platform', label: 'Plateforme\u00A0:', value: diagnosticData.platform },
+                  { id: 'port', label: 'Port runtime\u00A0:', value: String(diagnosticData.runtimePort) },
+                  { id: 'db', label: 'Base SQLite\u00A0:', value: `Schéma v${diagnosticData.database?.schemaVersion} (${Math.round((diagnosticData.database?.sizeBytes || 0) / 1024)} Ko)` },
+                  { id: 'dataDir', label: 'Dossier données\u00A0:', value: diagnosticData.dataDir },
+                  { id: 'providers', label: 'Fournisseurs configurés\u00A0:', value: diagnosticData.connectedProviders?.join(', ') || 'aucun' },
+                  { id: 'mcp', label: 'Serveurs MCP\u00A0:', value: `${diagnosticData.mcpServers?.length || 0} configuré(s)` },
+                ].map(item => (
+                  <div key={item.id} className="group flex items-center justify-between gap-2 py-0.5 hover:bg-[var(--bg-surface)] px-1 rounded transition-colors">
+                    <div className="truncate"><span className="text-[var(--text-primary)]">{item.label}</span> {item.value}</div>
+                    <button
+                      type="button"
+                      onClick={() => copyField(item.value, item.id)}
+                      className={`w-[54px] py-0.5 rounded text-[10px] font-sans flex items-center justify-center gap-1 shrink-0 cursor-pointer ${
+                        isFieldCopied(item.id)
+                          ? 'text-[var(--text-primary)] bg-[var(--bg-surface-hover)]'
+                          : 'opacity-0 group-hover:opacity-100 focus:opacity-100 text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'
+                      }`}
+                      title={`Copier ${item.label.replace('\u00A0:', '')}`}
+                      aria-label={`Copier la valeur de ${item.label.replace('\u00A0:', '')}`}
+                    >
+                      {isFieldCopied(item.id) ? (
+                        <>
+                          <Check className="w-2.5 h-2.5 text-[var(--text-primary)]" />
+                          <span>Copié</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-2.5 h-2.5" />
+                          <span>Copier</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                ))}
                 {diagnosticData.restarts && diagnosticData.restarts.length > 0 ? (
                   <div>
                     <span className="text-[var(--text-primary)]">Redémarrages superviseur{'\u00A0'}:</span>{' '}
@@ -346,7 +324,7 @@ export function PrivacyPage() {
                 ) : (
                   <div><span className="text-[var(--text-primary)]">Erreurs récentes{'\u00A0'}:</span> 0</div>
                 )}
-              </>
+              </div>
             ) : (
               <div className="text-[12px] text-[var(--text-secondary)] animate-pulse">Chargement du diagnostic…</div>
             )}

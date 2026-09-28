@@ -1,8 +1,10 @@
 import React from 'react';
-import { Plus, Download, Trash2, Edit2 } from 'lucide-react';
+import { Plus, Download, Trash2, Edit2, Copy, Check } from 'lucide-react';
 import { useMemorySettings } from '../../../hooks/settings/useMemorySettings';
+import { useCopyFeedback } from '../../../hooks/useCopyFeedback';
 
 export function MemoryPage() {
+  const { copy, isCopied } = useCopyFeedback();
   const {
     memoryEnabled,
     memories,
@@ -287,6 +289,19 @@ export function MemoryPage() {
                         minute: '2-digit'
                       })}
                     </span>
+                    <button
+                      type="button"
+                      onClick={() => copy(m.fact, m.id)}
+                      className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] p-0.5 cursor-pointer"
+                      title={isCopied(m.id) ? "Copié" : "Copier ce fait"}
+                      aria-label={isCopied(m.id) ? "Fait copié" : "Copier ce fait"}
+                    >
+                      {isCopied(m.id) ? (
+                        <Check className="w-3.5 h-3.5 text-[var(--text-primary)]" />
+                      ) : (
+                        <Copy className="w-3.5 h-3.5" />
+                      )}
+                    </button>
                     <button
                       type="button"
                       onClick={() => {

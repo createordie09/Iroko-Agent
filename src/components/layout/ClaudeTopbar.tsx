@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { PanelLeft, ChevronDown, Settings, MoreHorizontal, FileText, Download, Trash2, FileDown } from 'lucide-react';
+import { PanelLeft, ChevronDown, Settings, MoreHorizontal, FileText, Download, Trash2, FileDown, Copy, Check } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useUndoDeletion } from '../../hooks/useUndoDeletion';
+import { useCopyFeedback } from '../../hooks/useCopyFeedback';
 import { tokenService } from '../../services/security/TokenService';
 
 export function ClaudeTopbar() {
@@ -18,6 +19,7 @@ export function ClaudeTopbar() {
     messages
   } = useApp();
   const { scheduleUndoableDeletion } = useUndoDeletion();
+  const { copy, isCopied } = useCopyFeedback();
 
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
   const [pdfError, setPdfError] = useState<string | null>(null);
@@ -124,6 +126,16 @@ export function ClaudeTopbar() {
     a.remove();
     URL.revokeObjectURL(url);
     setIsExportMenuOpen(false);
+  };
+
+  const handleCopyMarkdown = () => {
+    if (messages.length === 0) return;
+    let md = `# ${currentTitle}\n\n`;
+    messages.forEach((m) => {
+      const roleLabel = m.role === 'user' ? 'Utilisateur' : 'Assistant';
+      md += `### ${roleLabel}\n\n${m.content}\n\n---\n\n`;
+    });
+    copy(md, 'markdown');
   };
 
   const handleExportJson = () => {
@@ -239,6 +251,27 @@ export function ClaudeTopbar() {
                   >
                     <FileText className="w-3.5 h-3.5 text-[var(--text-secondary)]" />
                     <span>Exporter en Markdown (.md)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleCopyMarkdown}
+                    disabled={messages.length === 0}
+                    className={`w-full px-3 py-1.5 text-left text-[13px] flex items-center justify-between hover:bg-[var(--bg-surface-hover)] transition-colors cursor-pointer ${
+                      messages.length === 0 ? 'text-[var(--text-tertiary)] cursor-not-allowed' : 'text-[var(--text-primary)]'
+                    }`}
+                  >
+                    <span className="flex items-center gap-2">
+                      {isCopied('markdown') ? (
+                        <Check className="w-3.5 h-3.5 text-[var(--text-primary)]" />
+                      ) : (
+                        <Copy className="w-3.5 h-3.5 text-[var(--text-secondary)]" />
+                      )}
+                      <span>{isCopied('markdown') ? 'Copié' : 'Copier en Markdown'}</span>
+                    </span>
+                    <span className="sr-only" aria-live="polite">
+                      {isCopied('markdown') ? 'Discussion copiée en Markdown dans le presse-papier' : ''}
+                    </span>
                   </button>
 
                   <button
