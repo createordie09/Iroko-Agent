@@ -123,6 +123,7 @@ Définis dans [`src/index.css`](file:///c:/Users/DELL/Documents/Iroko-Agent/src/
 ### Arrondis (Border Radius)
 - `--radius-composer: 16px` : Contour du composer principal.
 - `--radius-modal: 16px` : Fenêtre de paramètres et dialogues modaux.
+- `--radius-card: 12px` : Cartes de contenu (onboarding, encarts d'information, blocs de formulaire).
 - `--radius-button: 8px` : Boutons de navigation et boutons de la sidebar.
 - `--radius-item: 8px` : Lignes de liste (projets, discussions).
 - `--radius-pill: 9999px` : Contrôle segmenté [ Chat | Code ].
