@@ -52,7 +52,7 @@ export function CapabilitiesPage() {
                 type="button"
                 onClick={() => handleToggleTool(tool.name, tool.enabled)}
                 disabled={!tool.available || togglingToolName === tool.name}
-                className={`w-9 h-5 rounded-full relative transition-colors shrink-0 ${
+                className={`w-9 h-5 rounded-full relative transition-colors shrink-0 tap-target-24 ${
                   !tool.available
                     ? 'opacity-40 cursor-not-allowed bg-[var(--bg-active)]'
                     : tool.enabled
@@ -104,7 +104,7 @@ export function CapabilitiesPage() {
                   value={opt.id}
                   checked={webSearchPermission === opt.id}
                   onChange={() => handleUpdateSearchPermission(opt.id as any)}
-                  className="mt-0.5 accent-[var(--text-primary)] cursor-pointer"
+                  className="mt-0.5 accent-[var(--text-primary)] cursor-pointer tap-target-24"
                 />
                 <div className="text-[12px]">
                   <div className="font-medium text-[var(--text-primary)]">{opt.label}</div>

@@ -67,7 +67,7 @@ export function StorageBreakdownSection({
                 type="button"
                 onClick={() => setConfirmCleanCategory({ id: cat.id, label: cat.label })}
                 disabled={isCleaning || (cat.data?.bytes === 0 && cat.id !== 'database')}
-                className="px-2.5 py-1 text-[11px] bg-[var(--bg-app)] hover:bg-[var(--bg-active)] border border-[var(--border-modal)] text-[var(--text-primary)] rounded-[6px] transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                className="px-2.5 py-1 text-[11px] bg-[var(--bg-app)] hover:bg-[var(--bg-active)] border border-[var(--border-modal)] text-[var(--text-primary)] rounded-[6px] transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer tap-target-24"
               >
                 {isCleaning ? 'Nettoyage…' : cat.actionLabel}
               </button>

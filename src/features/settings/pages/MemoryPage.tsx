@@ -53,7 +53,7 @@ export function MemoryPage() {
           <button
             type="button"
             onClick={() => handleToggleMemory(!memoryEnabled)}
-            className={`w-9 h-5 rounded-full relative transition-colors ${
+            className={`w-9 h-5 rounded-full relative transition-colors tap-target-24 ${
               memoryEnabled ? 'bg-[var(--text-primary)]' : 'bg-[var(--bg-active)]'
             }`}
             aria-label="Activer ou désactiver la mémoire"
@@ -259,13 +259,24 @@ export function MemoryPage() {
 
         {/* Liste des éléments mémorisés */}
         <div className="space-y-2 mt-2">
-          {memories
-            .filter(m => {
+          {(() => {
+            const filteredMemories = memories.filter(m => {
               if (memoryScopeFilter === 'global') return m.scope === 'global';
               if (memoryScopeFilter === 'project') return m.scope === 'project';
               return true;
-            })
-            .map(m => (
+            });
+
+            if (filteredMemories.length === 0) {
+              return (
+                <div className="text-center py-6 text-[12px] text-[var(--text-secondary)] bg-[var(--bg-app)] border border-[var(--border-subtle)] rounded-[6px]">
+                  {memories.length === 0
+                    ? 'Aucun fait mémorisé pour le moment.'
+                    : 'Aucun fait mémorisé pour ce filtre.'}
+                </div>
+              );
+            }
+
+            return filteredMemories.map(m => (
               <div
                 key={m.id}
                 className="bg-[var(--bg-surface)] border border-[var(--border-modal)] rounded-[6px] p-3 flex flex-col gap-1.5"
@@ -292,7 +303,7 @@ export function MemoryPage() {
                     <button
                       type="button"
                       onClick={() => copy(m.fact, m.id)}
-                      className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] p-0.5 cursor-pointer"
+                      className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] p-0.5 cursor-pointer tap-target-24"
                       title={isCopied(m.id) ? "Copié" : "Copier ce fait"}
                       aria-label={isCopied(m.id) ? "Fait copié" : "Copier ce fait"}
                     >
@@ -312,7 +323,7 @@ export function MemoryPage() {
                         setMemoryError(null);
                         setShowAddMemoryModal(true);
                       }}
-                      className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] p-0.5"
+                      className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] p-0.5 tap-target-24"
                       title="Modifier ce fait"
                       aria-label="Modifier ce fait"
                     >
@@ -322,7 +333,7 @@ export function MemoryPage() {
                       type="button"
                       onClick={() => handleDeleteMemoryItem(m.id)}
                       disabled={deletingMemoryId === m.id}
-                      className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] p-0.5 disabled:opacity-40"
+                      className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] p-0.5 disabled:opacity-40 tap-target-24"
                       title="Supprimer ce fait"
                       aria-label="Supprimer ce fait"
                     >
@@ -335,13 +346,8 @@ export function MemoryPage() {
                   {m.fact}
                 </p>
               </div>
-            ))}
-
-          {memories.length === 0 && (
-            <div className="text-center py-6 text-[12px] text-[var(--text-secondary)] bg-[var(--bg-app)] border border-[var(--border-subtle)] rounded-[6px]">
-              Aucun fait mémorisé pour le moment.
-            </div>
-          )}
+            ));
+          })()}
         </div>
       </div>
     </div>

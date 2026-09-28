@@ -223,7 +223,7 @@ export function ConnectorsPage() {
                     <button
                       type="button"
                       onClick={() => handleToggleMcpServer(server.name, server.enabled)}
-                      className={`px-2 py-0.5 text-[11px] rounded transition-colors ${
+                      className={`px-2 py-0.5 text-[11px] rounded transition-colors tap-target-24 ${
                         server.enabled ? 'bg-[var(--bg-active)] text-[var(--text-primary)]' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
                       }`}
                     >
@@ -254,7 +254,7 @@ export function ConnectorsPage() {
                       <button
                         type="button"
                         onClick={() => setConfirmDeleteServerName(server.name)}
-                        className="p-1 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
+                        className="p-1 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer tap-target-24"
                         title="Supprimer le connecteur"
                         aria-label={`Supprimer le connecteur ${server.name}`}
                       >
@@ -307,7 +307,7 @@ export function ConnectorsPage() {
                             <button
                               type="button"
                               onClick={() => handleToggleMcpTool(server.name, tool.name, tool.enabled)}
-                              className={`px-1.5 py-0.5 rounded text-[10px] transition-colors ${
+                              className={`px-1.5 py-0.5 rounded text-[10px] transition-colors tap-target-24 ${
                                 tool.enabled ? 'bg-[var(--bg-active)] text-[var(--text-primary)]' : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'
                               }`}
                             >

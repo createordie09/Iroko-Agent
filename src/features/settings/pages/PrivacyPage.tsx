@@ -65,7 +65,7 @@ export function PrivacyPage() {
           <button
             type="button"
             onClick={() => handleToggleMaskModel(!maskModelEnabled)}
-            className={`w-9 h-5 rounded-full relative transition-colors ${
+            className={`w-9 h-5 rounded-full relative transition-colors tap-target-24 ${
               maskModelEnabled ? 'bg-[var(--text-primary)]' : 'bg-[var(--bg-active)]'
             }`}
             aria-label="Masquer les secrets avant envoi au modèle"
@@ -284,7 +284,7 @@ export function PrivacyPage() {
                     <button
                       type="button"
                       onClick={() => copyField(item.value, item.id)}
-                      className={`w-[54px] py-0.5 rounded text-[10px] font-sans flex items-center justify-center gap-1 shrink-0 cursor-pointer ${
+                      className={`w-[54px] py-0.5 rounded text-[10px] font-sans flex items-center justify-center gap-1 shrink-0 cursor-pointer tap-target-24 ${
                         isFieldCopied(item.id)
                           ? 'text-[var(--text-primary)] bg-[var(--bg-surface-hover)]'
                           : 'opacity-0 group-hover:opacity-100 focus:opacity-100 text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'

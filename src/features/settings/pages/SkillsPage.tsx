@@ -216,7 +216,7 @@ export function SkillsPage() {
                   <button
                     type="button"
                     onClick={() => handleToggleSkill(skill.name, skill.enabled)}
-                    className={`px-2 py-0.5 text-[11px] rounded transition-colors ${
+                    className={`px-2 py-0.5 text-[11px] rounded transition-colors tap-target-24 ${
                       skill.enabled ? 'bg-[var(--bg-active)] text-[var(--text-primary)]' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
                     }`}
                   >
@@ -228,7 +228,7 @@ export function SkillsPage() {
                       setEditingSkill(skill);
                       setEditSkillInstructions(skill.instructions);
                     }}
-                    className="p-1 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+                    className="p-1 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors tap-target-24"
                     title="Modifier les instructions"
                     aria-label={`Modifier les instructions de ${skill.name}`}
                   >

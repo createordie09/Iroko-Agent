@@ -39,7 +39,7 @@ export function CodePage() {
                 <button
                   type="button"
                   onClick={() => handleUpdatePermissionMode('ask')}
-                  className={`px-2.5 py-1 rounded-[6px] text-xs transition-colors ${
+                  className={`px-2.5 py-1 rounded-[6px] text-xs transition-colors tap-target-24 ${
                     permissionMode === 'ask' ? 'bg-[var(--bg-active)] text-[var(--text-primary)] font-medium' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
                   }`}
                   title="Demander pour toute modification ou commande non triviale"
@@ -49,7 +49,7 @@ export function CodePage() {
                 <button
                   type="button"
                   onClick={() => handleUpdatePermissionMode('auto_edit')}
-                  className={`px-2.5 py-1 rounded-[6px] text-xs transition-colors ${
+                  className={`px-2.5 py-1 rounded-[6px] text-xs transition-colors tap-target-24 ${
                     permissionMode === 'auto_edit' ? 'bg-[var(--bg-active)] text-[var(--text-primary)] font-medium' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
                   }`}
                   title="Autoriser automatiquement l'édition de fichiers, demander pour les commandes"
@@ -59,7 +59,7 @@ export function CodePage() {
                 <button
                   type="button"
                   onClick={() => handleUpdatePermissionMode('read_only')}
-                  className={`px-2.5 py-1 rounded-[6px] text-xs transition-colors ${
+                  className={`px-2.5 py-1 rounded-[6px] text-xs transition-colors tap-target-24 ${
                     permissionMode === 'read_only' ? 'bg-[var(--bg-active)] text-[var(--text-primary)] font-medium' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
                   }`}
                   title="Interdire toute modification ou commande risquée"
@@ -94,7 +94,7 @@ export function CodePage() {
                   key={opt.ms}
                   type="button"
                   onClick={() => handleUpdateTerminalTimeout(opt.ms)}
-                  className={`px-2.5 py-1 rounded-[6px] text-xs transition-colors ${
+                  className={`px-2.5 py-1 rounded-[6px] text-xs transition-colors tap-target-24 ${
                     terminalTimeout === opt.ms ? 'bg-[var(--bg-active)] text-[var(--text-primary)] font-medium' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
                   }`}
                 >
@@ -122,7 +122,7 @@ export function CodePage() {
                   key={opt.ms}
                   type="button"
                   onClick={() => handleUpdateFileTimeout(opt.ms)}
-                  className={`px-2.5 py-1 rounded-[6px] text-xs transition-colors ${
+                  className={`px-2.5 py-1 rounded-[6px] text-xs transition-colors tap-target-24 ${
                     fileTimeout === opt.ms ? 'bg-[var(--bg-active)] text-[var(--text-primary)] font-medium' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
                   }`}
                 >
@@ -164,7 +164,7 @@ export function CodePage() {
                       type="button"
                       onClick={() => handleRevokeRule(rule.id)}
                       disabled={revokingRuleId === rule.id}
-                      className="px-2 py-1 text-[11px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface)] rounded border border-[var(--border-modal)] transition-colors"
+                      className="px-2 py-1 text-[11px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface)] rounded border border-[var(--border-modal)] transition-colors tap-target-24"
                       title="Révoquer cette autorisation"
                     >
                       Révoquer

@@ -32,7 +32,7 @@ export function ThinkingPage() {
               <button
                 type="button"
                 onClick={() => handleUpdateThinkingLevel('disabled')}
-                className={`px-2.5 py-1 rounded-[6px] text-xs transition-colors ${
+                className={`px-2.5 py-1 rounded-[6px] text-xs transition-colors tap-target-24 ${
                   thinkingLevel === 'disabled' ? 'bg-[var(--bg-active)] text-[var(--text-primary)] font-medium' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
                 }`}
                 title="Désactiver le raisonnement explicite"
@@ -42,7 +42,7 @@ export function ThinkingPage() {
               <button
                 type="button"
                 onClick={() => handleUpdateThinkingLevel('low')}
-                className={`px-2.5 py-1 rounded-[6px] text-xs transition-colors ${
+                className={`px-2.5 py-1 rounded-[6px] text-xs transition-colors tap-target-24 ${
                   thinkingLevel === 'low' ? 'bg-[var(--bg-active)] text-[var(--text-primary)] font-medium' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
                 }`}
                 title="Faible (~1 024 tokens)"
@@ -52,7 +52,7 @@ export function ThinkingPage() {
               <button
                 type="button"
                 onClick={() => handleUpdateThinkingLevel('medium')}
-                className={`px-2.5 py-1 rounded-[6px] text-xs transition-colors ${
+                className={`px-2.5 py-1 rounded-[6px] text-xs transition-colors tap-target-24 ${
                   thinkingLevel === 'medium' ? 'bg-[var(--bg-active)] text-[var(--text-primary)] font-medium' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
                 }`}
                 title="Moyen (~4 096 tokens)"
@@ -62,7 +62,7 @@ export function ThinkingPage() {
               <button
                 type="button"
                 onClick={() => handleUpdateThinkingLevel('high')}
-                className={`px-2.5 py-1 rounded-[6px] text-xs transition-colors ${
+                className={`px-2.5 py-1 rounded-[6px] text-xs transition-colors tap-target-24 ${
                   thinkingLevel === 'high' ? 'bg-[var(--bg-active)] text-[var(--text-primary)] font-medium' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
                 }`}
                 title="Élevé (~16 384 tokens)"
@@ -92,7 +92,7 @@ export function ThinkingPage() {
             <button
               type="button"
               onClick={() => handleUpdateSubagentAutoRouting(!subagentAutoRouting)}
-              className={`w-9 h-5 rounded-full relative transition-colors ${
+              className={`w-9 h-5 rounded-full relative transition-colors tap-target-24 ${
                 subagentAutoRouting ? 'bg-[var(--text-primary)]' : 'bg-[var(--bg-active)]'
               }`}
               aria-label="Activer ou désactiver le routage automatique des sous-agents"
