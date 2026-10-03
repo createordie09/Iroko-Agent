@@ -270,3 +270,14 @@ test('Correction 12 — une seule pile HTTP côté client (tokenService.fetch)',
   assert.ok(!/[^.]fetch\(/.test(art.replace(/tokenService\.fetch\(/g, '')), 'ArtifactService ne doit plus utiliser fetch brut');
   assert.ok(!/await fetch\(/.test(read('src/hooks/settings/useSkillsSettings.ts')));
 });
+
+test('OpenRouter — catalogue sans modèles retirés et liste lue en direct avec repli vérifié', async () => {
+  const presets = read('server/models/providers/presets/index.ts');
+  const openrouterBlock = presets.slice(presets.indexOf("id: 'openrouter'"), presets.indexOf("id: 'openai'"));
+  for (const retired of ['claude-3.7-sonnet', 'claude-3.5-sonnet', 'gpt-4.5-preview']) {
+    assert.ok(!openrouterBlock.includes(retired), `${retired} est retiré d'OpenRouter et ne doit plus être proposé`);
+  }
+  const provider = read('server/models/providers/OpenRouterProvider.ts');
+  assert.ok(provider.includes('/models`, { signal'), 'listModels doit interroger le catalogue réel');
+  assert.ok(!provider.includes("model === 'anthropic/claude-3.7-sonnet'"), 'Plus de repli silencieux vers un modèle retiré');
+});

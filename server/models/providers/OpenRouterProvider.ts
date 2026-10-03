@@ -7,16 +7,30 @@ export class OpenRouterProvider implements AIProvider {
   public name = 'OpenRouter';
   private baseUrl = 'https://openrouter.ai/api/v1';
 
+  /** Liste de repli (identifiants vérifiés auprès d'OpenRouter) si le catalogue en ligne est injoignable */
+  private static readonly FALLBACK_MODELS = [
+    'anthropic/claude-sonnet-4.5',
+    'anthropic/claude-haiku-4.5',
+    'openai/gpt-4o-mini',
+    'openai/o3-mini',
+    'google/gemini-2.5-pro',
+    'deepseek/deepseek-r1',
+    'deepseek/deepseek-chat'
+  ];
+
+  /** Catalogue réel d'OpenRouter (public, sans clé) ; repli statique en cas d'échec réseau */
   public async listModels(): Promise<string[]> {
-    return [
-      'anthropic/claude-3.7-sonnet',
-      'anthropic/claude-3.5-sonnet',
-      'openai/gpt-4.5-preview',
-      'openai/o3-mini',
-      'google/gemini-2.5-pro',
-      'deepseek/deepseek-r1',
-      'deepseek/deepseek-chat'
-    ];
+    try {
+      const res = await fetch(`${this.baseUrl}/models`, { signal: AbortSignal.timeout(8000) });
+      if (res.ok) {
+        const data = await res.json();
+        const ids = Array.isArray(data?.data) ? data.data.map((m: any) => m?.id).filter((id: unknown): id is string => typeof id === 'string') : [];
+        if (ids.length > 0) return ids;
+      }
+    } catch {
+      // repli ci-dessous
+    }
+    return [...OpenRouterProvider.FALLBACK_MODELS];
   }
 
   public async *generateStream(request: ModelRequest, apiKey: string): AsyncIterable<StreamChunk> {
@@ -35,14 +49,18 @@ export class OpenRouterProvider implements AIProvider {
       'deepseek-reasoner': 'deepseek/deepseek-r1',
       'deepseek/deepseek-chat': 'deepseek/deepseek-chat',
       'deepseek-chat': 'deepseek/deepseek-chat',
-      'anthropic/claude-3-7-sonnet-latest': 'anthropic/claude-3.7-sonnet',
-      'claude-3-7-sonnet-latest': 'anthropic/claude-3.7-sonnet',
-      'anthropic/claude-3-5-sonnet-latest': 'anthropic/claude-3.5-sonnet',
-      'claude-3-5-sonnet-latest': 'anthropic/claude-3.5-sonnet',
-      'anthropic/claude-3-5-haiku-latest': 'anthropic/claude-3.5-haiku',
-      'claude-3-5-haiku-latest': 'anthropic/claude-3.5-haiku',
-      'openai/gpt-4.5-preview': 'openai/gpt-4.5-preview',
-      'gpt-4.5-preview': 'openai/gpt-4.5-preview',
+      // Modèles Claude 3.x et GPT-4.5 retirés d'OpenRouter : redirigés vers leurs successeurs
+      'anthropic/claude-3.7-sonnet': 'anthropic/claude-sonnet-4.5',
+      'anthropic/claude-3.5-sonnet': 'anthropic/claude-sonnet-4.5',
+      'anthropic/claude-3-7-sonnet-latest': 'anthropic/claude-sonnet-4.5',
+      'claude-3-7-sonnet-latest': 'anthropic/claude-sonnet-4.5',
+      'anthropic/claude-3-5-sonnet-latest': 'anthropic/claude-sonnet-4.5',
+      'claude-3-5-sonnet-latest': 'anthropic/claude-sonnet-4.5',
+      'anthropic/claude-3.5-haiku': 'anthropic/claude-haiku-4.5',
+      'anthropic/claude-3-5-haiku-latest': 'anthropic/claude-haiku-4.5',
+      'claude-3-5-haiku-latest': 'anthropic/claude-haiku-4.5',
+      'openai/gpt-4.5-preview': 'openai/gpt-4o',
+      'gpt-4.5-preview': 'openai/gpt-4o',
       'openai/o3-mini': 'openai/o3-mini',
       'o3-mini': 'openai/o3-mini',
       'openai/o1': 'openai/o1',
@@ -114,7 +132,7 @@ export class OpenRouterProvider implements AIProvider {
       payload.reasoning = { effort: request.thinkingLevel };
     }
 
-    let response = await fetch(`${this.baseUrl}/chat/completions`, {
+    const response = await fetch(`${this.baseUrl}/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -125,22 +143,6 @@ export class OpenRouterProvider implements AIProvider {
       body: JSON.stringify(payload),
       signal: request.abortSignal
     });
-
-    if (!response.ok && response.status === 404 && model === 'anthropic/claude-3.7-sonnet') {
-      // Re-tentative automatique vers anthropic/claude-3.5-sonnet si l'endpoint 3.7 n'est pas disponible (404)
-      payload.model = 'anthropic/claude-3.5-sonnet';
-      response = await fetch(`${this.baseUrl}/chat/completions`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
-          'HTTP-Referer': 'https://iroko-agent.local',
-          'X-Title': 'Iroko Code Agent'
-        },
-        body: JSON.stringify(payload),
-        signal: request.abortSignal
-      });
-    }
 
     if (!response.ok) {
       const errText = await response.text();
