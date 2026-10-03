@@ -22,6 +22,9 @@ export class PermissionEngine {
   private pendingRequests: Map<string, PendingPermission> = new Map();
   // Délai maximal d'attente d'une réponse de l'utilisateur (120 secondes / 2 minutes par défaut)
   private timeoutMs = 120000;
+
+  /** Notifié de la fin de chaque demande interactive (réponse de l'utilisateur, expiration ou annulation) */
+  public onDecision?: (decision: { requestId: string; outcome: 'approved' | 'denied' | 'expired'; scope?: string }) => void;
   // Temps total cumulé passé en attente d'approbation utilisateur (exclu des timeouts de tâche)
   private totalWaitTimeMs = 0;
 
@@ -193,6 +196,7 @@ export class PermissionEngine {
           fingerprint
         });
 
+        this.notifyDecision(requestId, 'expired');
         resolve(false);
       }, this.timeoutMs);
 
@@ -281,16 +285,26 @@ export class PermissionEngine {
       fingerprint: pending.fingerprint
     });
 
+    this.notifyDecision(requestId, approved ? 'approved' : 'denied', actualScope);
     pending.resolve(approved);
     return true;
+  }
+
+  private notifyDecision(requestId: string, outcome: 'approved' | 'denied' | 'expired', scope?: string): void {
+    try {
+      this.onDecision?.({ requestId, outcome, scope });
+    } catch {
+      // la notification ne doit jamais bloquer la décision
+    }
   }
 
   /**
    * Réinitialise les autorisations de session et annule les requêtes en attente.
    */
   public clear(): void {
-    for (const pending of this.pendingRequests.values()) {
+    for (const [requestId, pending] of this.pendingRequests.entries()) {
       clearTimeout(pending.timer);
+      this.notifyDecision(requestId, 'denied');
       pending.resolve(false);
     }
     this.pendingRequests.clear();

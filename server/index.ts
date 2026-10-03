@@ -3079,6 +3079,7 @@ wss.on('connection', (ws: WebSocket) => {
     }
   };
 
+  permissionEngine.onDecision = (decision) => emitRuntimeEvent({ type: 'permission_resolved', ...decision } as AgentEvent);
   const runtime = new AgentRuntime(sessionId, DEFAULT_WORKSPACE, permissionEngine, emitRuntimeEvent);
 
   const session: ActiveSession = {

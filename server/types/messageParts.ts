@@ -32,6 +32,17 @@ export type MessagePart =
       startedAt: number;
       durationMs?: number;
     }
+  | {
+      id: string;
+      type: 'permission';
+      requestId: string;
+      tool: string;
+      level: string;
+      description: string;
+      /** Commande ou chemin concerné (réel, sans empreinte interne) */
+      target?: string;
+      status: 'pending' | 'approved' | 'denied' | 'expired';
+    }
   | { id: string; type: 'plan'; steps: PlanStep[] }
   | ({ id: string; type: 'artifact' } & ArtifactPartData);
 
@@ -132,6 +143,37 @@ export function applyEventToParts(parts: MessagePart[], event: AgentEvent, now: 
             error: event.error,
             durationMs: Math.max(0, now - p.startedAt)
           };
+        }
+        return p;
+      });
+      return found ? next : parts;
+    }
+
+    case 'permission_required': {
+      const req = event.request;
+      if (!req || !req.id || parts.some(p => p.type === 'permission' && p.requestId === req.id)) return parts;
+      const target = req.details?.command ?? req.details?.path;
+      return [
+        ...closeThinking(parts, now),
+        {
+          id: newPartId('permission'),
+          type: 'permission',
+          requestId: req.id,
+          tool: req.tool,
+          level: req.level,
+          description: req.description,
+          ...(typeof target === 'string' ? { target: target.slice(0, PART_MAX_STRING) } : {}),
+          status: 'pending'
+        }
+      ];
+    }
+
+    case 'permission_resolved': {
+      let found = false;
+      const next = parts.map(p => {
+        if (p.type === 'permission' && p.requestId === event.requestId) {
+          found = true;
+          return { ...p, status: event.outcome };
         }
         return p;
       });

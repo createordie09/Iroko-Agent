@@ -302,6 +302,9 @@ export function useChatAgentEvents({
         case 'permission_required':
           setPendingPermission(event.request);
           break;
+        case 'permission_resolved':
+          setPendingPermission(prev => (prev && prev.id === event.requestId ? null : prev));
+          break;
         case 'file_changed':
           setChangedFiles(prev => {
             const filtered = prev.filter(f => f.path !== event.path);

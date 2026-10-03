@@ -122,3 +122,41 @@ test('Parts — le plan reste un seul bloc, mis à jour sur place, à sa positio
   assert.deepEqual(parts.map(p => p.type), ['text', 'plan', 'tool']);
   assert.deepEqual(parts[1].steps.map(s => s.status), ['completed', 'in_progress']);
 });
+
+test('Parts — une demande d\'autorisation devient un bloc qui passe à la décision réelle', () => {
+  const request = { id: 'r1', tool: 'execute_command', level: 'MEDIUM', description: 'Lancer les tests', details: { command: 'npm test', fingerprint: 'secret-interne', pattern: 'npm' }, timestamp: 1 };
+  const pending = replay([
+    { type: 'tool_call_start', callId: 'c1', tool: 'execute_command', input: {} },
+    { type: 'permission_required', request }
+  ]);
+  assert.deepEqual(pending.map(p => p.type), ['tool', 'permission']);
+  assert.equal(pending[1].status, 'pending');
+  assert.equal(pending[1].target, 'npm test');
+  assert.ok(!JSON.stringify(pending[1]).includes('secret-interne'));
+
+  const denied = applyEventToParts(pending, ev({ type: 'permission_resolved', requestId: 'r1', outcome: 'denied' }));
+  assert.equal(denied[1].status, 'denied');
+  // Un événement de décision inconnu laisse la liste intacte
+  assert.equal(applyEventToParts(denied, ev({ type: 'permission_resolved', requestId: 'inconnu', outcome: 'approved' })), denied);
+});
+
+test('Autorisations — le moteur notifie la réponse de l\'utilisateur et l\'expiration', async () => {
+  const fs = await import('node:fs');
+  const os = await import('node:os');
+  const path = await import('node:path');
+  const { PermissionEngine } = await import('../server/permissions/PermissionEngine.ts');
+  const engine = new PermissionEngine(fs.mkdtempSync(path.join(os.tmpdir(), 'iroko-perm-')));
+  const decisions = [];
+  engine.onDecision = (d) => decisions.push(d);
+
+  const answered = engine.requestPermission('execute_command', 'MEDIUM', 'Test A', { command: 'echo a' }, (req) => {
+    setTimeout(() => engine.resolvePermission(req.id, true, 'once'), 5);
+  });
+  assert.equal(await answered, true);
+  assert.equal(decisions[0].outcome, 'approved');
+
+  engine.timeoutMs = 20;
+  const expired = engine.requestPermission('execute_command', 'MEDIUM', 'Test B', { command: 'echo b' }, () => {});
+  assert.equal(await expired, false);
+  assert.equal(decisions[1].outcome, 'expired');
+});

@@ -43,6 +43,29 @@ function ThinkingPart({ text, active, durationMs }: { key?: React.Key; text: str
   );
 }
 
+const PERMISSION_STATUS_LABEL: Record<string, string> = {
+  pending: 'En attente de votre réponse',
+  approved: 'Autorisée',
+  denied: 'Refusée',
+  expired: 'Expirée, refusée par défaut'
+};
+
+function PermissionPart({ part }: { key?: React.Key; part: Extract<MessagePart, { type: 'permission' }> }) {
+  return (
+    <div className="border-l border-[var(--border-modal)] pl-3 py-0.5 text-[12.5px]" data-permission-part="true" data-permission-status={part.status}>
+      <div className="flex items-center gap-2 text-[var(--text-secondary)]">
+        {part.status === 'approved' ? <Check className="w-3 h-3 shrink-0" aria-hidden="true" />
+          : part.status === 'pending' ? <Loader2 className="w-3 h-3 shrink-0 animate-spin" aria-hidden="true" />
+          : <X className="w-3 h-3 shrink-0" aria-hidden="true" />}
+        <span className="text-[var(--text-primary)]">Autorisation</span>
+        <span>{PERMISSION_STATUS_LABEL[part.status]}</span>
+      </div>
+      <div className="mt-0.5 text-[var(--text-secondary)]">{part.description}</div>
+      {part.target && <div className="font-mono text-[12px] text-[var(--text-secondary)] truncate">{part.target}</div>}
+    </div>
+  );
+}
+
 function PlanPart({ steps }: { key?: React.Key; steps: Array<{ id: string; title: string; status: string }> }) {
   const done = steps.filter(step => step.status === 'completed').length;
   return (
@@ -99,6 +122,8 @@ export function MessageParts({
             );
           case 'tool':
             return <ToolStep key={part.id} part={part} />;
+          case 'permission':
+            return <PermissionPart key={part.id} part={part} />;
           case 'plan':
             return <PlanPart key={part.id} steps={part.steps} />;
           case 'artifact':

@@ -50,6 +50,7 @@ export type AgentEvent = BaseEvent & (
   | { type: 'tool_call_start'; callId: string; tool: string; input: unknown }
   | { type: 'tool_call_result'; callId: string; tool: string; success: boolean; result: unknown; error?: string }
   | { type: 'permission_required'; request: PermissionRequest }
+  | { type: 'permission_resolved'; requestId: string; outcome: 'approved' | 'denied' | 'expired'; scope?: string }
   | { type: 'file_changed'; path: string; diff?: string; action: 'create' | 'modify' | 'delete' }
   | { type: 'verification_step'; check: VerificationCheck }
   | { type: 'message'; role: 'assistant'; content: string; partial?: boolean }
