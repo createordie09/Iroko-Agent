@@ -14,6 +14,7 @@ import { useChatAgentEvents } from '../../hooks/chat/useChatAgentEvents';
 import { useChatMessageActions } from '../../hooks/chat/useChatMessageActions';
 import { useConnectionRecovery } from '../../hooks/chat/useConnectionRecovery';
 import { FormattedMessage } from './FormattedMessage';
+import { ModeSwitchSuggestion } from './ModeSwitchSuggestion';
 import { ChatMessageList } from './ChatMessageList';
 import { ChatInspectorPanel, InspectorTabType } from './ChatInspectorPanel';
 import { DeleteMessageModal } from './modals/DeleteMessageModal';
@@ -23,7 +24,7 @@ export function ClaudeChat() {
   const {
     messages, setMessages, chatStatus, setChatStatus,
     conversationFont, activeModel, activeConversationId,
-    notificationsEnabled, composerMode, animations, runtimeConnected, loadConversation, chatError, setChatError
+    notificationsEnabled, composerMode, setComposerMode, animations, runtimeConnected, loadConversation, chatError, setChatError
   } = useApp();
 
   const conversationId = activeConversationId || 'default_conversation';
@@ -60,7 +61,7 @@ export function ClaudeChat() {
     planSteps, contextUsage, toolExecutions, setToolExecutions,
     artifacts, loadArtifacts, activeVideoJobs, handleCancelVideoJob,
     pendingPermission, setPendingPermission, changedFiles,
-    errorMessage, setErrorMessage, ariaLiveSentence
+    errorMessage, setErrorMessage, modeSwitchReason, setModeSwitchReason, ariaLiveSentence
   } = useChatAgentEvents({
     conversationId, notificationsEnabled, currentAssistantStream,
     appendStreamDelta, flushStreamImmediately, resetStreamBuffer,
@@ -84,7 +85,7 @@ export function ClaudeChat() {
     setChatStatus, resetStreamBuffer, setThinkingLogs, setToolExecutions,
     setErrorMessage: (m: any) => {
       setErrorMessage(m);
-      if (m === null) setChatError(null);
+      if (m === null) { setChatError(null); setModeSwitchReason(null); }
     },
     loadArtifacts, setAttachmentsMap
   });
@@ -287,6 +288,18 @@ export function ClaudeChat() {
                   </div>
                 )}
               </article>
+            )}
+
+            {/* Proposition de passage en mode Code (demandée par le modèle en mode Chat) */}
+            {modeSwitchReason && composerMode === 'chat' && chatStatus !== 'loading' && (
+              <ModeSwitchSuggestion
+                reason={modeSwitchReason}
+                onAccept={() => {
+                  setModeSwitchReason(null);
+                  setComposerMode('code');
+                  handleSendMessage('Le mode Code est activé\u00A0: exécute maintenant la tâche demandée.', { mode: 'code' });
+                }}
+              />
             )}
 
             {/* Message d'erreur avec réessai */}

@@ -46,6 +46,7 @@ export type AgentEvent = BaseEvent & (
   | { type: 'status'; status: AgentStatus; message?: string }
   | { type: 'thinking'; content: string }
   | { type: 'plan'; steps: PlanStep[] }
+  | { type: 'mode_switch_suggested'; reason: string }
   | { type: 'tool_call_start'; callId: string; tool: string; input: unknown }
   | { type: 'tool_call_result'; callId: string; tool: string; success: boolean; result: unknown; error?: string }
   | { type: 'permission_required'; request: PermissionRequest }

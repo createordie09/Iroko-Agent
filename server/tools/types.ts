@@ -11,6 +11,7 @@ export type ToolCategory =
   | 'mcp' 
   | 'lsp'
   | 'memory'
+  | 'conversation'
   | 'subagent'
   | 'attachments'
   | 'artifacts'

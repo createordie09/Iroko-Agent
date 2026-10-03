@@ -36,6 +36,7 @@ export function useChatAgentEvents({
   const [thinkingLogs, setThinkingLogs] = useState<string[]>([]);
   const [isThinkingOpen, setIsThinkingOpen] = useState(false);
   const [planSteps, setPlanSteps] = useState<PlanStep[]>([]);
+  const [modeSwitchReason, setModeSwitchReason] = useState<string | null>(null);
   const [changedFiles, setChangedFiles] = useState<ChangedFileRecord[]>([]);
   const [contextUsage, setContextUsage] = useState<{
     inputTokens: number;
@@ -99,6 +100,7 @@ export function useChatAgentEvents({
     // Réinitialisation stricte des états transitoires de l'ancienne discussion (Mission R5c)
     setToolExecutions([]);
     setPlanSteps([]);
+    setModeSwitchReason(null);
     setChangedFiles([]);
     currentThinkingRef.current = '';
     setCurrentThinking('');
@@ -204,6 +206,9 @@ export function useChatAgentEvents({
           break;
         case 'plan':
           setPlanSteps(event.steps);
+          break;
+        case 'mode_switch_suggested':
+          setModeSwitchReason(event.reason);
           break;
         case 'context_usage':
           if (event.usage) {
@@ -386,6 +391,8 @@ export function useChatAgentEvents({
     changedFiles,
     errorMessage,
     setErrorMessage,
+    modeSwitchReason,
+    setModeSwitchReason,
     ariaLiveSentence
   };
 }
