@@ -1,4 +1,4 @@
-import type { AgentEvent } from './events';
+import type { AgentEvent, PlanStep } from './events';
 
 /**
  * Blocs ordonnés d'une réponse d'assistant (réflexion, texte, appel d'outil, artéfact).
@@ -32,6 +32,7 @@ export type MessagePart =
       startedAt: number;
       durationMs?: number;
     }
+  | { id: string; type: 'plan'; steps: PlanStep[] }
   | ({ id: string; type: 'artifact' } & ArtifactPartData);
 
 /** Taille maximale d'une chaîne conservée dans un bloc (les contenus de fichiers peuvent être très longs) */
@@ -135,6 +136,24 @@ export function applyEventToParts(parts: MessagePart[], event: AgentEvent, now: 
         return p;
       });
       return found ? next : parts;
+    }
+
+    case 'plan': {
+      if (!Array.isArray(event.steps) || event.steps.length === 0) return parts;
+      const steps = event.steps.map(step => ({
+        id: step.id,
+        title: step.title,
+        status: step.status,
+        ...(step.description ? { description: step.description } : {})
+      }));
+      // Un seul bloc de plan par réponse, mis à jour sur place à chaque changement d'état
+      const existingIndex = parts.findIndex(p => p.type === 'plan');
+      if (existingIndex >= 0) {
+        const next = [...parts];
+        next[existingIndex] = { ...(parts[existingIndex] as any), steps };
+        return next;
+      }
+      return [...closeThinking(parts, now), { id: newPartId('plan'), type: 'plan', steps }];
     }
 
     case 'artifact_created':

@@ -109,3 +109,16 @@ test('Parts — la durée de réflexion est celle mesurée entre le premier frag
   const encours = replay([{ type: 'thinking', content: 'a' }]);
   assert.equal(encours[0].durationMs, undefined);
 });
+
+test('Parts — le plan reste un seul bloc, mis à jour sur place, à sa position d\'origine', () => {
+  const step = (id, status) => ({ id, title: 'Étape ' + id, status });
+  const parts = replay([
+    { type: 'message', role: 'assistant', content: 'Voici le plan.' },
+    { type: 'plan', steps: [step('1', 'in_progress'), step('2', 'pending')] },
+    { type: 'tool_call_start', callId: 'c1', tool: 'read_file', input: {} },
+    { type: 'plan', steps: [step('1', 'completed'), step('2', 'in_progress')] },
+    { type: 'plan', steps: [] }
+  ]);
+  assert.deepEqual(parts.map(p => p.type), ['text', 'plan', 'tool']);
+  assert.deepEqual(parts[1].steps.map(s => s.status), ['completed', 'in_progress']);
+});

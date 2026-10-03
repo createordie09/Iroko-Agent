@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronRight, ChevronDown } from 'lucide-react';
+import { ChevronRight, ChevronDown, Check, X, Loader2, Circle } from 'lucide-react';
 import type { MessagePart } from '../../../server/types/messageParts';
 import { FormattedMessage } from './FormattedMessage';
 import { ArtifactCard } from './ArtifactCard';
@@ -43,6 +43,33 @@ function ThinkingPart({ text, active, durationMs }: { key?: React.Key; text: str
   );
 }
 
+function PlanPart({ steps }: { key?: React.Key; steps: Array<{ id: string; title: string; status: string }> }) {
+  const done = steps.filter(step => step.status === 'completed').length;
+  return (
+    <div className="border-l border-[var(--border-modal)] pl-3 py-0.5" data-plan-part="true">
+      <div className="text-[12px] text-[var(--text-tertiary)] mb-1">Plan · {done} sur {steps.length}</div>
+      <ul className="space-y-1">
+        {steps.map(step => (
+          <li key={step.id} className="flex items-start gap-2 text-[13px]" data-plan-status={step.status}>
+            <span className="mt-[3px] shrink-0 text-[var(--text-secondary)]" aria-hidden="true">
+              {step.status === 'completed' ? <Check className="w-3 h-3" />
+                : step.status === 'failed' ? <X className="w-3 h-3" />
+                : step.status === 'in_progress' ? <Loader2 className="w-3 h-3 animate-spin" />
+                : <Circle className="w-3 h-3" />}
+            </span>
+            <span className={step.status === 'completed' ? 'text-[var(--text-secondary)] line-through' : 'text-[var(--text-primary)]'}>
+              {step.title}
+            </span>
+            <span className="sr-only">
+              {step.status === 'completed' ? 'terminée' : step.status === 'failed' ? 'échec' : step.status === 'in_progress' ? 'en cours' : 'à faire'}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 /** Chronologie d'une réponse : réflexion, texte, étapes d'outils et artéfacts dans leur ordre réel */
 export function MessageParts({
   parts, conversationFont, isStreaming, onOpenArtifact, onRegenerateImage, onReuseArtifactAsAttachment
@@ -72,6 +99,8 @@ export function MessageParts({
             );
           case 'tool':
             return <ToolStep key={part.id} part={part} />;
+          case 'plan':
+            return <PlanPart key={part.id} steps={part.steps} />;
           case 'artifact':
             return (
               <ArtifactCard
