@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
 import { ChevronRight, ChevronDown, Check, X, Loader2 } from 'lucide-react';
-import type { MessagePart } from '../../../server/types/messageParts';
-
-export type ToolPart = Extract<MessagePart, { type: 'tool' }>;
+import { ToolPart, summarizeToolResult, buildEditDiff } from './toolStepSummary';
 
 const VERBS: Record<string, { running: string; done: string }> = {
   web_search: { running: 'Recherche en cours', done: 'Recherche effectuée' },
@@ -45,6 +43,8 @@ function formatDuration(ms?: number): string {
 export function ToolStep({ part }: { key?: React.Key; part: ToolPart }) {
   const [open, setOpen] = useState(false);
   const subject = toolSubject(part);
+  const summary = summarizeToolResult(part);
+  const diff = buildEditDiff(part);
   const hasDetails = part.input !== undefined || part.result !== undefined || Boolean(part.error);
 
   return (
@@ -64,6 +64,7 @@ export function ToolStep({ part }: { key?: React.Key; part: ToolPart }) {
         )}
         <span className="text-[var(--text-primary)] shrink-0">{toolLabel(part)}</span>
         {subject && <span className="font-mono truncate min-w-0">{subject}</span>}
+        {summary && <span className="text-[11.5px] text-[var(--text-tertiary)] shrink-0">{summary}</span>}
         {part.status !== 'running' && part.durationMs !== undefined && (
           <span className="text-[11px] text-[var(--text-tertiary)] shrink-0">{formatDuration(part.durationMs)}</span>
         )}
@@ -71,6 +72,23 @@ export function ToolStep({ part }: { key?: React.Key; part: ToolPart }) {
       </button>
       {open && (
         <div className="mt-1.5 space-y-1.5 text-[12px] text-[var(--text-secondary)]">
+          {diff.length > 0 && (
+            <div data-tool-diff="true" className="font-mono border border-[var(--border-subtle)] rounded-[var(--radius-button)] overflow-x-auto claude-scrollbar">
+              {diff.map((line, i) => (
+                <div
+                  key={i}
+                  className={`flex gap-2 px-2 whitespace-pre ${
+                    line.kind === 'added'
+                      ? 'bg-[var(--bg-surface)] text-[var(--text-primary)]'
+                      : 'text-[var(--text-tertiary)] line-through'
+                  }`}
+                >
+                  <span aria-hidden="true" className="select-none shrink-0">{line.kind === 'added' ? '+' : '−'}</span>
+                  <span>{line.text}</span>
+                </div>
+              ))}
+            </div>
+          )}
           {part.input !== undefined && (
             <div>
               <div className="text-[11px] text-[var(--text-tertiary)]">Entrée</div>
