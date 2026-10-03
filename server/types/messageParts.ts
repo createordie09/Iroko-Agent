@@ -120,6 +120,8 @@ export function applyEventToParts(parts: MessagePart[], event: AgentEvent, now: 
     }
 
     case 'tool_call_start': {
+      // L'appel à update_plan est représenté par le bloc de plan lui-même
+      if (event.tool === 'update_plan') return parts;
       if (parts.some(p => p.type === 'tool' && p.callId === event.callId)) return parts;
       return [
         ...closeThinking(parts, now),

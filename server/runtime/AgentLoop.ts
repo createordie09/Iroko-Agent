@@ -114,8 +114,12 @@ export class AgentLoop {
       }
     }
 
-    if (!resumedFromCheckpoint && context.conversationMode === 'code') {
-      planner.createInitialPlan(userPrompt);
+    // Le plan n'existe que si le modèle le déclare (outil update_plan) : aucune étape n'est inventée
+    context.setPlan = (items) => {
+      planner.setPlanFromModel(items);
+    };
+    if (!resumedFromCheckpoint) {
+      planner.reset();
     }
 
     // 1. Analyse automatique du workspace
@@ -176,6 +180,9 @@ export class AgentLoop {
       systemPromptContent += '\n\nMODE CHAT ACTIF : Vous êtes en mode discussion. Vous pouvez répondre, discuter du projet, analyser les documents et pièces jointes, rechercher sur le web, et créer ou mettre à jour des artéfacts (create_artifact, update_artifact, create_document) : un fichier .md, un document, un rapport ou un extrait de code livré à l\'utilisateur ne nécessite PAS le mode Code. Les outils qui touchent aux fichiers du projet, au terminal, à git, aux tests et au plan sont indisponibles. Si la demande les exige, appelez IMMÉDIATEMENT l\'outil request_code_mode avec la raison (n\'annoncez jamais « je vais vous proposer » sans l\'appeler), puis terminez par une seule phrase courte : l\'interface affiche un bouton qui bascule en mode Code et relance la tâche. Ne demandez jamais à l\'utilisateur de manipuler lui-même le sélecteur et ne prétendez jamais qu\'un artéfact exige le mode Code.';
     } else if (context.executionMode === 'plan') {
       systemPromptContent += '\n\nMODE PLAN ACTIF (LECTURE SEULE) : L\'écriture et la modification de fichiers, ainsi que l\'exécution de commandes système modificatrices sont formellement désactivées. Utilisez uniquement les outils d\'inspection SAFE pour analyser et concevoir la solution sans l\'exécuter.';
+    }
+    if (context.conversationMode === 'code') {
+      systemPromptContent += '\n\nRÈGLE DU PLAN DE TRAVAIL : si la demande comporte au moins trois actions distinctes (par exemple créer plusieurs fichiers, puis les relire, puis résumer), votre PREMIÈRE action est d\'appeler l\'outil update_plan avec la liste courte des étapes réelles (3 à 8, une phrase chacune, en français). Rappelez ensuite update_plan avec la liste complète à jour chaque fois qu\'une étape commence (une seule in_progress) ou se termine (completed). Pour une demande simple (une lecture, une réponse, une seule modification), n\'appelez pas update_plan. N\'ajoutez jamais une étape que vous ne comptez pas faire.';
     }
     const systemMsg: ModelMessage = { role: 'system', content: systemPromptContent };
     const maskBeforeModel = runtimeDatabase.getSetting('mask_secrets_before_model') !== 'false';
@@ -502,26 +509,6 @@ export class AgentLoop {
         for (const tc of toolCallsForMessage) {
           if (options.abortSignal?.aborted) break;
 
-          // Mise à jour adaptative des étapes du plan selon l'outil appelé
-          const steps = planner.getSteps();
-          if (steps.length >= 3) {
-            if (['write_file', 'edit_file'].includes(tc.name)) {
-              if (steps[0].status === 'in_progress') {
-                planner.updateStepStatus(0, 'completed');
-              }
-              if (steps[1].status === 'pending') {
-                planner.updateStepStatus(1, 'in_progress');
-              }
-            } else if (['verify_project'].includes(tc.name)) {
-              if (steps[1].status === 'in_progress') {
-                planner.updateStepStatus(1, 'completed');
-              }
-              if (steps[2].status === 'pending') {
-                planner.updateStepStatus(2, 'in_progress');
-              }
-            }
-          }
-
           const toolExecMessage = tc.name === 'web_search' && (tc.arguments as any)?.query
             ? `Recherche\u00A0: ${(tc.arguments as any).query}`
             : `Exécution de l'outil "${tc.name}"...`;
@@ -705,10 +692,10 @@ export class AgentLoop {
       }
     }
 
-    // Si tout est validé, clôturer les étapes restantes en completed
+    // Fin de tâche : l'étape en cours est considérée terminée ; une étape jamais commencée reste « à faire »
     const finalSteps = planner.getSteps();
     for (let i = 0; i < finalSteps.length; i++) {
-      if (finalSteps[i].status === 'in_progress' || finalSteps[i].status === 'pending') {
+      if (finalSteps[i].status === 'in_progress') {
         planner.updateStepStatus(i, 'completed');
       }
     }

@@ -26,6 +26,7 @@ import { GetDocumentSymbolsTool } from './lsp/get_document_symbols';
 import { lspManager } from './lsp/LspManager';
 import { RememberFactTool } from './memory/remember_fact';
 import { RequestCodeModeTool } from './conversation/request_code_mode';
+import { UpdatePlanTool } from './conversation/update_plan';
 import { BrowserNavigateTool } from './browser/browser_navigate';
 import { BrowserScreenshotTool } from './browser/browser_screenshot';
 import { BrowserClickTool } from './browser/browser_click';
@@ -65,7 +66,7 @@ const CODE_ONLY_TOOLS = new Set([
   'execute_command', 'start_process', 'stop_process', 'get_process_output', 'list_processes',
   'git_status', 'git_diff', 'git_log', 'git_add', 'git_commit', 'git_branch', 'git_create_branch',
   'verify_project', 'get_diagnostics', 'find_definition', 'find_references', 'invoke_subagent',
-  'run_skill_script'
+  'run_skill_script', 'update_plan'
 ]);
 
 /** Outils propres au mode Chat : retirés du catalogue en mode Code */
@@ -113,6 +114,7 @@ export class ToolRegistry {
 
     // Outil de conversation : proposition de passage en mode Code (mode Chat)
     this.register(new RequestCodeModeTool());
+    this.register(new UpdatePlanTool());
 
     // Outils Navigateur (§16)
     this.register(new BrowserNavigateTool());

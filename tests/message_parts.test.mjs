@@ -207,3 +207,13 @@ test('Parts — après un arrêt inattendu, la reprise de la base ajoute le marq
   assert.equal(meta.parts[0].status, 'error');
   assert.equal(meta.parts[meta.parts.length - 1].kind, 'interrupted');
 });
+
+test('Parts — l\'appel à update_plan n\'ajoute pas d\'étape d\'outil : le bloc de plan le représente', () => {
+  const step = (id, status) => ({ id, title: 'Étape ' + id, status });
+  const parts = replay([
+    { type: 'tool_call_start', callId: 'p1', tool: 'update_plan', input: { steps: [] } },
+    { type: 'plan', steps: [step('1', 'in_progress')] },
+    { type: 'tool_call_result', callId: 'p1', tool: 'update_plan', success: true, result: 'ok' }
+  ]);
+  assert.deepEqual(parts.map(p => p.type), ['plan']);
+});

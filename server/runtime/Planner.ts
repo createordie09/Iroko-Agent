@@ -9,75 +9,26 @@ export class Planner {
   constructor(private emitEvent: (event: AgentEvent) => void) {}
 
   /**
-   * Détermine si une demande est non triviale et justifie l'ouverture d'un plan.
-   * Une demande triviale (salutation, question théorique simple) n'ouvre aucun plan.
+   * Remet le plan à zéro au début d'une tâche : aucune étape n'est inventée.
+   * Le plan n'existe que si le modèle le déclare lui-même (outil update_plan).
    */
-  public isNonTrivial(prompt: string): boolean {
-    const trimmed = prompt.trim().toLowerCase();
-    if (!trimmed) return false;
-
-    // Salutations et courtoisies pures
-    const greetings = ['bonjour', 'salut', 'coucou', 'hello', 'hi', 'bonsoir', 'merci', 'qui es-tu', 'qui es tu', 'aide'];
-    if (greetings.some(g => trimmed === g || trimmed === `${g} !` || trimmed === `${g} ?` || trimmed === `${g}.`)) {
-      return false;
-    }
-
-    // Questions purement informatives sans action demandée sur le code
-    if (/^(c'est quoi|qu'est-ce que|qu'est ce que|quelle est la diff|pourquoi|explique|comment fonctionne)\b/i.test(trimmed) &&
-        !/code|fichier|projet|corrige|modifie|ajoute|crée|test|build/i.test(trimmed)) {
-      return false;
-    }
-
-    // Mots-clés déclencheurs d'actions d'ingénierie
-    const actionKeywords = [
-      'crée', 'creer', 'créer', 'ajoute', 'ajouter', 'modifie', 'modifier',
-      'corrige', 'corriger', 'fix', 'refactor', 'refactorise', 'supprime',
-      'teste', 'tester', 'test', 'compile', 'compiler', 'build', 'vérifie',
-      'verifier', 'vérifier', 'implémente', 'implemente', 'implémenter',
-      'installe', 'installer', 'commit', 'branche', 'git', 'inspecte', 'analyse'
-    ];
-
-    if (actionKeywords.some(kw => trimmed.includes(kw))) {
-      return true;
-    }
-
-    // Longueur et structure : requête détaillée de plus de 60 caractères
-    return trimmed.length > 60;
+  public reset(): void {
+    this.steps = [];
+    this.replanCount = 0;
+    this.notify();
   }
 
   /**
-   * Crée le plan initial adapté à la demande.
+   * Remplace le plan par celui que le modèle déclare (outil update_plan).
+   * Les identifiants des étapes inchangées sont conservés pour un affichage stable.
    */
-  public createInitialPlan(prompt: string): PlanStep[] {
-    if (!this.isNonTrivial(prompt)) {
-      this.steps = [];
-      this.replanCount = 0;
-      this.notify();
-      return [];
-    }
-
-    this.replanCount = 0;
-    this.steps = [
-      {
-        id: crypto.randomUUID(),
-        title: 'Analyser la demande et inspecter l\'environnement',
-        status: 'in_progress',
-        description: 'Examen des fichiers, configuration et dépendances.'
-      },
-      {
-        id: crypto.randomUUID(),
-        title: 'Appliquer les modifications ciblées',
-        status: 'pending',
-        description: 'Édition rigoureuse sans altération visuelle ni régression.'
-      },
-      {
-        id: crypto.randomUUID(),
-        title: 'Vérifier la conformité et valider le projet',
-        status: 'pending',
-        description: 'Contrôles statiques (types, lint, tests, build) et inspection du diff.'
-      }
-    ];
-
+  public setPlanFromModel(items: Array<{ title: string; status: PlanStep['status'] }>): PlanStep[] {
+    const previous = this.steps;
+    this.steps = items.map((item, idx) => ({
+      id: previous[idx] && previous[idx].title === item.title ? previous[idx].id : crypto.randomUUID(),
+      title: item.title,
+      status: item.status
+    }));
     this.notify();
     return this.steps;
   }
