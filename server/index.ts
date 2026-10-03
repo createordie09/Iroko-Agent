@@ -575,7 +575,8 @@ const server = http.createServer(async (req, res) => {
           streamedText: job.streamedText,
           thinkingText: job.thinkingText,
           toolExecutions: job.toolExecutions,
-          planSteps: job.planSteps
+          planSteps: job.planSteps,
+          parts: job.parts
         }));
       } else {
         res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -3078,6 +3079,7 @@ wss.on('connection', (ws: WebSocket) => {
     }
   };
 
+  permissionEngine.onDecision = (decision) => emitRuntimeEvent({ type: 'permission_resolved', ...decision } as AgentEvent);
   const runtime = new AgentRuntime(sessionId, DEFAULT_WORKSPACE, permissionEngine, emitRuntimeEvent);
 
   const session: ActiveSession = {
@@ -3201,7 +3203,11 @@ wss.on('connection', (ws: WebSocket) => {
                 id: crypto.randomUUID(),
                 conversationId: activeConvId,
                 role: 'user',
-                content: message.prompt
+                content: message.prompt,
+                metadata: {
+                  mode: convMode,
+                  ...(message.attachmentIds && message.attachmentIds.length > 0 ? { attachmentIds: message.attachmentIds } : {})
+                }
               });
             }
 
@@ -3242,6 +3248,7 @@ wss.on('connection', (ws: WebSocket) => {
               metadata: {
                 taskId: activeTaskId,
                 status: 'generating',
+                mode: convMode,
                 interrupted: true,
                 canContinue: true,
                 prompt: message.prompt

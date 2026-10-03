@@ -15,6 +15,7 @@ export interface UseChatMessageActionsOptions {
   resetStreamBuffer: () => void;
   setThinkingLogs: React.Dispatch<React.SetStateAction<string[]>>;
   setToolExecutions: React.Dispatch<React.SetStateAction<any[]>>;
+  resetLiveParts: () => void;
   setErrorMessage: React.Dispatch<React.SetStateAction<string | null>>;
   loadArtifacts: () => Promise<void>;
   setAttachmentsMap: React.Dispatch<React.SetStateAction<Record<string, any>>>;
@@ -30,6 +31,7 @@ export function useChatMessageActions({
   resetStreamBuffer,
   setThinkingLogs,
   setToolExecutions,
+  resetLiveParts,
   setErrorMessage,
   loadArtifacts,
   setAttachmentsMap
@@ -56,6 +58,7 @@ export function useChatMessageActions({
     setChatStatus('loading');
     setThinkingLogs([]); // Zéro log inventé : alimenté uniquement par les flux réels du provider
     setToolExecutions([]);
+    resetLiveParts();
     resetStreamBuffer();
     setErrorMessage(null);
 

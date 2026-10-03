@@ -11,6 +11,7 @@ export type ToolCategory =
   | 'mcp' 
   | 'lsp'
   | 'memory'
+  | 'conversation'
   | 'subagent'
   | 'attachments'
   | 'artifacts'
@@ -30,6 +31,8 @@ export interface ToolContext {
   isReadOnly?: boolean;
   currentModelId?: string;
   currentProviderId?: string;
+  /** Déclare le plan de travail de la tâche (outil update_plan) */
+  setPlan?: (steps: Array<{ title: string; status: 'pending' | 'in_progress' | 'completed' }>) => void;
 }
 
 export interface ToolResult<T = any> {

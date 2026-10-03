@@ -27,42 +27,56 @@ describe('MISSION L11 : Boucle Autonome Évoluée & Gestionnaire de Plan Dynamiq
     } catch {}
   });
 
-  test('1. Décomposition non triviale & Statuts fidèles à l\'exécution réelle', () => {
+  test('1. Plan déclaré par le modèle : aucune étape inventée, statuts fidèles', async () => {
     const emittedEvents = [];
     const planner = new Planner((event) => {
       emittedEvents.push(event);
     });
 
-    // 1.1 Requête triviale -> aucun plan ouvert
-    assert.strictEqual(planner.isNonTrivial('bonjour'), false);
-    assert.strictEqual(planner.isNonTrivial('Bonjour !'), false);
-    assert.strictEqual(planner.isNonTrivial('qui es-tu ?'), false);
-    assert.strictEqual(planner.isNonTrivial('merci'), false);
-
-    const trivialPlan = planner.createInitialPlan('bonjour !');
-    assert.strictEqual(trivialPlan.length, 0);
+    // 1.1 Au début d'une tâche, aucune étape n'existe
+    planner.reset();
     assert.strictEqual(planner.getSteps().length, 0);
 
-    // 1.2 Requête non triviale -> décomposition en étapes ordonnées
-    assert.strictEqual(planner.isNonTrivial('Ajoute un composant de barre de navigation dans le projet'), true);
-    assert.strictEqual(planner.isNonTrivial('Corrige le bug de rendu dans App.tsx et vérifie'), true);
+    // 1.2 Le plan est celui que le modèle déclare, via l'outil update_plan
+    const { UpdatePlanTool } = await import('../server/tools/conversation/update_plan.ts');
+    const tool = new UpdatePlanTool();
+    const context = { setPlan: (items) => planner.setPlanFromModel(items) };
+    const result = await tool.execute({
+      steps: [
+        { title: 'Lire la configuration', status: 'in_progress' },
+        { title: 'Modifier le composant', status: 'pending' }
+      ]
+    }, context);
+    assert.strictEqual(result.success, true);
+    assert.strictEqual(planner.getSteps().length, 2);
+    assert.strictEqual(planner.getSteps()[0].title, 'Lire la configuration');
+    const firstId = planner.getSteps()[0].id;
 
-    const plan = planner.createInitialPlan('Ajoute un composant de statut et vérifie le build');
-    assert.strictEqual(plan.length, 3);
-    assert.strictEqual(plan[0].status, 'in_progress');
-    assert.strictEqual(plan[1].status, 'pending');
-    assert.strictEqual(plan[2].status, 'pending');
-
-    // Vérifier l'émission de l'événement 'plan'
     const lastEvent = emittedEvents[emittedEvents.length - 1];
     assert.strictEqual(lastEvent.type, 'plan');
-    assert.strictEqual(lastEvent.steps.length, 3);
+    assert.strictEqual(lastEvent.steps.length, 2);
 
-    // 1.3 Progression fidèle des statuts
-    planner.updateStepStatus(0, 'completed');
-    planner.updateStepStatus(1, 'in_progress');
+    // 1.3 Mise à jour : les identifiants des étapes inchangées sont conservés
+    await tool.execute({
+      steps: [
+        { title: 'Lire la configuration', status: 'completed' },
+        { title: 'Modifier le composant', status: 'in_progress' }
+      ]
+    }, context);
+    assert.strictEqual(planner.getSteps()[0].id, firstId);
     assert.strictEqual(planner.getSteps()[0].status, 'completed');
     assert.strictEqual(planner.getSteps()[1].status, 'in_progress');
+
+    // 1.4 Entrées invalides refusées sans toucher au plan
+    assert.strictEqual((await tool.execute({ steps: [] }, context)).success, false);
+    assert.strictEqual((await tool.execute({ steps: [{ title: '', status: 'pending' }] }, context)).success, false);
+    assert.strictEqual((await tool.execute({ steps: [{ title: 'x', status: 'fini' }] }, context)).success, false);
+    assert.strictEqual((await tool.execute({ steps: Array.from({ length: 11 }, (_, i) => ({ title: 'e' + i, status: 'pending' })) }, context)).success, false);
+    assert.strictEqual(planner.getSteps().length, 2);
+
+    // 1.5 Le plan est remis à zéro pour la tâche suivante
+    planner.reset();
+    assert.strictEqual(planner.getSteps().length, 0);
   });
 
   test('2. Auto-replanification après un échec de vérification ou de test (§5.2, §22)', () => {
@@ -71,7 +85,7 @@ describe('MISSION L11 : Boucle Autonome Évoluée & Gestionnaire de Plan Dynamiq
       emittedEvents.push(event);
     });
 
-    planner.createInitialPlan('Corrige les types et compile le projet');
+    planner.setPlan(['Inspecter les types', 'Corriger les erreurs', 'Compiler le projet']);
     assert.strictEqual(planner.getSteps().length, 3);
 
     // Simuler l'avancement : étape 0 completed, étape 1 completed, étape 2 in_progress
@@ -198,7 +212,7 @@ describe('MISSION L11 : Boucle Autonome Évoluée & Gestionnaire de Plan Dynamiq
 
   test('5. Blocage persistant après replanifications répétées expliqué à l\'utilisateur (§37)', () => {
     const planner = new Planner(() => {});
-    planner.createInitialPlan('Corrige le bug complexe');
+    planner.setPlan(['Corriger le bug complexe']);
 
     // 1ère replanification
     const r1 = planner.replanAfterFailure({ checkName: 'Test 1', error: 'Erreur 1' });

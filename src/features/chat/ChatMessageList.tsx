@@ -2,7 +2,6 @@ import React from 'react';
 import { AttachmentPublicInfo } from '../../services/attachments/AttachmentService';
 import { ChatMessageItem } from './ChatMessageItem';
 import { ActiveVideoJobCard } from './ActiveVideoJobCard';
-import { LiveToolExecutions } from './LiveToolExecutions';
 import { PermissionPrompt } from '../agent/PermissionPrompt';
 import { tokenService } from '../../services/security/TokenService';
 
@@ -32,7 +31,6 @@ export interface ChatMessageListProps {
   onOpenArtifact: (artifactId: string) => void;
   onRegenerateImage: (prompt: string) => void;
   attachmentsMap: Record<string, AttachmentPublicInfo>;
-  toolExecutions: any[];
   activeVideoJobs: any[];
   handleCancelVideoJob: (jobId: string) => void;
   pendingPermission: any;
@@ -55,7 +53,6 @@ export function ChatMessageList({
   onOpenArtifact,
   onRegenerateImage,
   attachmentsMap,
-  toolExecutions,
   activeVideoJobs,
   handleCancelVideoJob,
   pendingPermission,
@@ -176,9 +173,6 @@ export function ChatMessageList({
           className="w-full select-none transition-none"
         />
       )}
-
-      {/* Outils en cours d'exécution */}
-      <LiveToolExecutions executions={toolExecutions} />
 
       {/* Tâches vidéo en cours */}
       {activeVideoJobs.map(job => (

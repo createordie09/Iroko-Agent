@@ -15,6 +15,13 @@ test('Mission M8.3 — Parcours Bout en Bout (E2E) : FTS5, Espace Disque et Rés
     // 1. Charger l'application Iroko
     await page.goto('http://localhost:5173', { waitUntil: 'networkidle' });
 
+    // Sur des données vierges, l'onboarding du premier lancement s'affiche : on le passe pour atteindre le composer
+    const skipOnboarding = page.getByRole('button', { name: 'Configurer plus tard' }).first();
+    if (await skipOnboarding.isVisible().catch(() => false)) {
+      await skipOnboarding.click();
+      await page.waitForTimeout(300);
+    }
+
     // 2. Vérifier que l'application est bien chargée et que le composer est présent
     const composer = page.locator('textarea').first();
     const isComposerVisible = await composer.isVisible();
@@ -31,6 +38,12 @@ test('Mission M8.3 — Parcours Bout en Bout (E2E) : FTS5, Espace Disque et Rés
       await page.waitForTimeout(300);
       // Effacer la recherche
       await searchInput.fill('');
+    }
+
+    // La palette de commandes ouverte par Ctrl+K rend le reste de l'application inerte : on la ferme avant de continuer
+    if (await page.locator('[role="dialog"]').count() > 0) {
+      await page.keyboard.press('Escape');
+      await page.waitForTimeout(300);
     }
 
     // 4. Ouvrir la modale des Paramètres

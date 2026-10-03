@@ -25,6 +25,8 @@ import { FindReferencesTool } from './lsp/find_references';
 import { GetDocumentSymbolsTool } from './lsp/get_document_symbols';
 import { lspManager } from './lsp/LspManager';
 import { RememberFactTool } from './memory/remember_fact';
+import { RequestCodeModeTool } from './conversation/request_code_mode';
+import { UpdatePlanTool } from './conversation/update_plan';
 import { BrowserNavigateTool } from './browser/browser_navigate';
 import { BrowserScreenshotTool } from './browser/browser_screenshot';
 import { BrowserClickTool } from './browser/browser_click';
@@ -57,6 +59,18 @@ export interface ToolStatusInfo {
   available: boolean;
   reasonDisabled?: string;
 }
+
+/** Outils réservés au mode Code (fichiers du projet, terminal, git, tests, analyse de code) */
+const CODE_ONLY_TOOLS = new Set([
+  'list_dir', 'read_file', 'search_text', 'edit_file', 'write_file',
+  'execute_command', 'start_process', 'stop_process', 'get_process_output', 'list_processes',
+  'git_status', 'git_diff', 'git_log', 'git_add', 'git_commit', 'git_branch', 'git_create_branch',
+  'verify_project', 'get_diagnostics', 'find_definition', 'find_references', 'invoke_subagent',
+  'run_skill_script', 'update_plan'
+]);
+
+/** Outils propres au mode Chat : retirés du catalogue en mode Code */
+const CHAT_ONLY_TOOLS = new Set(['request_code_mode']);
 
 export class ToolRegistry {
   private tools: Map<string, IrokoTool> = new Map();
@@ -97,6 +111,10 @@ export class ToolRegistry {
 
     // Outils Mémoire (§20)
     this.register(new RememberFactTool());
+
+    // Outil de conversation : proposition de passage en mode Code (mode Chat)
+    this.register(new RequestCodeModeTool());
+    this.register(new UpdatePlanTool());
 
     // Outils Navigateur (§16)
     this.register(new BrowserNavigateTool());
@@ -292,14 +310,9 @@ export class ToolRegistry {
     ).filter(t => this.isToolEnabled(t.name) && this.isToolAvailable(t.name).available);
 
     if (conversationMode === 'chat') {
-      const codeTools = new Set([
-        'list_dir', 'read_file', 'search_text', 'edit_file', 'write_file',
-        'execute_command', 'start_process', 'stop_process', 'get_process_output', 'list_processes',
-        'git_status', 'git_diff', 'git_log', 'git_add', 'git_commit', 'git_branch', 'git_create_branch',
-        'verify_project', 'get_diagnostics', 'find_definition', 'find_references', 'invoke_subagent',
-        'run_skill_script'
-      ]);
-      tools = tools.filter(t => !codeTools.has(t.name));
+      tools = tools.filter(t => !CODE_ONLY_TOOLS.has(t.name));
+    } else {
+      tools = tools.filter(t => !CHAT_ONLY_TOOLS.has(t.name));
     }
 
     return tools.map(t => ({
@@ -319,17 +332,10 @@ export class ToolRegistry {
     const tool = this.getTool(name);
 
     if (context.conversationMode === 'chat') {
-      const codeTools = new Set([
-        'list_dir', 'read_file', 'search_text', 'edit_file', 'write_file',
-        'execute_command', 'start_process', 'stop_process', 'get_process_output', 'list_processes',
-        'git_status', 'git_diff', 'git_log', 'git_add', 'git_commit', 'git_branch', 'git_create_branch',
-        'verify_project', 'get_diagnostics', 'find_definition', 'find_references', 'invoke_subagent',
-        'run_skill_script'
-      ]);
-      if (codeTools.has(name)) {
+      if (CODE_ONLY_TOOLS.has(name)) {
         return {
           success: false,
-          error: `L'outil "${name}" est désactivé : Mode Chat actif. Basculez en mode Code dans la conversation pour exécuter des actions sur les fichiers ou le système.`
+          error: `L'outil "${name}" est désactivé : Mode Chat actif. Appelez request_code_mode pour proposer à l'utilisateur de passer en mode Code et d'exécuter des actions sur les fichiers ou le système.`
         };
       }
     }

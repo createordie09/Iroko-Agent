@@ -46,9 +46,11 @@ export type AgentEvent = BaseEvent & (
   | { type: 'status'; status: AgentStatus; message?: string }
   | { type: 'thinking'; content: string }
   | { type: 'plan'; steps: PlanStep[] }
+  | { type: 'mode_switch_suggested'; reason: string }
   | { type: 'tool_call_start'; callId: string; tool: string; input: unknown }
   | { type: 'tool_call_result'; callId: string; tool: string; success: boolean; result: unknown; error?: string }
   | { type: 'permission_required'; request: PermissionRequest }
+  | { type: 'permission_resolved'; requestId: string; outcome: 'approved' | 'denied' | 'expired'; scope?: string }
   | { type: 'file_changed'; path: string; diff?: string; action: 'create' | 'modify' | 'delete' }
   | { type: 'verification_step'; check: VerificationCheck }
   | { type: 'message'; role: 'assistant'; content: string; partial?: boolean }
@@ -64,7 +66,7 @@ export type AgentEvent = BaseEvent & (
   | { type: 'agent_status_changed'; activeConversationIds: string[]; runningCount: number; timestamp?: string; conversationId?: string; status?: string }
   | { type: 'skill_invoked'; skillName: string; format?: string; timestamp?: string }
   | { type: 'skill_fallback'; skillName: string; format?: string; warning?: string; timestamp?: string }
-  | { type: 'task_resumed'; taskId: string; payload: { taskId: string; conversationId: string; content: string; thinking: string; toolExecutions: any[]; planSteps: any[]; prompt: string; mode: string; status: string } }
+  | { type: 'task_resumed'; taskId: string; payload: { taskId: string; conversationId: string; content: string; thinking: string; toolExecutions: any[]; planSteps: any[]; parts?: any[]; prompt: string; mode: string; status: string } }
 );
 
 export type ClientMessage =

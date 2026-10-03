@@ -103,9 +103,10 @@ interface MemoizedBlockProps {
   block: ParsedBlock;
   index: number;
   isOpen: boolean;
+  documentMode?: boolean;
 }
 
-export const MemoizedBlock = React.memo(function MemoizedBlock({ block, index, isOpen }: MemoizedBlockProps) {
+export const MemoizedBlock = React.memo(function MemoizedBlock({ block, index, isOpen, documentMode }: MemoizedBlockProps) {
   if (block.type === 'code') {
     return (
       <CodeBlock
@@ -157,6 +158,14 @@ export const MemoizedBlock = React.memo(function MemoizedBlock({ block, index, i
   return (
     <>
       {lines.map((line, i) => {
+        if (documentMode && (line.startsWith('# ') || line.startsWith('## '))) {
+          const isMain = line.startsWith('# ');
+          return (
+            <h3 key={`${index}-${i}`} className={`${isMain ? 'text-[20px]' : 'text-[17px]'} font-semibold text-[var(--text-primary)] pt-3 pb-1`}>
+              {line.replace(/^#{1,2} /, '')}
+            </h3>
+          );
+        }
         if (line.startsWith('### ')) {
           return (
             <h4 key={`${index}-${i}`} className="text-[16px] font-semibold text-[var(--text-primary)] pt-3 pb-1">
@@ -207,11 +216,14 @@ export const MemoizedBlock = React.memo(function MemoizedBlock({ block, index, i
 export interface FormattedMessageProps {
   content: string;
   isStreaming?: boolean;
+  /** Aperçu d'un document : les titres « # » et « ## » sont rendus en titres (non utilisé dans le chat) */
+  documentMode?: boolean;
 }
 
 export const FormattedMessage = React.memo(function FormattedMessage({
   content,
-  isStreaming = false
+  isStreaming = false,
+  documentMode = false
 }: FormattedMessageProps) {
   const blocks = useMemo(() => parseMarkdownBlocks(content), [content]);
 
@@ -229,6 +241,7 @@ export const FormattedMessage = React.memo(function FormattedMessage({
             block={block}
             index={bIdx}
             isOpen={isBlockOpen}
+            documentMode={documentMode}
           />
         );
       })}
