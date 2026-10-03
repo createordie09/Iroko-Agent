@@ -61,7 +61,7 @@ test('Correction 2 — hors environnement de test, aucune réponse fictive : err
   try {
     await assert.rejects(
       collect(modelRouter.generateStream({ modelId: 'anthropic/claude-3.5-sonnet', messages: [{ role: 'user', content: 'Bonjour' }] }, 'anthropic')),
-      /Aucun fournisseur d'IA configuré/
+      /Aucun fournisseur d'IA disponible/
     );
   } finally {
     modelRouter.setFallbackPolicy(previousPolicy);

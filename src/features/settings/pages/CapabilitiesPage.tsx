@@ -59,6 +59,8 @@ export function CapabilitiesPage() {
                     ? 'bg-[var(--text-primary)]'
                     : 'bg-[var(--bg-active)]'
                 }`}
+                role="switch"
+                aria-checked={tool.enabled && tool.available}
                 aria-label={`Activer ou désactiver l'outil ${tool.name}`}
               >
                 <span

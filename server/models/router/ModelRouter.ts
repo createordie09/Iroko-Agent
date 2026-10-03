@@ -126,6 +126,8 @@ export class ModelRouter {
     }
 
     let lastError: any = null;
+    // Erreur du fournisseur demandé par l'utilisateur : c'est celle qui doit être rapportée, pas celle d'un repli
+    let preferredError: any = null;
 
     // 2. Parcourir les providers
     for (const providerId of providerQueue) {
@@ -155,6 +157,7 @@ export class ModelRouter {
         } catch (err: any) {
           if (request.abortSignal?.aborted || err.name === 'AbortError') return;
           lastError = new Error(`${provider.name} injoignable\u00A0: ${err.message}`);
+          if (providerId === targetProvider) preferredError = lastError;
           logger.warn(`Échec du fournisseur local ${provider.name} : ${err.message}`);
           if (yielded) {
             yield { type: 'text_delta', text: `\n\n[Flux interrompu : ${err.message}]` };
@@ -210,6 +213,7 @@ export class ModelRouter {
 
           const classification = this.poolManager.reportFailure(credential.id, err);
           lastError = err;
+          if (providerId === targetProvider) preferredError = err;
 
           logger.warn(
             `Échec clé ${credential.maskedKey} (${provider.name}) : ${classification.message} [${classification.category}]`
@@ -235,8 +239,9 @@ export class ModelRouter {
     }
 
     // Si tout a échoué
-    if (!lastError && !hasConfiguredKeys) {
-      throw new Error('Aucun fournisseur d\'IA configuré. Ajoutez une clé dans Paramètres › Fournisseurs & Clés ou démarrez un serveur local (Ollama, LM Studio).');
+    if (preferredError) throw preferredError;
+    if (!hasConfiguredKeys) {
+      throw new Error('Aucun fournisseur d\'IA disponible. Ajoutez une clé dans Paramètres › Fournisseurs & Clés ou démarrez un serveur local (Ollama, LM Studio).');
     }
     throw lastError || new Error('Tous les fournisseurs et clés d\'IA configurés sont actuellement indisponibles.');
   }
