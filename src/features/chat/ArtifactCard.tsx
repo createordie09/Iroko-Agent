@@ -4,6 +4,7 @@ import {
 } from 'lucide-react';
 import { ArtifactPublicInfo, artifactService } from '../../services/artifacts/ArtifactService';
 import { mediaService } from '../../services/media/MediaService';
+import { tokenService } from '../../services/security/TokenService';
 
 export interface ArtifactCardProps {
   key?: React.Key;
@@ -85,7 +86,7 @@ export function ArtifactCard({ artifact, onOpen, onRegenerate, onReuseAsAttachme
       if (isRasterImage) {
         // Tentative de copie binaire de l'image
         try {
-          const res = await fetch(downloadUrl);
+          const res = await tokenService.fetch(downloadUrl);
           const blob = await res.blob();
           // navigator.clipboard.write attend un PNG dans la plupart des navigateurs
           if (blob.type === 'image/png') {
@@ -139,7 +140,7 @@ export function ArtifactCard({ artifact, onOpen, onRegenerate, onReuseAsAttachme
   return (
     <div
       onClick={() => onOpen?.(artifact.id)}
-      className="my-2.5 p-3 rounded-[8px] bg-[var(--bg-sidebar)] border border-[var(--border-subtle)] hover:border-[var(--border-composer)] transition-colors cursor-pointer group select-none text-left"
+      className="my-2.5 p-3 rounded-[var(--radius-button)] bg-[var(--bg-sidebar)] border border-[var(--border-subtle)] hover:border-[var(--border-composer)] transition-colors cursor-pointer group select-none text-left"
     >
       {/* Rendu de l'image à la largeur de la colonne avec ratio préservé sans animation (Mission M6) */}
       {isRasterImage && (
@@ -153,7 +154,7 @@ export function ArtifactCard({ artifact, onOpen, onRegenerate, onReuseAsAttachme
         </div>
       )}
 
-      {/* Rendu vidéo natif sans autoplay (Mission M7) [À VALIDER] */}
+      {/* Rendu vidéo natif sans autoplay (Mission M7) */}
       {isVideo && (
         <div className="mb-2.5 w-full bg-[var(--bg-app)] rounded-[6px] border border-[var(--border-subtle)] overflow-hidden flex items-center justify-center">
           {streamTicket ? (

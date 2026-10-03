@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { tokenService } from '../../services/security/TokenService';
+import { feedbackBus } from '../../services/feedback/FeedbackBus';
 
 export function usePluginsSettings() {
   const [pluginsList, setPluginsList] = useState<any[]>([]);
@@ -11,24 +12,30 @@ export function usePluginsSettings() {
       if (Array.isArray(data.plugins)) {
         setPluginsList(data.plugins);
       }
-    } catch {}
+    } catch {
+      feedbackBus.error('Impossible de charger les extensions.');
+    }
   };
 
   const handleTogglePlugin = async (id: string, currentEnabled: boolean) => {
     try {
-      await tokenService.fetch(`/api/plugins/${encodeURIComponent(id)}/toggle`, {
+      await tokenService.fetchChecked(`/api/plugins/${encodeURIComponent(id)}/toggle`, {
         method: 'PUT',
         body: JSON.stringify({ enabled: !currentEnabled })
-      });
-      fetchPluginsData();
-    } catch {}
+      }, "Impossible de modifier l'extension.");
+    } catch (err) {
+      feedbackBus.report(err, "Impossible de modifier l'extension.");
+    }
+    fetchPluginsData();
   };
 
   const handleDeletePlugin = async (id: string) => {
     try {
-      await tokenService.fetch(`/api/plugins/${encodeURIComponent(id)}`, { method: 'DELETE' });
-      fetchPluginsData();
-    } catch {}
+      await tokenService.fetchChecked(`/api/plugins/${encodeURIComponent(id)}`, { method: 'DELETE' }, "Impossible de supprimer l'extension.");
+    } catch (err) {
+      feedbackBus.report(err, "Impossible de supprimer l'extension.");
+    }
+    fetchPluginsData();
   };
 
   useEffect(() => {

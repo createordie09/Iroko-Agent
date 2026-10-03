@@ -117,7 +117,7 @@ export function SearchProvidersSection({
           return (
             <div
               key={p.id}
-              className="flex items-center justify-between py-2.5 px-3 bg-[var(--bg-surface)] border border-[var(--border-subtle)] rounded-[8px]"
+              className="flex items-center justify-between py-2.5 px-3 bg-[var(--bg-surface)] border border-[var(--border-subtle)] rounded-[var(--radius-button)]"
             >
               <div className="min-w-0 pr-2">
                 <div className="flex items-center gap-2">

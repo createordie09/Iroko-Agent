@@ -268,7 +268,7 @@ class ModelStoreService {
     }
 
     // 3. Sans fournisseur configuré ou aucun modèle disponible
-    const hasReadyProvider = providers.some(p => p.activeKeys > 0 || p.isLocal);
+    const hasReadyProvider = providers.some(p => p.activeKeys > 0 || (p.isLocal && p.status === 'READY'));
     if (!hasReadyProvider || models.length === 0) {
       return {
         type: 'no_provider',

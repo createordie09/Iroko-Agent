@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useRef } from 'react';
+import { useOverlayFocus } from '../../../hooks/useOverlayFocus';
 
 export interface EditModalData {
   message: any;
@@ -24,12 +25,29 @@ export function EditMessageModal({
   onCancel,
   onConfirm
 }: EditMessageModalProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useOverlayFocus({
+    isOpen: Boolean(data),
+    onClose: onCancel,
+    containerRef,
+    initialFocusRef: textareaRef
+  });
+
   if (!data) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-      <div className="bg-[var(--bg-modal)] border border-[var(--border-modal)] rounded-[10px] max-w-lg w-full p-4 space-y-3 animate-in fade-in zoom-in-95 duration-150">
-        <div className="text-[14px] font-semibold text-[var(--text-primary)]">
+    <div data-overlay-backdrop="true" className="fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4">
+      <div
+        ref={containerRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="edit-message-title"
+        tabIndex={-1}
+        data-modal="true"
+        className="bg-[var(--bg-modal)] border border-[var(--border-modal)] rounded-[10px] max-w-lg w-full p-4 space-y-3 animate-in fade-in zoom-in-95 duration-150 outline-none">
+        <div id="edit-message-title" className="text-[14px] font-semibold text-[var(--text-primary)]">
           Modifier et renvoyer le message
         </div>
         
@@ -48,6 +66,7 @@ export function EditMessageModal({
 
         <div>
           <textarea
+            ref={textareaRef}
             value={data.content}
             onChange={e => onChangeContent(e.target.value)}
             rows={4}
@@ -69,7 +88,7 @@ export function EditMessageModal({
             type="button"
             onClick={onConfirm}
             disabled={!data.content.trim()}
-            className="px-3 py-1.5 rounded-[6px] text-[12px] bg-[var(--text-primary)] text-[var(--bg-app)] hover:bg-white font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+            className="px-3 py-1.5 rounded-[6px] text-[12px] bg-[var(--text-primary)] text-[var(--bg-app)] hover:opacity-90 font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
           >
             Confirmer et renvoyer
           </button>

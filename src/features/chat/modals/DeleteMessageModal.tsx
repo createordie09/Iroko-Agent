@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useRef } from 'react';
+import { useOverlayFocus } from '../../../hooks/useOverlayFocus';
 
 export interface DeleteMessageModalProps {
   isOpen: boolean;
@@ -13,19 +14,38 @@ export function DeleteMessageModal({
   onCancel,
   onConfirm
 }: DeleteMessageModalProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const cancelRef = useRef<HTMLButtonElement>(null);
+
+  useOverlayFocus({
+    isOpen,
+    onClose: () => { if (!isDeleting) onCancel(); },
+    containerRef,
+    initialFocusRef: cancelRef
+  });
+
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-      <div className="bg-[var(--bg-modal)] border border-[var(--border-modal)] rounded-[10px] max-w-md w-full p-4 space-y-3 animate-in fade-in zoom-in-95 duration-150">
-        <div className="text-[14px] font-semibold text-[var(--text-primary)]">
+    <div data-overlay-backdrop="true" className="fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4">
+      <div
+        ref={containerRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="delete-message-title"
+        aria-describedby="delete-message-desc"
+        tabIndex={-1}
+        data-modal="true"
+        className="bg-[var(--bg-modal)] border border-[var(--border-modal)] rounded-[10px] max-w-md w-full p-4 space-y-3 animate-in fade-in zoom-in-95 duration-150 outline-none">
+        <div id="delete-message-title" className="text-[14px] font-semibold text-[var(--text-primary)]">
           Supprimer le message
         </div>
-        <p className="text-[12px] text-[var(--text-secondary)] leading-relaxed">
-          Voulez-vous vraiment supprimer ce message de la discussion&nbsp;? Cette action est irréversible dans la base locale.
+        <p id="delete-message-desc" className="text-[12px] text-[var(--text-secondary)] leading-relaxed">
+          Voulez-vous vraiment supprimer ce message de la discussion&nbsp;? Vous pourrez annuler cette suppression pendant quelques secondes.
         </p>
         <div className="flex items-center justify-end gap-2 pt-1">
           <button
+            ref={cancelRef}
             type="button"
             onClick={onCancel}
             disabled={isDeleting}

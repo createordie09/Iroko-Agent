@@ -28,14 +28,57 @@ export class ModelGateway {
   public readonly keyPool: KeyPoolManager;
   public readonly catalog: ModelCatalogManager;
 
+  /** Disponibilité réelle des fournisseurs locaux (sans clé), mesurée par sonde réseau */
+  private localAvailability: Map<string, { ok: boolean; checkedAt: number }> = new Map();
+  private probing = false;
+  private static readonly PROBE_TTL_MS = 10_000;
+  /** Rappelé lorsque la disponibilité d'un fournisseur local change (diffusion WS par le daemon) */
+  public onLocalAvailabilityChange?: (providerId: string, ok: boolean) => void;
+
   constructor() {
     this.router = modelRouter;
     this.keyPool = keyPoolManager;
     this.catalog = modelCatalogManager;
     this.catalog.initialize().catch(() => {});
+    this.probeLocalProviders();
+  }
+
+  /** Un fournisseur est utilisable s'il a une clé active, ou s'il est local et réellement joignable */
+  public static isConnected(p: { id: string; activeKeys: number; isLocal?: boolean; status?: string }): boolean {
+    if (p.id === 'mock') return false;
+    return p.activeKeys > 0 || (Boolean(p.isLocal) && p.status === 'READY');
+  }
+
+  /** Sonde en arrière-plan les fournisseurs locaux (au plus une fois toutes les 10 s) */
+  public probeLocalProviders(): void {
+    if (this.probing) return;
+    const now = Date.now();
+    const targets = this.router.getAllProviders().filter(p => {
+      if (!getProviderPreset(p.id)?.isLocal) return false;
+      const known = this.localAvailability.get(p.id);
+      return !known || now - known.checkedAt > ModelGateway.PROBE_TTL_MS;
+    });
+    if (targets.length === 0) return;
+    this.probing = true;
+    Promise.all(targets.map(async (provider) => {
+      let ok = false;
+      try {
+        const result = await provider.validateCredential('');
+        ok = Boolean(result?.valid);
+      } catch {
+        ok = false;
+      }
+      const previous = this.localAvailability.get(provider.id);
+      this.localAvailability.set(provider.id, { ok, checkedAt: Date.now() });
+      if (!previous || previous.ok !== ok) {
+        if (ok) this.refreshCatalog(provider.id).catch(() => {});
+        this.onLocalAvailabilityChange?.(provider.id, ok);
+      }
+    })).finally(() => { this.probing = false; });
   }
 
   public getAvailableProviders(): ProviderInfo[] {
+    this.probeLocalProviders();
     return this.router.getAllProviders().map(p => {
       const keys = this.keyPool.getKeysByProvider(p.id);
       const activeKeys = keys.filter(k => k.enabled && k.status !== 'INVALID' && k.status !== 'QUOTA_EXHAUSTED').length;
@@ -47,7 +90,8 @@ export class ModelGateway {
       if (p.id === 'mock') {
         status = 'READY';
       } else if (preset?.isLocal) {
-        status = 'READY';
+        const known = this.localAvailability.get(p.id);
+        status = !known ? 'CONFIGURED' : (known.ok ? 'READY' : 'ERROR');
       } else if (keys.length === 0) {
         status = 'NOT_CONFIGURED';
       } else if (activeKeys > 0) {
@@ -91,7 +135,7 @@ export class ModelGateway {
    */
   public async getAvailableModels(): Promise<FormattedModel[]> {
     const providers = this.getAvailableProviders().filter(p => p.id !== 'mock');
-    const connectedProviders = providers.filter(p => p.activeKeys > 0);
+    const connectedProviders = providers.filter(p => ModelGateway.isConnected(p));
 
     if (connectedProviders.length === 0) {
       return [];

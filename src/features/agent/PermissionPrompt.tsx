@@ -12,7 +12,7 @@ export function PermissionPrompt({ request, onRespond }: PermissionPromptProps) 
 
   return (
     <div
-      className="w-full bg-[var(--bg-sidebar)] border border-[var(--border-modal)] rounded-[8px] overflow-hidden my-3 select-none"
+      className="w-full bg-[var(--bg-sidebar)] border border-[var(--border-modal)] rounded-[var(--radius-button)] overflow-hidden my-3 select-none"
       style={{ boxShadow: 'none' }}
     >
       {/* En-tête sobre */}

@@ -19,7 +19,7 @@ export const PROVIDER_OPTIONS: ProviderOption[] = [
   {
     id: 'anthropic',
     name: 'Anthropic',
-    description: 'Accès direct aux modèles Claude 3.5 Sonnet et Haiku via la console officielle.',
+    description: 'Accès direct aux modèles Sonnet et Haiku via la console officielle.',
     docsUrl: 'https://console.anthropic.com/settings/keys',
     requiresKey: true,
     placeholder: 'sk-ant-api03-…'

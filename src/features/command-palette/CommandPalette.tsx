@@ -1,6 +1,5 @@
 /**
  * CommandPalette — Palette de commandes universelle (Mission R4a)
- * [À VALIDER par capture]
  *
  * - Raccourci : Ctrl+K (Cmd+K)
  * - Liste unique filtrée groupée par catégorie
@@ -77,7 +76,7 @@ export function CommandPalette() {
     /* Fond semi-opaque SANS flou */
     <div
       data-overlay-backdrop="true"
-      className="fixed inset-0 z-50 flex items-start justify-center pt-[12vh] px-4 bg-black/70 animate-in fade-in duration-150"
+      className="fixed inset-0 z-50 flex items-start justify-center pt-[12vh] px-4 bg-black/75 animate-in fade-in duration-150"
       onClick={(e) => { if (e.target === e.currentTarget) close(); }}
     >
       {/* Fenêtre palette — max 560px, responsive 375px */}

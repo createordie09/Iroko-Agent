@@ -1,6 +1,6 @@
 /**
  * UndoDeletionBanner — Bandeau discret de suppression différée avec bouton "Annuler" (Mission R4b)
- * [À VALIDER]
+ *
  *
  * Apparaît pendant 5 secondes lors de la suppression d'une discussion, d'un message,
  * d'un élément de mémoire ou d'une compétence importée.

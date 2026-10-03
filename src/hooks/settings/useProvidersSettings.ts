@@ -1,5 +1,6 @@
 import React, { useState, useEffect, FormEvent } from 'react';
 import { tokenService } from '../../services/security/TokenService';
+import { feedbackBus } from '../../services/feedback/FeedbackBus';
 import { ProviderCredential } from '../../../server/models/types';
 import { useApp } from '../../context/AppContext';
 
@@ -52,7 +53,9 @@ export function useProvidersSettings() {
       ]);
       if (provRes.providers) setProviders(provRes.providers.filter((p: any) => p.id !== 'mock'));
       if (credRes.credentials) setCredentials(credRes.credentials);
-    } catch {}
+    } catch {
+      feedbackBus.error('Impossible de charger les fournisseurs et les clés.');
+    }
     setLoadingKeys(false);
   };
 
@@ -76,7 +79,7 @@ export function useProvidersSettings() {
     e.preventDefault();
     if (!newKeyRaw.trim()) return;
     try {
-      await tokenService.fetch('/api/credentials', {
+      await tokenService.fetchChecked('/api/credentials', {
         method: 'POST',
         body: JSON.stringify({
           providerId: selectedProviderId,
@@ -84,19 +87,21 @@ export function useProvidersSettings() {
           key: newKeyRaw.trim(),
           priority: 1
         })
-      });
+      }, "Impossible d'enregistrer la clé.");
       setNewKeyRaw('');
       setNewKeyLabel('');
       setShowAddKeyForm(false);
       fetchKeys();
       // Notifier le Composer pour qu'il re-sonde /api/models (M10.0)
       refreshModels();
-    } catch {}
+    } catch (err) {
+      feedbackBus.report(err, "Impossible d'enregistrer la clé.");
+    }
   };
 
   const handleAddCredentialDirect = async (providerId: string, key: string, label: string) => {
     try {
-      await tokenService.fetch('/api/credentials', {
+      await tokenService.fetchChecked('/api/credentials', {
         method: 'POST',
         body: JSON.stringify({
           providerId,
@@ -104,32 +109,38 @@ export function useProvidersSettings() {
           key,
           priority: 1
         })
-      });
+      }, "Impossible d'enregistrer la clé.");
       fetchKeys();
       refreshModels();
-    } catch {}
+    } catch (err) {
+      feedbackBus.report(err, "Impossible d'enregistrer la clé.");
+    }
   };
 
   const handleDeleteCredential = async (id: string) => {
     try {
-      await tokenService.fetch(`/api/credentials?id=${id}`, { method: 'DELETE' });
+      await tokenService.fetchChecked(`/api/credentials?id=${id}`, { method: 'DELETE' }, 'Impossible de supprimer la clé.');
       fetchKeys();
       // Le catalogue de modèles peut changer après suppression d'une clé (M10.0)
       refreshModels();
-    } catch {}
+    } catch (err) {
+      feedbackBus.report(err, 'Impossible de supprimer la clé.');
+    }
   };
 
   const handleRefreshProvider = async (providerId: string) => {
     setRefreshingProviderId(providerId);
     try {
-      await tokenService.fetch('/api/models/refresh', {
+      await tokenService.fetchChecked('/api/models/refresh', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ providerId })
-      });
+      }, "Impossible d'actualiser les modèles.");
       await fetchKeys();
       refreshModels();
-    } catch {} finally {
+    } catch (err) {
+      feedbackBus.report(err, "Impossible d'actualiser les modèles.");
+    } finally {
       setRefreshingProviderId(null);
     }
   };
@@ -138,8 +149,10 @@ export function useProvidersSettings() {
     const targetCreds = credentials.filter(c => c.providerId === providerId);
     for (const c of targetCreds) {
       try {
-        await tokenService.fetch(`/api/credentials?id=${c.id}`, { method: 'DELETE' });
-      } catch {}
+        await tokenService.fetchChecked(`/api/credentials?id=${c.id}`, { method: 'DELETE' }, 'Impossible de supprimer la clé.');
+      } catch (err) {
+        feedbackBus.report(err, 'Impossible de supprimer la clé.');
+      }
     }
     await fetchKeys();
     refreshModels();
@@ -204,7 +217,9 @@ export function useProvidersSettings() {
         const modelsRes = await tokenService.fetch(`/api/media/models?providerId=${encodeURIComponent(targetProv)}`).then(r => r.json());
         if (Array.isArray(modelsRes)) setImageModels(modelsRes);
       }
-    } catch {}
+    } catch {
+      feedbackBus.error('Impossible de charger les réglages de génération d\'images.');
+    }
   };
 
   const handleSelectImageProvider = async (providerId: string) => {
@@ -217,13 +232,15 @@ export function useProvidersSettings() {
           setActiveImageModel(modelsRes[0].id);
         }
       }
-    } catch {}
+    } catch {
+      feedbackBus.error('Impossible de charger les modèles d\'images.');
+    }
   };
 
   const handleSaveMediaSettings = async () => {
     setIsSavingImageSettings(true);
     try {
-      await tokenService.fetch('/api/media/settings', {
+      await tokenService.fetchChecked('/api/media/settings', {
         method: 'POST',
         body: JSON.stringify({
           activeProviderId: activeImageProvider,
@@ -231,11 +248,13 @@ export function useProvidersSettings() {
           apiKey: imageApiKey || undefined,
           accountId: imageAccountId || undefined
         })
-      });
+      }, "Impossible d'enregistrer les réglages d'images.");
       setImageSaveSuccess(true);
       setTimeout(() => setImageSaveSuccess(false), 3000);
       fetchMediaSettings();
-    } catch {} finally {
+    } catch (err) {
+      feedbackBus.report(err, "Impossible d'enregistrer les réglages d'images.");
+    } finally {
       setIsSavingImageSettings(false);
     }
   };
@@ -259,7 +278,9 @@ export function useProvidersSettings() {
         const modelsRes = await tokenService.fetch(`/api/media/video/models?providerId=${encodeURIComponent(targetProv)}`).then(r => r.json());
         if (Array.isArray(modelsRes)) setVideoModels(modelsRes);
       }
-    } catch {}
+    } catch {
+      feedbackBus.error('Impossible de charger les réglages de génération de vidéos.');
+    }
   };
 
   const handleSelectVideoProvider = async (providerId: string) => {
@@ -272,13 +293,15 @@ export function useProvidersSettings() {
           setActiveVideoModel(modelsRes[0].id);
         }
       }
-    } catch {}
+    } catch {
+      feedbackBus.error('Impossible de charger les modèles vidéo.');
+    }
   };
 
   const handleSaveVideoSettings = async () => {
     setIsSavingVideoSettings(true);
     try {
-      await tokenService.fetch('/api/media/video/settings', {
+      await tokenService.fetchChecked('/api/media/video/settings', {
         method: 'POST',
         body: JSON.stringify({
           activeProviderId: activeVideoProvider,
@@ -286,11 +309,13 @@ export function useProvidersSettings() {
           apiKey: videoApiKey || undefined,
           timeoutMs: videoTimeoutMs
         })
-      });
+      }, "Impossible d'enregistrer les réglages vidéo.");
       setVideoSaveSuccess(true);
       setTimeout(() => setVideoSaveSuccess(false), 3000);
       fetchVideoSettings();
-    } catch {} finally {
+    } catch (err) {
+      feedbackBus.report(err, "Impossible d'enregistrer les réglages vidéo.");
+    } finally {
       setIsSavingVideoSettings(false);
     }
   };

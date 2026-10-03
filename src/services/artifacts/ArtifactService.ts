@@ -35,21 +35,9 @@ export class ArtifactService {
     return ArtifactService.instance;
   }
 
-  private async getAuthHeaders(): Promise<Record<string, string>> {
-    const token = await tokenService.getToken();
-    return {
-      'Authorization': `Bearer ${token}`,
-      'X-Iroko-Request': '1',
-      'Content-Type': 'application/json'
-    };
-  }
-
   public async listArtifacts(conversationId: string): Promise<ArtifactPublicInfo[]> {
     try {
-      const headers = await this.getAuthHeaders();
-      const res = await fetch(`/api/conversations/${encodeURIComponent(conversationId)}/artifacts`, {
-        headers
-      });
+      const res = await tokenService.fetch(`/api/conversations/${encodeURIComponent(conversationId)}/artifacts`);
       if (!res.ok) return [];
       const data = await res.json();
       // Le serveur retourne soit un tableau direct, soit { artifacts: [...] } (compatibilité)
@@ -61,10 +49,7 @@ export class ArtifactService {
 
   public async getArtifact(id: string): Promise<ArtifactPublicInfo | null> {
     try {
-      const headers = await this.getAuthHeaders();
-      const res = await fetch(`/api/artifacts/${encodeURIComponent(id)}`, {
-        headers
-      });
+      const res = await tokenService.fetch(`/api/artifacts/${encodeURIComponent(id)}`);
       if (!res.ok) return null;
       const data = await res.json();
       return data.artifact || null;
@@ -75,10 +60,7 @@ export class ArtifactService {
 
   public async getArtifactVersion(id: string, version: number): Promise<{ version: ArtifactVersionMeta; content: string } | null> {
     try {
-      const headers = await this.getAuthHeaders();
-      const res = await fetch(`/api/artifacts/${encodeURIComponent(id)}/versions/${version}`, {
-        headers
-      });
+      const res = await tokenService.fetch(`/api/artifacts/${encodeURIComponent(id)}/versions/${version}`);
       if (!res.ok) return null;
       const data = await res.json();
       return data;
@@ -89,10 +71,8 @@ export class ArtifactService {
 
   public async restoreVersion(id: string, version: number): Promise<ArtifactPublicInfo | null> {
     try {
-      const headers = await this.getAuthHeaders();
-      const res = await fetch(`/api/artifacts/${encodeURIComponent(id)}/restore`, {
+      const res = await tokenService.fetch(`/api/artifacts/${encodeURIComponent(id)}/restore`, {
         method: 'POST',
-        headers,
         body: JSON.stringify({ version })
       });
       if (!res.ok) return null;
@@ -105,17 +85,11 @@ export class ArtifactService {
 
   public async downloadArtifact(id: string, filename: string, version?: number): Promise<boolean> {
     try {
-      const token = await tokenService.getToken();
       const url = version !== undefined
         ? `/api/artifacts/${encodeURIComponent(id)}/versions/${version}/download`
         : `/api/artifacts/${encodeURIComponent(id)}/download`;
 
-      const res = await fetch(url, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'X-Iroko-Request': '1'
-        }
-      });
+      const res = await tokenService.fetch(url);
 
       if (!res.ok) return false;
 
@@ -127,7 +101,7 @@ export class ArtifactService {
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      URL.revokeObjectURL(blobUrl);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
       return true;
     } catch {
       return false;
@@ -136,14 +110,8 @@ export class ArtifactService {
 
   public async downloadAllArtifacts(conversationId: string): Promise<boolean> {
     try {
-      const token = await tokenService.getToken();
       const url = `/api/conversations/${encodeURIComponent(conversationId)}/artifacts/download-all`;
-      const res = await fetch(url, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'X-Iroko-Request': '1'
-        }
-      });
+      const res = await tokenService.fetch(url);
       if (!res.ok) return false;
 
       const blob = await res.blob();
@@ -154,7 +122,7 @@ export class ArtifactService {
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      URL.revokeObjectURL(blobUrl);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
       return true;
     } catch {
       return false;
@@ -171,11 +139,10 @@ export class ArtifactService {
     error?: string;
   } | null> {
     try {
-      const headers = await this.getAuthHeaders();
       const url = version !== undefined
         ? `/api/artifacts/${encodeURIComponent(id)}/preview?version=${version}`
         : `/api/artifacts/${encodeURIComponent(id)}/preview`;
-      const res = await fetch(url, { headers });
+      const res = await tokenService.fetch(url);
       if (!res.ok) return null;
       return await res.json();
     } catch {

@@ -321,7 +321,7 @@ export function ArtifactInspector({
             <iframe
               sandbox="allow-scripts"
               srcDoc={`<!DOCTYPE html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; connect-src 'none';"><style>body{margin:12px;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;color:black;background:white;line-height:1.5;}</style></head><body>${content || previewData?.text || ''}</body></html>`}
-              className="w-full h-[460px] border border-[var(--border-subtle)] rounded-[8px] bg-white text-black select-text"
+              className="w-full h-[460px] border border-[var(--border-subtle)] rounded-[var(--radius-button)] bg-white text-black select-text"
               title={activeArtifact.name}
             />
           </div>
@@ -334,7 +334,7 @@ export function ArtifactInspector({
                 <Download className="w-3 h-3" /> Télécharger
               </button>
             </div>
-            <div className="p-4 bg-[var(--bg-sidebar)] border border-[var(--border-subtle)] rounded-[8px] flex items-center justify-center min-h-[260px]">
+            <div className="p-4 bg-[var(--bg-sidebar)] border border-[var(--border-subtle)] rounded-[var(--radius-button)] flex items-center justify-center min-h-[260px]">
               <img
                 src={`data:image/svg+xml;utf8,${encodeURIComponent(content || previewData?.text || '')}`}
                 alt={activeArtifact.name}
@@ -351,7 +351,7 @@ export function ArtifactInspector({
                 <Download className="w-3 h-3" /> Télécharger
               </button>
             </div>
-            <div className="p-4 bg-[var(--bg-sidebar)] border border-[var(--border-subtle)] rounded-[8px] flex items-center justify-center min-h-[260px]">
+            <div className="p-4 bg-[var(--bg-sidebar)] border border-[var(--border-subtle)] rounded-[var(--radius-button)] flex items-center justify-center min-h-[260px]">
               <img
                 src={`/api/artifacts/${activeArtifact.id}/download?version=${selectedVersion}`}
                 alt={activeArtifact.name}
@@ -359,7 +359,7 @@ export function ArtifactInspector({
               />
             </div>
             {activeArtifact.metadata && (
-              <div className="p-3 bg-[var(--bg-sidebar)] border border-[var(--border-subtle)] rounded-[8px] space-y-1.5 text-[12px]">
+              <div className="p-3 bg-[var(--bg-sidebar)] border border-[var(--border-subtle)] rounded-[var(--radius-button)] space-y-1.5 text-[12px]">
                 {activeArtifact.metadata.prompt && (
                   <div>
                     <span className="text-[var(--text-secondary)] block text-[11px]">Prompt{'\u00A0'}:</span>
@@ -377,20 +377,20 @@ export function ArtifactInspector({
         ) : isDocx ? (
           /* APERÇU DOCX : Texte extrait via Mammoth */
           <div className="space-y-3">
-            <div className="p-2.5 bg-[var(--bg-sidebar)] border border-[var(--border-subtle)] rounded-[8px] text-[11px] text-[var(--text-secondary)] flex items-center justify-between">
+            <div className="p-2.5 bg-[var(--bg-sidebar)] border border-[var(--border-subtle)] rounded-[var(--radius-button)] text-[11px] text-[var(--text-secondary)] flex items-center justify-between">
               <span>Document Word (.docx)</span>
               <button type="button" onClick={handleDownload} className="text-[var(--text-primary)] hover:underline flex items-center gap-1">
                 <Download className="w-3 h-3" /> Télécharger (.docx)
               </button>
             </div>
-            <div className="p-3.5 bg-[var(--bg-app)] border border-[var(--border-subtle)] rounded-[8px] text-[13px] leading-relaxed whitespace-pre-wrap select-text text-[var(--text-muted)]">
+            <div className="p-3.5 bg-[var(--bg-app)] border border-[var(--border-subtle)] rounded-[var(--radius-button)] text-[13px] leading-relaxed whitespace-pre-wrap select-text text-[var(--text-muted)]">
               {previewData?.text || 'Document Word vide ou en cours de chargement\u2026'}
             </div>
           </div>
         ) : isXlsx ? (
           /* APERÇU XLSX : Feuilles et données via ExcelJS */
           <div className="space-y-3">
-            <div className="p-2.5 bg-[var(--bg-sidebar)] border border-[var(--border-subtle)] rounded-[8px] text-[11px] text-[var(--text-secondary)] flex items-center justify-between">
+            <div className="p-2.5 bg-[var(--bg-sidebar)] border border-[var(--border-subtle)] rounded-[var(--radius-button)] text-[11px] text-[var(--text-secondary)] flex items-center justify-between">
               <span>Classeur Excel (.xlsx) — {previewData?.sheets?.length || 1} feuille(s)</span>
               <button type="button" onClick={handleDownload} className="text-[var(--text-primary)] hover:underline flex items-center gap-1">
                 <Download className="w-3 h-3" /> Télécharger (.xlsx)
@@ -401,7 +401,7 @@ export function ArtifactInspector({
                 {previewData.sheets.map((sheet: any, sIdx: number) => (
                   <div key={sIdx} className="space-y-1.5">
                     <div className="text-[11px] font-mono text-[var(--text-secondary)]">{sheet.name}</div>
-                    <div className="overflow-x-auto border border-[var(--border-subtle)] rounded-[8px] bg-[var(--bg-app)]">
+                    <div className="overflow-x-auto border border-[var(--border-subtle)] rounded-[var(--radius-button)] bg-[var(--bg-app)]">
                       <table className="w-full text-left text-[12px] font-mono border-collapse">
                         <tbody>
                           {sheet.rows.map((row: any[], rIdx: number) => (
@@ -420,7 +420,7 @@ export function ArtifactInspector({
                 ))}
               </div>
             ) : (
-              <div className="p-4 bg-[var(--bg-app)] border border-[var(--border-subtle)] rounded-[8px] text-[var(--text-secondary)] text-center">
+              <div className="p-4 bg-[var(--bg-app)] border border-[var(--border-subtle)] rounded-[var(--radius-button)] text-[var(--text-secondary)] text-center">
                 Classeur Excel vide ou sans données tabulaires.
               </div>
             )}
@@ -428,7 +428,7 @@ export function ArtifactInspector({
         ) : isPptx ? (
           /* APERÇU PPTX : Diapositives */
           <div className="space-y-3">
-            <div className="p-2.5 bg-[var(--bg-sidebar)] border border-[var(--border-subtle)] rounded-[8px] text-[11px] text-[var(--text-secondary)] flex items-center justify-between">
+            <div className="p-2.5 bg-[var(--bg-sidebar)] border border-[var(--border-subtle)] rounded-[var(--radius-button)] text-[11px] text-[var(--text-secondary)] flex items-center justify-between">
               <span>Présentation PowerPoint (.pptx) — {previewData?.slides?.length || 0} diapositive(s)</span>
               <button type="button" onClick={handleDownload} className="text-[var(--text-primary)] hover:underline flex items-center gap-1">
                 <Download className="w-3 h-3" /> Télécharger (.pptx)
@@ -436,7 +436,7 @@ export function ArtifactInspector({
             </div>
             <div className="space-y-2">
               {(previewData?.slides || []).map((slide: any, sIdx: number) => (
-                <div key={sIdx} className="p-3 bg-[var(--bg-app)] border border-[var(--border-subtle)] rounded-[8px] space-y-1">
+                <div key={sIdx} className="p-3 bg-[var(--bg-app)] border border-[var(--border-subtle)] rounded-[var(--radius-button)] space-y-1">
                   <div className="text-[12px] font-medium text-[var(--text-primary)]">{slide.title || `Diapositive ${sIdx + 1}`}</div>
                   <div className="text-[12px] text-[var(--text-muted)] leading-relaxed whitespace-pre-wrap">{slide.text}</div>
                 </div>
@@ -446,13 +446,13 @@ export function ArtifactInspector({
         ) : isPdf ? (
           /* APERÇU PDF : Métadonnées et téléchargement */
           <div className="space-y-3">
-            <div className="p-2.5 bg-[var(--bg-sidebar)] border border-[var(--border-subtle)] rounded-[8px] text-[11px] text-[var(--text-secondary)] flex items-center justify-between">
+            <div className="p-2.5 bg-[var(--bg-sidebar)] border border-[var(--border-subtle)] rounded-[var(--radius-button)] text-[11px] text-[var(--text-secondary)] flex items-center justify-between">
               <span>Document PDF ({previewData?.pageCount || 1} page{previewData?.pageCount > 1 ? 's' : ''})</span>
               <button type="button" onClick={handleDownload} className="text-[var(--text-primary)] hover:underline flex items-center gap-1">
                 <Download className="w-3 h-3" /> Télécharger (.pdf)
               </button>
             </div>
-            <div className="p-6 bg-[var(--bg-app)] border border-[var(--border-subtle)] rounded-[8px] text-center space-y-3">
+            <div className="p-6 bg-[var(--bg-app)] border border-[var(--border-subtle)] rounded-[var(--radius-button)] text-center space-y-3">
               <FileText className="w-8 h-8 text-[var(--text-secondary)] mx-auto" />
               <div className="text-[13px] text-[var(--text-primary)] font-medium">{activeArtifact.title || activeArtifact.name}</div>
               <p className="text-[12px] text-[var(--text-secondary)] max-w-sm mx-auto">
@@ -469,7 +469,7 @@ export function ArtifactInspector({
           </div>
         ) : isZip ? (
           /* APERÇU ZIP : Carte d'archive */
-          <div className="p-6 bg-[var(--bg-app)] border border-[var(--border-subtle)] rounded-[8px] text-center space-y-3">
+          <div className="p-6 bg-[var(--bg-app)] border border-[var(--border-subtle)] rounded-[var(--radius-button)] text-center space-y-3">
             <Archive className="w-8 h-8 text-[var(--text-secondary)] mx-auto" />
             <div className="text-[13px] text-[var(--text-primary)] font-medium">{activeArtifact.title || activeArtifact.name}</div>
             <p className="text-[12px] text-[var(--text-secondary)] max-w-sm mx-auto">
@@ -484,7 +484,7 @@ export function ArtifactInspector({
             </button>
           </div>
         ) : isCsv && csvTable ? (
-          <div className="overflow-x-auto border border-[var(--border-subtle)] rounded-[8px] bg-[var(--bg-app)]">
+          <div className="overflow-x-auto border border-[var(--border-subtle)] rounded-[var(--radius-button)] bg-[var(--bg-app)]">
             <table className="w-full text-left text-[12px] font-mono border-collapse">
               <thead>
                 <tr className="bg-[var(--bg-surface)] border-b border-[var(--border-subtle)] text-[var(--text-primary)]">
@@ -511,7 +511,7 @@ export function ArtifactInspector({
         ) : isJson ? (
           <CodeBlock code={formattedJson || content} language="json" />
         ) : isMarkdown ? (
-          <div className="space-y-2 bg-[var(--bg-app)] border border-[var(--border-subtle)] rounded-[8px] p-3 text-[13px] leading-relaxed">
+          <div className="space-y-2 bg-[var(--bg-app)] border border-[var(--border-subtle)] rounded-[var(--radius-button)] p-3 text-[13px] leading-relaxed">
             {parseMarkdownBlocks(content).map((b, idx) => {
               if (b.type === 'code') {
                 return <CodeBlock key={idx} code={b.code} language={b.language} title={b.title} />;

@@ -646,12 +646,12 @@ export function ClaudeComposer({
         </div>
       )}
 
-      {/* ── Puce du projet actif, Pièces jointes, Puce Image & Puce Vidéo (M2, M3, M6 & M7) [À VALIDER] ── */}
+      {/* ── Puce du projet actif, Pièces jointes, Puce Image & Puce Vidéo (M2, M3, M6 & M7) ── */}
       {(activeWorkspace || attachments.length > 0 || hasImageChip || hasVideoChip) && (
         <div className="flex flex-wrap gap-2 pb-2 mb-2 border-b border-[var(--border-modal)]">
-          {/* Puce Image (Mission M6) [À VALIDER] */}
+          {/* Puce Image (Mission M6) */}
           {hasImageChip && (
-            <div className="flex items-center gap-2 p-1.5 bg-[var(--bg-surface-hover)] border border-[var(--border-composer)] rounded-[8px] max-w-[240px]">
+            <div className="flex items-center gap-2 p-1.5 bg-[var(--bg-surface-hover)] border border-[var(--border-composer)] rounded-[var(--radius-button)] max-w-[240px]">
               <div className="w-8 h-8 rounded bg-[var(--bg-modal)] border border-[var(--border-composer)] flex items-center justify-center shrink-0">
                 <ImageIcon className="w-4 h-4 text-[var(--text-primary)]" />
               </div>
@@ -671,9 +671,9 @@ export function ClaudeComposer({
             </div>
           )}
 
-          {/* Puce Vidéo (Mission M7) [À VALIDER] */}
+          {/* Puce Vidéo (Mission M7) */}
           {hasVideoChip && (
-            <div className="flex items-center gap-2 p-1.5 bg-[var(--bg-surface-hover)] border border-[var(--border-composer)] rounded-[8px] max-w-[240px]">
+            <div className="flex items-center gap-2 p-1.5 bg-[var(--bg-surface-hover)] border border-[var(--border-composer)] rounded-[var(--radius-button)] max-w-[240px]">
               <div className="w-8 h-8 rounded bg-[var(--bg-modal)] border border-[var(--border-composer)] flex items-center justify-center shrink-0">
                 <Film className="w-4 h-4 text-[var(--text-primary)]" />
               </div>
@@ -696,7 +696,7 @@ export function ClaudeComposer({
           {/* Puce Projet */}
           {activeWorkspace && (
             <div
-              className="flex items-center gap-2 p-1.5 bg-[var(--bg-surface-hover)] border border-[var(--border-composer)] rounded-[8px] max-w-[280px]"
+              className="flex items-center gap-2 p-1.5 bg-[var(--bg-surface-hover)] border border-[var(--border-composer)] rounded-[var(--radius-button)] max-w-[280px]"
             >
               <div className="w-8 h-8 rounded bg-[var(--bg-modal)] border border-[var(--border-composer)] flex items-center justify-center shrink-0">
                 <Folder className="w-4 h-4 text-[var(--text-secondary)]" />
@@ -738,7 +738,7 @@ export function ClaudeComposer({
           {attachments.map(att => (
             <div
               key={att.tempId}
-              className="flex items-center gap-2 p-1.5 bg-[var(--bg-surface-hover)] border border-[var(--border-composer)] rounded-[8px] max-w-[220px]"
+              className="flex items-center gap-2 p-1.5 bg-[var(--bg-surface-hover)] border border-[var(--border-composer)] rounded-[var(--radius-button)] max-w-[220px]"
             >
               {att.isImage && att.previewUrl ? (
                 <img
@@ -780,7 +780,7 @@ export function ClaudeComposer({
         </div>
       )}
 
-      {/* ── Bandeau de Comparaison de deux modèles (Mission R4d) [À VALIDER] ── */}
+      {/* ── Bandeau de Comparaison de deux modèles (Mission R4d) ── */}
       {isComparisonMode && (
         <ComparisonBar
           modelAName={activeModelFormatted.name}
@@ -849,7 +849,7 @@ export function ClaudeComposer({
                   <span>Ajouter des fichiers</span>
                 </button>
 
-                {/* Créer une image (Mission M6) [À VALIDER] */}
+                {/* Créer une image (Mission M6) */}
                 {isImageConfigured ? (
                   <button
                     type="button"
@@ -878,7 +878,7 @@ export function ClaudeComposer({
                   </button>
                 )}
 
-                {/* Créer une vidéo (Mission M7) [À VALIDER] */}
+                {/* Créer une vidéo (Mission M7) */}
                 {isVideoConfigured ? (
                   <button
                     type="button"
@@ -908,7 +908,7 @@ export function ClaudeComposer({
                   </button>
                 )}
 
-                {/* Comparer deux modèles (Mission R4d) [À VALIDER] */}
+                {/* Comparer deux modèles (Mission R4d) */}
                 {isComparisonAvailable ? (
                   <button
                     type="button"
@@ -938,7 +938,7 @@ export function ClaudeComposer({
                   </button>
                 )}
 
-                {/* Ouvrir un dossier… (Mode Code uniquement) [À VALIDER] */}
+                {/* Ouvrir un dossier… (Mode Code uniquement) */}
                 {composerMode === 'code' ? (
                   <div>
                     <button
@@ -1314,7 +1314,7 @@ export function ClaudeComposer({
 
       {/* État 4 : hasModels = true → rien à afficher */}
 
-      {/* Ligne de contexte utilisé (Mission M8.3 P7) [À VALIDER] */}
+      {/* Ligne de contexte utilisé (Mission M8.3 P7) */}
       {contextUsage && contextUsage.ratio >= 0.60 && (
         <div className="text-[12px] text-[var(--text-secondary)] pt-2 px-1 select-none flex items-center justify-between border-t border-[var(--border-subtle)] mt-2">
           <span>

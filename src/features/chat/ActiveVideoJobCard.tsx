@@ -16,7 +16,7 @@ export function ActiveVideoJobCard({ job, onCancel }: ActiveVideoJobCardProps) {
 
   return (
     <div
-      className="my-3 p-3.5 bg-[var(--bg-modal)] border border-[var(--border-modal)] rounded-[8px] flex items-center justify-between gap-3 select-none"
+      className="my-3 p-3.5 bg-[var(--bg-modal)] border border-[var(--border-modal)] rounded-[var(--radius-button)] flex items-center justify-between gap-3 select-none"
     >
       <div className="flex items-center gap-2.5 min-w-0 flex-1">
         <div className="w-8 h-8 rounded bg-[var(--bg-surface)] border border-[var(--border-subtle)] flex items-center justify-center shrink-0">

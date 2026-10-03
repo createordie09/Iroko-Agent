@@ -21,6 +21,8 @@ const EXCLUDED_PATHS = [
 // Détecte aussi les couleurs hexadécimales en dur dans les attributs style ou constantes de composants
 const HEX_REGEX = /#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})\b/g;
 const ARBITRARY_RGB_REGEX = /(rgb|rgba|hsl|hsla)\(\s*\d+/g;
+// Rayons en dur dont une valeur existe déjà en token (--radius-button/item = 8px, --radius-card = 12px, --radius-composer/modal = 16px)
+const ARBITRARY_RADIUS_REGEX = /rounded-\[(8|12|16)px\]/g;
 
 let totalErrors = 0;
 const errorReports = [];
@@ -75,6 +77,18 @@ function checkFile(filePath) {
       });
     }
 
+    // Recherche de rayons en dur ayant un token équivalent
+    ARBITRARY_RADIUS_REGEX.lastIndex = 0;
+    while ((match = ARBITRARY_RADIUS_REGEX.exec(line)) !== null) {
+      totalErrors++;
+      errorReports.push({
+        file: relPath,
+        line: i + 1,
+        match: match[0],
+        snippet: trimmed.slice(0, 100)
+      });
+    }
+
     // Recherche de fonctions rgb/rgba/hsl arbitraires hors var()
     ARBITRARY_RGB_REGEX.lastIndex = 0;
     while ((match = ARBITRARY_RGB_REGEX.exec(line)) !== null) {
@@ -93,14 +107,14 @@ console.log('--- Contrôle des Tokens de Design (npm run lint:tokens) ---');
 scanDirectory(srcDir);
 
 if (totalErrors > 0) {
-  console.error(`\n❌ Échec du contrôle : ${totalErrors} couleur(s) arbitraire(s) détectée(s) dans les composants :\n`);
+  console.error(`\n❌ Échec du contrôle : ${totalErrors} valeur(s) arbitraire(s) (couleur ou rayon) détectée(s) dans les composants :\n`);
   for (const err of errorReports.slice(0, 50)) {
     console.error(`  - ${err.file}:${err.line} -> "${err.match}" dans : ${err.snippet}`);
   }
   if (errorReports.length > 50) {
     console.error(`  ... et ${errorReports.length - 50} autre(s) occurrence(s).`);
   }
-  console.error('\nConsigne : Remplacez chaque couleur par son token CSS (ex. var(--text-primary), var(--bg-surface), var(--border-subtle)...).');
+  console.error('\nConsigne : Remplacez chaque couleur ou rayon par son token CSS (ex. var(--text-primary), var(--bg-surface), var(--radius-button)...).');
   process.exit(1);
 } else {
   console.log('✅ Aucun code couleur en dur trouvé dans les composants. Tous les tokens du design system sont respectés.\n');

@@ -18,6 +18,7 @@ export interface UseSidebarConversationsOptions {
   resetChat: () => void;
   scheduleUndoableDeletion: (options: any) => Promise<void>;
   setIsMobileSidebarOpen: (v: boolean) => void;
+  activeConversationId: string | null;
 }
 
 export function useSidebarConversations({
@@ -27,7 +28,8 @@ export function useSidebarConversations({
   loadConversation,
   resetChat,
   scheduleUndoableDeletion,
-  setIsMobileSidebarOpen
+  setIsMobileSidebarOpen,
+  activeConversationId
 }: UseSidebarConversationsOptions) {
   const [editingConvId, setEditingConvId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState('');
@@ -94,7 +96,7 @@ export function useSidebarConversations({
   // ── Suppression Unitaire ──
   const handleDeleteConversation = useCallback((e: React.MouseEvent, item: HistoryItem) => {
     e.stopPropagation();
-    const wasActive = history[0]?.id === item.id && activeView === 'chat';
+    const wasActive = activeConversationId === item.id && activeView === 'chat';
     const oldHistory = [...history];
     setHistory(prev => prev.filter(h => h.id !== item.id));
     if (wasActive) resetChat();
@@ -108,7 +110,7 @@ export function useSidebarConversations({
         if (wasActive) loadConversation(item.id);
       }
     });
-  }, [history, activeView, setHistory, resetChat, scheduleUndoableDeletion, loadConversation]);
+  }, [history, activeView, activeConversationId, setHistory, resetChat, scheduleUndoableDeletion, loadConversation]);
 
   // ── Sélection Multiple ──
   const handleToggleSelectionMode = useCallback(() => {
@@ -147,7 +149,8 @@ export function useSidebarConversations({
 
     const count = idsToDelete.length;
     const oldHistory = [...history];
-    const wasActive = history[0] && idsToDelete.includes(history[0].id) && activeView === 'chat';
+    const activeIdBefore = activeConversationId;
+    const wasActive = Boolean(activeIdBefore) && idsToDelete.includes(activeIdBefore as string) && activeView === 'chat';
 
     setHistory(prev => prev.filter(h => !idsToDelete.includes(h.id)));
     if (wasActive) resetChat();
@@ -162,11 +165,11 @@ export function useSidebarConversations({
       onRestore: () => {
         setHistory(oldHistory);
         if (wasActive) {
-          loadConversation(oldHistory[0].id);
+          loadConversation(activeIdBefore as string);
         }
       }
     });
-  }, [selectedIds, history, activeView, setHistory, resetChat, scheduleUndoableDeletion, loadConversation]);
+  }, [selectedIds, history, activeView, activeConversationId, setHistory, resetChat, scheduleUndoableDeletion, loadConversation]);
 
   // ── Épinglage / Désépinglage (Mission R4e) ──
   const handleTogglePin = useCallback(async (id: string, currentPinned?: boolean) => {

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { tokenService } from '../../services/security/TokenService';
+import { feedbackBus } from '../../services/feedback/FeedbackBus';
 import { useUndoDeletion } from '../useUndoDeletion';
 
 export function useMemorySettings() {
@@ -30,19 +31,25 @@ export function useMemorySettings() {
       if (Array.isArray(listRes?.memories)) {
         setMemories(listRes.memories);
       }
-    } catch {} finally {
+    } catch {
+      feedbackBus.error('Impossible de charger la mémoire.');
+    } finally {
       setLoadingMemories(false);
     }
   };
 
   const handleToggleMemory = async (enabled: boolean) => {
+    const previous = memoryEnabled;
     setMemoryEnabled(enabled);
     try {
-      await tokenService.fetch('/api/memory/toggle', {
+      await tokenService.fetchChecked('/api/memory/toggle', {
         method: 'PUT',
         body: JSON.stringify({ enabled })
-      });
-    } catch {}
+      }, 'Impossible de modifier la mémoire.');
+    } catch (err) {
+      setMemoryEnabled(previous);
+      feedbackBus.report(err, 'Impossible de modifier la mémoire.');
+    }
   };
 
   const handleSaveMemoryItem = async () => {
@@ -94,15 +101,17 @@ export function useMemorySettings() {
 
   const handleClearAllMemories = async () => {
     try {
-      await tokenService.fetch('/api/memory', { method: 'DELETE' });
+      await tokenService.fetchChecked('/api/memory', { method: 'DELETE' }, 'Impossible de vider la mémoire.');
       setMemories([]);
       setShowClearConfirm(false);
-    } catch {}
+    } catch (err) {
+      feedbackBus.report(err, 'Impossible de vider la mémoire.');
+    }
   };
 
   const handleExportMemories = async () => {
     try {
-      const res = await tokenService.fetch('/api/memory/export');
+      const res = await tokenService.fetchChecked('/api/memory/export', undefined, "Impossible d'exporter la mémoire.");
       const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -111,8 +120,10 @@ export function useMemorySettings() {
       document.body.appendChild(a);
       a.click();
       a.remove();
-      window.URL.revokeObjectURL(url);
-    } catch {}
+      setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+    } catch (err) {
+      feedbackBus.report(err, "Impossible d'exporter la mémoire.");
+    }
   };
 
   useEffect(() => {

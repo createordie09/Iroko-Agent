@@ -80,6 +80,8 @@ export type ClientMessage =
       thinkingBudget?: number;
       conversationId?: string;
       attachmentIds?: string[];
+      /** Relance du dernier message utilisateur déjà enregistré : ne pas le dupliquer */
+      retry?: boolean;
     }
   | { type: 'permission_response'; requestId: string; approved: boolean; scope?: 'once' | 'session' | 'workspace' }
   | { type: 'cancel_task' };

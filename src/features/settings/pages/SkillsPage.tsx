@@ -53,7 +53,7 @@ export function SkillsPage() {
 
       {/* Formulaire d'importation */}
       {showImportSkillForm && (
-        <div className="p-3 bg-[var(--bg-app)] border border-[var(--border-modal)] rounded-[8px] space-y-3">
+        <div className="p-3 bg-[var(--bg-app)] border border-[var(--border-modal)] rounded-[var(--radius-button)] space-y-3">
           <div className="text-[13px] font-medium text-[var(--text-primary)]">Importer une compétence</div>
           <div>
             <label className="text-[11px] text-[var(--text-secondary)] block mb-1">Chemin absolu du dossier ou de l'archive (.zip)</label>
@@ -102,7 +102,7 @@ export function SkillsPage() {
 
       {/* Rapport et confirmation de sécurité après import */}
       {importResult && (
-        <div className="p-3 bg-[var(--bg-app)] border border-[var(--border-modal)] rounded-[8px] space-y-3">
+        <div className="p-3 bg-[var(--bg-app)] border border-[var(--border-modal)] rounded-[var(--radius-button)] space-y-3">
           <div className="flex items-center justify-between">
             <div className="text-[13px] font-medium text-[var(--text-primary)]">
               Rapport de sécurité{'\u00A0'}: {importResult.skill.name}
@@ -155,7 +155,7 @@ export function SkillsPage() {
 
       {/* Formulaire d'édition */}
       {editingSkill && (
-        <div className="p-3 bg-[var(--bg-app)] border border-[var(--border-modal)] rounded-[8px] space-y-3">
+        <div className="p-3 bg-[var(--bg-app)] border border-[var(--border-modal)] rounded-[var(--radius-button)] space-y-3">
           <div className="flex items-center justify-between">
             <div className="text-[13px] font-medium text-[var(--text-primary)]">
               Modifier{'\u00A0'}: {editingSkill.name}
@@ -200,7 +200,7 @@ export function SkillsPage() {
           {skillsList.map(skill => (
             <div
               key={skill.name}
-              className="p-3 bg-[var(--bg-app)] border border-[var(--border-subtle)] rounded-[8px] space-y-1.5"
+              className="p-3 bg-[var(--bg-app)] border border-[var(--border-subtle)] rounded-[var(--radius-button)] space-y-1.5"
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">

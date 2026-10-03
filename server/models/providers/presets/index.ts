@@ -11,7 +11,7 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     isLocal: false,
     requiresKey: true,
     docsUrl: 'https://openrouter.ai/keys',
-    defaultModel: 'openrouter/anthropic/claude-3.5-sonnet',
+    defaultModel: 'openrouter/anthropic/claude-sonnet-4.5',
     modelsEndpoint: '/models',
     validation: {
       endpoint: '/auth/key',
@@ -30,8 +30,8 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     },
     curatedModels: [
       {
-        id: 'openrouter/anthropic/claude-3.7-sonnet',
-        name: 'Sonnet 3.7',
+        id: 'openrouter/anthropic/claude-sonnet-4.5',
+        name: 'Sonnet 4.5',
         publisher: 'Anthropic',
         contextWindow: 200000,
         maxOutputTokens: 64000,
@@ -40,24 +40,24 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
         description: 'Modèle de référence pour le raisonnement hybride et le code.'
       },
       {
-        id: 'openrouter/anthropic/claude-3.5-sonnet',
-        name: 'Sonnet 3.5',
+        id: 'openrouter/anthropic/claude-haiku-4.5',
+        name: 'Haiku 4.5',
         publisher: 'Anthropic',
         contextWindow: 200000,
-        maxOutputTokens: 8192,
+        maxOutputTokens: 64000,
         priceTier: 'standard',
         capabilities: { vision: true, nativePdf: true, audio: false, video: false, tools: true, reasoning: true },
         description: 'Modèle équilibré et rapide.'
       },
       {
-        id: 'openrouter/openai/gpt-4.5-preview',
-        name: 'GPT-4.5 Preview',
+        id: 'openrouter/openai/gpt-4o-mini',
+        name: 'GPT-4o mini',
         publisher: 'OpenAI',
         contextWindow: 128000,
         maxOutputTokens: 16384,
-        priceTier: 'premium',
-        capabilities: { vision: true, nativePdf: false, audio: false, video: false, tools: true, reasoning: true },
-        description: 'Nouveau modèle phare multimodal d\'OpenAI.'
+        priceTier: 'budget',
+        capabilities: { vision: true, nativePdf: false, audio: false, video: false, tools: true, reasoning: false },
+        description: 'Modèle multimodal d\'OpenAI rapide et économique.'
       },
       {
         id: 'openrouter/openai/o3-mini',

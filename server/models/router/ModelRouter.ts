@@ -117,13 +117,17 @@ export class ModelRouter {
       }
     }
 
-    // Le mock ne doit intervenir en dernier recours QUE si l'utilisateur n'a configuré aucune clé
+    // Le moteur de test ne répond JAMAIS en production : aucune réponse fictive n'est jamais fabriquée.
+    // Il n'intervient en dernier recours que dans l'environnement de test, sans aucune clé configurée.
     const hasConfiguredKeys = this.poolManager.getAllKeys().some(k => k.enabled && k.status !== 'INVALID' && k.status !== 'QUOTA_EXHAUSTED');
-    if (!hasConfiguredKeys && !providerQueue.includes('mock')) {
+    const isTestEnv = process.env.NODE_ENV === 'test' || process.env.IROKO_TEST_MODE === '1';
+    if (isTestEnv && !hasConfiguredKeys && !providerQueue.includes('mock')) {
       providerQueue.push('mock');
     }
 
     let lastError: any = null;
+    // Erreur du fournisseur demandé par l'utilisateur : c'est celle qui doit être rapportée, pas celle d'un repli
+    let preferredError: any = null;
 
     // 2. Parcourir les providers
     for (const providerId of providerQueue) {
@@ -137,6 +141,30 @@ export class ModelRouter {
           yield chunk;
         }
         return;
+      }
+
+      // Fournisseurs locaux sans clé (Ollama, LM Studio) : appel direct, sans passer par le pool de clés
+      const preset = getProviderPreset(provider.id);
+      if (preset && preset.requiresKey === false) {
+        let yielded = false;
+        try {
+          for await (const chunk of provider.generateStream(request, '')) {
+            if (request.abortSignal?.aborted) return;
+            yielded = true;
+            yield chunk;
+          }
+          return;
+        } catch (err: any) {
+          if (request.abortSignal?.aborted || err.name === 'AbortError') return;
+          lastError = new Error(`${provider.name} injoignable\u00A0: ${err.message}`);
+          if (providerId === targetProvider) preferredError = lastError;
+          logger.warn(`Échec du fournisseur local ${provider.name} : ${err.message}`);
+          if (yielded) {
+            yield { type: 'text_delta', text: `\n\n[Flux interrompu : ${err.message}]` };
+            return;
+          }
+          continue;
+        }
       }
 
       let attempts = 0;
@@ -185,6 +213,7 @@ export class ModelRouter {
 
           const classification = this.poolManager.reportFailure(credential.id, err);
           lastError = err;
+          if (providerId === targetProvider) preferredError = err;
 
           logger.warn(
             `Échec clé ${credential.maskedKey} (${provider.name}) : ${classification.message} [${classification.category}]`
@@ -210,6 +239,10 @@ export class ModelRouter {
     }
 
     // Si tout a échoué
+    if (preferredError) throw preferredError;
+    if (!hasConfiguredKeys) {
+      throw new Error('Aucun fournisseur d\'IA disponible. Ajoutez une clé dans Paramètres › Fournisseurs & Clés ou démarrez un serveur local (Ollama, LM Studio).');
+    }
     throw lastError || new Error('Tous les fournisseurs et clés d\'IA configurés sont actuellement indisponibles.');
   }
 }

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { tokenService } from '../../services/security/TokenService';
+import { feedbackBus } from '../../services/feedback/FeedbackBus';
 
 export function useCapabilitiesSettings() {
   const [toolsList, setToolsList] = useState<any[]>([]);
@@ -16,7 +17,9 @@ export function useCapabilitiesSettings() {
       if (Array.isArray(data.tools)) {
         setToolsList(data.tools);
       }
-    } catch {} finally {
+    } catch {
+      feedbackBus.error('Impossible de charger les outils.');
+    } finally {
       setLoadingTools(false);
     }
   };
@@ -28,31 +31,37 @@ export function useCapabilitiesSettings() {
       if (data.permission) {
         setWebSearchPermission(data.permission);
       }
-    } catch {}
+    } catch {
+      feedbackBus.error('Impossible de charger la permission de recherche web.');
+    }
   };
 
   const handleUpdateSearchPermission = async (newPerm: 'ask' | 'auto' | 'disabled') => {
+    const previous = webSearchPermission;
     setWebSearchPermission(newPerm);
     try {
-      await tokenService.fetch('/api/search/settings', {
+      await tokenService.fetchChecked('/api/search/settings', {
         method: 'POST',
         body: JSON.stringify({ permission: newPerm })
-      });
+      }, 'Impossible de modifier la permission de recherche web.');
       fetchToolsData();
-    } catch {}
+    } catch (err) {
+      setWebSearchPermission(previous);
+      feedbackBus.report(err, 'Impossible de modifier la permission de recherche web.');
+    }
   };
 
   const handleToggleTool = async (name: string, currentEnabled: boolean) => {
     setTogglingToolName(name);
     try {
-      const res = await tokenService.fetch(`/api/tools/${name}/toggle`, {
+      await tokenService.fetchChecked(`/api/tools/${name}/toggle`, {
         method: 'PUT',
         body: JSON.stringify({ enabled: !currentEnabled })
-      });
-      if (res.ok) {
-        setToolsList(prev => prev.map(t => t.name === name ? { ...t, enabled: !currentEnabled } : t));
-      }
-    } catch {} finally {
+      }, "Impossible de modifier l'outil.");
+      setToolsList(prev => prev.map(t => t.name === name ? { ...t, enabled: !currentEnabled } : t));
+    } catch (err) {
+      feedbackBus.report(err, "Impossible de modifier l'outil.");
+    } finally {
       setTogglingToolName(null);
     }
   };

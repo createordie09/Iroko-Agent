@@ -163,7 +163,7 @@ function CodeBlockComponent({ code, language, title, isOpen = false }: CodeBlock
   };
 
   return (
-    <div className="my-3 rounded-[8px] bg-[var(--bg-sidebar)] border border-[var(--border-subtle)] overflow-hidden text-left">
+    <div className="my-3 rounded-[var(--radius-button)] bg-[var(--bg-sidebar)] border border-[var(--border-subtle)] overflow-hidden text-left">
       {/* En-tête du bloc : Langage / Titre à gauche, Actions à droite */}
       <div className="flex items-center justify-between px-3 py-1.5 bg-[var(--bg-modal)] border-b border-[var(--border-subtle)] text-[12px] select-none">
         <div className="flex items-center gap-2 min-w-0 pr-2">

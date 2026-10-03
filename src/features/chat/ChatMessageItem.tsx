@@ -97,7 +97,7 @@ export function ChatMessageItem({
             {msg.content}
           </div>
 
-          {/* Actions au survol sous le message utilisateur (Copier, Modifier, Supprimer) [À VALIDER] */}
+          {/* Actions au survol sous le message utilisateur (Copier, Modifier, Supprimer) */}
           <div
             data-message-actions="true"
             className="flex items-center gap-1.5 pt-0.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity select-none"
@@ -232,7 +232,7 @@ export function ChatMessageItem({
             <MessageSources sources={msg.metadata.sources} />
           )}
 
-          {/* Signalement sobre de message interrompu avec bouton Continuer (Mission R3c) [À VALIDER] */}
+          {/* Signalement sobre de message interrompu avec bouton Continuer (Mission R3c) */}
           {msg.metadata?.interrupted && (
             <div className="flex items-center gap-2 pt-1.5 select-none" data-interrupted-indicator="true">
               <span className="px-1.5 py-0.5 rounded-[var(--radius-button)] bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[11px] text-[var(--text-tertiary)] font-sans">
@@ -254,7 +254,7 @@ export function ChatMessageItem({
             </div>
           )}
 
-          {/* Actions au survol sous la réponse (Copier, Régénérer, Supprimer) [À VALIDER] */}
+          {/* Actions au survol sous la réponse (Copier, Régénérer, Supprimer) */}
           <div
             data-message-actions="true"
             className="flex items-center gap-1.5 pt-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity select-none"

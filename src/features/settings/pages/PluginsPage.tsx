@@ -25,7 +25,7 @@ export function PluginsPage() {
           {pluginsList.map((plugin) => (
             <div
               key={plugin.id}
-              className="p-3 bg-[var(--bg-app)] border border-[var(--border-subtle)] rounded-[8px] space-y-2"
+              className="p-3 bg-[var(--bg-app)] border border-[var(--border-subtle)] rounded-[var(--radius-button)] space-y-2"
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">

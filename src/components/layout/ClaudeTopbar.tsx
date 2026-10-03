@@ -16,7 +16,8 @@ export function ClaudeTopbar() {
     setHistory,
     resetChat,
     loadConversation,
-    messages
+    messages,
+    activeConversationId
   } = useApp();
   const { scheduleUndoableDeletion } = useUndoDeletion();
   const { copy, isCopied } = useCopyFeedback();
@@ -27,7 +28,8 @@ export function ClaudeTopbar() {
   const menuRef = useRef<HTMLDivElement>(null);
 
   const isConversation = activeView === 'chat';
-  const currentTitle = history[0]?.topic || 'Nouvelle discussion';
+  const currentConv = history.find(h => h.id === activeConversationId);
+  const currentTitle = currentConv?.topic || 'Nouvelle discussion';
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -53,30 +55,14 @@ export function ClaudeTopbar() {
   }, [isExportMenuOpen]);
 
   const handleExportPdf = async () => {
-    if (messages.length === 0 || isExportingPdf) return;
+    if (messages.length === 0 || isExportingPdf || !activeConversationId) return;
     setIsExportingPdf(true);
     setPdfError(null);
     try {
-      const currentConv = history[0];
-      const payload = {
-        title: currentTitle,
-        messages: messages.map(m => ({ role: m.role, content: m.content })),
-        date: currentConv?.created_at ? new Date(currentConv.created_at).toLocaleDateString('fr-FR', {
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit'
-        }) : undefined
-      };
-
-      const res = await tokenService.fetch('/api/conversations/export-pdf', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/pdf, application/json'
-        },
-        body: JSON.stringify(payload)
+      if (!activeConversationId) return;
+      const res = await tokenService.fetch(`/api/conversations/${encodeURIComponent(activeConversationId)}/export/pdf`, {
+        method: 'GET',
+        headers: { 'Accept': 'application/pdf, application/json' }
       });
 
       if (!res.ok) {
@@ -100,7 +86,7 @@ export function ClaudeTopbar() {
       document.body.appendChild(a);
       a.click();
       a.remove();
-      URL.revokeObjectURL(url);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
       setIsExportMenuOpen(false);
     } catch (err: any) {
       setPdfError(err?.message || "Erreur lors de l'exportation PDF.");
@@ -109,12 +95,17 @@ export function ClaudeTopbar() {
     }
   };
 
-  const handleExportMarkdown = () => {
+  const buildMarkdown = (): string => {
     let md = `# ${currentTitle}\n\n`;
     messages.forEach((m) => {
       const roleLabel = m.role === 'user' ? 'Utilisateur' : 'Assistant';
       md += `### ${roleLabel}\n\n${m.content}\n\n---\n\n`;
     });
+    return md;
+  };
+
+  const handleExportMarkdown = () => {
+    const md = buildMarkdown();
     const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -124,17 +115,13 @@ export function ClaudeTopbar() {
     document.body.appendChild(a);
     a.click();
     a.remove();
-    URL.revokeObjectURL(url);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
     setIsExportMenuOpen(false);
   };
 
   const handleCopyMarkdown = () => {
     if (messages.length === 0) return;
-    let md = `# ${currentTitle}\n\n`;
-    messages.forEach((m) => {
-      const roleLabel = m.role === 'user' ? 'Utilisateur' : 'Assistant';
-      md += `### ${roleLabel}\n\n${m.content}\n\n---\n\n`;
-    });
+    const md = buildMarkdown();
     copy(md, 'markdown');
   };
 
@@ -156,12 +143,11 @@ export function ClaudeTopbar() {
     document.body.appendChild(a);
     a.click();
     a.remove();
-    URL.revokeObjectURL(url);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
     setIsExportMenuOpen(false);
   };
 
   const handleDeleteCurrent = () => {
-    const currentConv = history[0];
     if (!currentConv) return;
     const oldHistory = [...history];
     const oldId = currentConv.id;
@@ -211,11 +197,11 @@ export function ClaudeTopbar() {
 
         {isConversation && (
           <div className="flex items-center gap-1.5 min-w-0">
-            <div className="flex items-center gap-1.5 text-[14px] font-normal text-[var(--text-primary)] hover:text-white transition-colors max-w-sm truncate select-none">
+            <div className="flex items-center gap-1.5 text-[14px] font-normal text-[var(--text-primary)] hover:opacity-80 transition-colors max-w-sm truncate select-none">
               <span className="truncate">{currentTitle}</span>
             </div>
 
-            {/* Menu d'export "…" (§ Mission M8.2) [À VALIDER] */}
+            {/* Menu d'export "…" (§ Mission M8.2) */}
             <div className="relative" ref={menuRef}>
               <button
                 type="button"
@@ -228,7 +214,7 @@ export function ClaudeTopbar() {
               </button>
 
               {isExportMenuOpen && (
-                <div className="absolute left-0 top-[calc(100%+4px)] w-56 bg-[var(--bg-surface)] border border-[var(--border-modal)] rounded-[8px] py-1 z-50">
+                <div className="absolute left-0 top-[calc(100%+4px)] w-56 bg-[var(--bg-surface)] border border-[var(--border-modal)] rounded-[var(--radius-button)] py-1 z-50">
                   <button
                     type="button"
                     onClick={handleExportPdf}

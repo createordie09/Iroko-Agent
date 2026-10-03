@@ -3,7 +3,7 @@ import { ClaudeSidebar } from './ClaudeSidebar';
 import { ClaudeTopbar } from './ClaudeTopbar';
 import { ClaudeHero } from '../../features/home/ClaudeHero';
 import { useApp } from '../../context/AppContext';
-import { agentClient } from '../../lib/agent-client';
+import { dispatchPrompt } from '../../lib/dispatchPrompt';
 import { useOverlayFocus } from '../../hooks/useOverlayFocus';
 import { useLiveAnnouncements } from '../../hooks/useLiveAnnouncements';
 import { useVisualViewportHeight } from '../../hooks/useVisualViewportHeight';
@@ -12,7 +12,6 @@ import { useOnboarding } from '../../hooks/useOnboarding';
 import { useProviders } from '../../hooks/models/useProviders';
 import { ZoneErrorBoundary } from '../common/ZoneErrorBoundary';
 import { UndoDeletionBanner } from '../common/UndoDeletionBanner';
-import { tokenService } from '../../services/security/TokenService';
 
 // Chargement dynamique différé (Lot 6 Fiche 19) pour alléger le bundle initial
 const ClaudeChat = lazy(() => import('../../features/chat/ClaudeChat').then(m => ({ default: m.ClaudeChat })));
@@ -44,12 +43,14 @@ export function ZyriconAppShell() {
     composerMode,
     setComposerMode,
     activeModel,
+    setActiveConversationId,
+    setChatError,
     isCommandPaletteOpen,
   } = useApp();
 
   const { providers } = useProviders();
   const hasConversations = (history && history.length > 0) || messages.length > 0;
-  const hasConfiguredProviders = providers.some(p => p.keyCount > 0 || p.status === 'READY' || p.status === 'CONFIGURED');
+  const hasConfiguredProviders = providers.some(p => p.keyCount > 0);
   const { shouldShowOnboarding, completeOnboarding, skipOnboarding } = useOnboarding(hasConversations, hasConfiguredProviders);
 
   const mobileDrawerRef = useRef<HTMLDivElement>(null);
@@ -87,46 +88,20 @@ export function ZyriconAppShell() {
     setMessages([{ role: 'user', content: text, timestamp: Date.now() }]);
     setChatStatus('loading');
 
-    if (options?.comparisonModelBId) {
-      setActiveView('chat');
-      tokenService.fetch(`/api/conversations/${encodeURIComponent(newConvId)}/compare`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          prompt: text,
-          modelAId: activeModel,
-          modelBId: options.comparisonModelBId
-        })
-      }).then(async (res) => {
-        if (res.ok) {
-          const data = await res.json();
-          if (data.assistantMessage) {
-            setMessages(prev => {
-              const filtered = prev.filter(m => m.id !== data.assistantMessage.id);
-              return [...filtered, data.assistantMessage];
-            });
-          }
-        }
-        setChatStatus('idle');
-      }).catch((err) => {
-        console.error('Erreur comparaison de modèles', err);
-        setChatStatus('idle');
-      });
-      return;
-    }
-
-    let preferredProviderId: string | undefined = undefined;
-    if (activeModel && activeModel.includes('/')) {
-      preferredProviderId = activeModel.split('/')[0];
-    }
-    agentClient.sendPrompt(text, {
-      conversationId: newConvId,
-      mode: targetMode,
-      modelId: activeModel,
-      preferredProviderId,
-      attachmentIds: options?.attachmentIds
-    });
+    setChatError(null);
+    setActiveConversationId(newConvId);
     setActiveView('chat');
+    dispatchPrompt({
+      text,
+      conversationId: newConvId,
+      activeModel,
+      mode: targetMode,
+      attachmentIds: options?.attachmentIds,
+      comparisonModelBId: options?.comparisonModelBId,
+      setMessages,
+      setChatStatus,
+      setErrorMessage: setChatError
+    });
   };
 
   /** Le bouton "Personnaliser" de la sidebar ouvre les Paramètres sur l'onglet Compétences */
@@ -148,7 +123,7 @@ export function ZyriconAppShell() {
       className="w-screen bg-[var(--bg-app)] flex overflow-hidden font-sans select-none text-[var(--text-primary)] m-0 p-0 relative"
     >
 
-      {/* ── Lien d'évitement / Skip link (WCAG 2.4.1 — À VALIDER, invisible au repos) ── */}
+      {/* ── Lien d'évitement / Skip link (WCAG 2.4.1, invisible au repos) ── */}
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:px-3 focus:py-1.5 focus:bg-[var(--bg-surface)] focus:text-[var(--text-primary)] focus:border focus:border-[var(--border-focus)] focus:rounded-[var(--radius-button)] focus:text-[13px] outline-none select-none transition-none"
@@ -246,14 +221,14 @@ export function ZyriconAppShell() {
           </ZoneErrorBoundary>
         </Suspense>
       )}
-      {/* ── Palette de commandes universelle (Mission R4a — [À VALIDER]) ── */}
+      {/* ── Palette de commandes universelle (Mission R4a —) ── */}
       {isCommandPaletteOpen && (
         <Suspense fallback={null}>
           <CommandPalette />
         </Suspense>
       )}
 
-      {/* ── Bandeau de suppression différée avec annulation (Mission R4b — [À VALIDER]) ── */}
+      {/* ── Bandeau de suppression différée avec annulation (Mission R4b —) ── */}
       <UndoDeletionBanner />
 
     </div>

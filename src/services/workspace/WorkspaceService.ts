@@ -32,7 +32,6 @@ export interface OpenWorkspaceResult {
 
 export class WorkspaceService {
   private static instance: WorkspaceService;
-  private readonly baseUrl = 'http://127.0.0.1:3001';
 
   public static getInstance(): WorkspaceService {
     if (!WorkspaceService.instance) {
@@ -41,83 +40,56 @@ export class WorkspaceService {
     return WorkspaceService.instance;
   }
 
-  private async getHeaders(): Promise<HeadersInit> {
-    const token = await tokenService.getToken();
-    return {
-      'Content-Type': 'application/json',
-      'X-Iroko-Request': '1',
-      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-    };
+  /**
+   * Appel authentifié via la pile HTTP commune (jeton, reprise sur 401, même origine).
+   * Une réponse d'erreur du serveur est rendue avec un champ `error` explicite.
+   */
+  private async request<T = any>(path: string, method: 'GET' | 'POST', body?: unknown): Promise<T> {
+    const res = await tokenService.fetch(path, {
+      method,
+      ...(body !== undefined ? { body: JSON.stringify(body) } : {})
+    });
+    let data: any;
+    try {
+      data = await res.json();
+    } catch {
+      throw new Error(`Réponse illisible du runtime local (HTTP ${res.status}).`);
+    }
+    if (!res.ok && data && typeof data === 'object' && !data.error) {
+      data.error = `Requête refusée par le runtime local (HTTP ${res.status}).`;
+    }
+    return data as T;
   }
 
   public async pickFolder(): Promise<{ cancelled: boolean; path?: string; name?: string; warning?: string; error?: string }> {
-    const headers = await this.getHeaders();
-    const res = await fetch(`${this.baseUrl}/api/workspaces/pick`, {
-      method: 'POST',
-      headers
-    });
-    return res.json();
+    return this.request('/api/workspaces/pick', 'POST');
   }
 
   public async cancelPick(): Promise<boolean> {
-    const headers = await this.getHeaders();
-    const res = await fetch(`${this.baseUrl}/api/workspaces/pick/cancel`, {
-      method: 'POST',
-      headers
-    });
-    const data = await res.json();
+    const data = await this.request('/api/workspaces/pick/cancel', 'POST');
     return Boolean(data.success);
   }
 
   public async validatePath(pathStr: string): Promise<WorkspaceValidation> {
-    const headers = await this.getHeaders();
-    const res = await fetch(`${this.baseUrl}/api/workspaces/validate`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ path: pathStr })
-    });
-    return res.json();
+    return this.request('/api/workspaces/validate', 'POST', { path: pathStr });
   }
 
   public async getRecentWorkspaces(): Promise<RecentWorkspace[]> {
-    const headers = await this.getHeaders();
-    const res = await fetch(`${this.baseUrl}/api/workspaces/recent`, {
-      method: 'GET',
-      headers
-    });
-    const data = await res.json();
+    const data = await this.request('/api/workspaces/recent', 'GET');
     return data.recent || [];
   }
 
   public async openWorkspace(conversationId: string, pathStr?: string, isTemp = false): Promise<OpenWorkspaceResult> {
-    const headers = await this.getHeaders();
-    const res = await fetch(`${this.baseUrl}/api/workspaces/open`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ conversationId, path: pathStr, isTemp })
-    });
-    return res.json();
+    return this.request('/api/workspaces/open', 'POST', { conversationId, path: pathStr, isTemp });
   }
 
   public async closeWorkspace(conversationId: string): Promise<boolean> {
-    const headers = await this.getHeaders();
-    const res = await fetch(`${this.baseUrl}/api/workspaces/close`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ conversationId })
-    });
-    const data = await res.json();
+    const data = await this.request('/api/workspaces/close', 'POST', { conversationId });
     return Boolean(data.success);
   }
 
   public async copyTempTo(conversationId: string, destinationPath: string): Promise<{ success: boolean; copiedFiles: number; totalBytes: number; error?: string }> {
-    const headers = await this.getHeaders();
-    const res = await fetch(`${this.baseUrl}/api/workspaces/temp/copy_to`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ conversationId, destinationPath })
-    });
-    return res.json();
+    return this.request('/api/workspaces/temp/copy_to', 'POST', { conversationId, destinationPath });
   }
 }
 

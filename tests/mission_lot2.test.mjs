@@ -83,7 +83,7 @@ test('Mission Lot 2 - 6. Titre de document dynamique', () => {
   const content = fs.readFileSync(filePath, 'utf-8');
 
   assert.ok(
-    content.includes('document.title = `${history[0].topic.trim()} — Iroko`') &&
+    content.includes('document.title = `${activeTopic} — Iroko`') &&
     content.includes("document.title = 'Iroko'"),
     'AppContext doit mettre à jour document.title dynamiquement avec le sujet ou repli sur Iroko'
   );

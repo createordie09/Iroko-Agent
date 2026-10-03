@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { tokenService } from '../../services/security/TokenService';
+import { feedbackBus } from '../../services/feedback/FeedbackBus';
 
 export interface DesktopCapabilities {
   isDesktop: boolean;
@@ -92,12 +93,14 @@ export function useDesktopSettings() {
 
     // 2. Persistance dans SQLite
     try {
-      await tokenService.fetch('/api/settings/launch_on_startup', {
+      await tokenService.fetchChecked('/api/settings/launch_on_startup', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ value: target })
-      });
-    } catch {}
+      }, 'Impossible d\'enregistrer le lancement au démarrage.');
+    } catch (err) {
+      feedbackBus.report(err, 'Impossible d\'enregistrer le lancement au démarrage.');
+    }
   }, [autoLaunch, canAutoLaunch, isDesktop]);
 
   const toggleCloseToTray = useCallback(async () => {
@@ -120,12 +123,14 @@ export function useDesktopSettings() {
 
     // 2. Persistance dans SQLite
     try {
-      await tokenService.fetch('/api/settings/minimize_to_tray', {
+      await tokenService.fetchChecked('/api/settings/minimize_to_tray', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ value: target })
-      });
-    } catch {}
+      }, 'Impossible d\'enregistrer la réduction dans la zone de notification.');
+    } catch (err) {
+      feedbackBus.report(err, 'Impossible d\'enregistrer la réduction dans la zone de notification.');
+    }
   }, [closeToTray, canTray, isDesktop]);
 
   return {

@@ -1,6 +1,5 @@
 /**
  * SidebarDiscussionItem — Élément de discussion individuel dans la sidebar (Mission R4c)
- * [À VALIDER]
  *
  * Supporte :
  * 1. Renommage inline par double-clic ou via le menu "…" (Entrée = valider, Échap = annuler).
@@ -182,7 +181,7 @@ export function SidebarDiscussionItem({
             {isMenuOpen && (
               <div
                 role="menu"
-                className="absolute right-0 top-[calc(100%+2px)] w-40 bg-[var(--bg-surface)] border border-[var(--border-modal)] rounded-[8px] py-1 z-50 shadow-none text-[12px]"
+                className="absolute right-0 top-[calc(100%+2px)] w-40 bg-[var(--bg-surface)] border border-[var(--border-modal)] rounded-[var(--radius-button)] py-1 z-50 shadow-none text-[12px]"
               >
                 {/* ── Action Épingler / Désépingler ── */}
                 {onTogglePin && (

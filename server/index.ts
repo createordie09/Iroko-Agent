@@ -5,7 +5,8 @@ import crypto from 'crypto';
 import os from 'os';
 import { fileURLToPath } from 'url';
 import { AgentEvent, ClientMessage } from './types/events';
-import { modelGateway } from './models/ModelGateway';
+import { modelGateway, ModelGateway } from './models/ModelGateway';
+import { getProviderPreset } from './models/providers/presets';
 import { toolRegistry } from './tools/ToolRegistry';
 import { PermissionEngine } from './permissions/PermissionEngine';
 import { PermissionStore } from './permissions/PermissionStore';
@@ -110,6 +111,18 @@ export function broadcastWsEvent(event: any): void {
     }
   }
 }
+
+// Sonde périodique des serveurs locaux (Ollama, LM Studio) : démarrage ou arrêt détecté sans action de l'utilisateur
+setInterval(() => modelGateway.probeLocalProviders(), 10_000).unref();
+
+modelGateway.onLocalAvailabilityChange = (providerId) => {
+  broadcastWsEvent({
+    type: 'providers_changed',
+    providerId,
+    action: 'availability',
+    timestamp: new Date().toISOString()
+  });
+};
 
 export function broadcastActiveTasksStatus(extra?: { conversationId?: string; status?: string }): void {
   const activeConvIds = new Set<string>();
@@ -576,9 +589,9 @@ const server = http.createServer(async (req, res) => {
       try {
         const body = await readJson(10 * 1024 * 1024);
         const { title, messages, date } = body;
-        if (!messages || !Array.isArray(messages)) {
+        if (!messages || !Array.isArray(messages) || messages.length === 0) {
           res.writeHead(400, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ error: 'Le champ messages (tableau) est requis.' }));
+          res.end(JSON.stringify({ error: 'Le champ messages (tableau non vide) est requis.' }));
           return;
         }
         const pdfBuffer = await ConversationPdfExporter.generate({
@@ -614,6 +627,11 @@ const server = http.createServer(async (req, res) => {
       }
       try {
         const msgs = convData.messages || [];
+        if (msgs.length === 0) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Aucun message à exporter dans cette discussion.' }));
+          return;
+        }
         const exportMessages = msgs.map(m => ({
           role: m.role as 'user' | 'assistant' | 'system',
           content: m.content || ''
@@ -647,7 +665,7 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
-    if (pathname.startsWith('/api/conversations/') && req.method === 'GET') {
+    if (pathname.startsWith('/api/conversations/') && req.method === 'GET' && !pathname.slice('/api/conversations/'.length).includes('/')) {
       const id = pathname.replace('/api/conversations/', '').trim();
       const data = runtimeDatabase.getConversation(id);
       if (!data) {
@@ -1125,7 +1143,7 @@ const server = http.createServer(async (req, res) => {
       const convId = parsedUrl.searchParams.get('conversationId') || undefined;
 
       const availableProviders = modelGateway.getAvailableProviders();
-      const connectedProviderIds = availableProviders.filter(p => p.id !== 'mock' && p.activeKeys > 0).map(p => p.id);
+      const connectedProviderIds = availableProviders.filter(p => ModelGateway.isConnected(p)).map(p => p.id);
       const connectedCount = connectedProviderIds.length;
 
       let models: any[];
@@ -1278,7 +1296,8 @@ const server = http.createServer(async (req, res) => {
         rawKey = modelGateway.keyPool.getDecryptedKey(body.id);
       }
 
-      if (!providerId || (!rawKey && providerId !== 'mock_search' && providerId !== 'custom_search')) {
+      const isKeylessProvider = providerId ? getProviderPreset(providerId)?.requiresKey === false : false;
+      if (!providerId || (!rawKey && !isKeylessProvider && providerId !== 'mock_search' && providerId !== 'custom_search')) {
         res.writeHead(400, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ valid: false, error: 'providerId et key (ou id existant) sont requis.' }));
         return;
@@ -2433,35 +2452,7 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
-    // --- Artéfacts (Mission M4) ---
-    if (pathname.startsWith('/api/conversations/') && pathname.endsWith('/artifacts') && req.method === 'GET') {
-      const convId = pathname.replace('/api/conversations/', '').replace('/artifacts', '').trim();
-      const list = artifactManager.listArtifacts(convId);
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify(list));
-      return;
-    }
-
-    if (pathname.startsWith('/api/conversations/') && pathname.endsWith('/artifacts') && req.method === 'POST') {
-      const convId = pathname.replace('/api/conversations/', '').replace('/artifacts', '').trim();
-      const body = await readJson(6 * 1024 * 1024); // 6 Mo max
-      const { filename, content, title, mimeType } = body;
-      if (!filename || content === undefined) {
-        res.writeHead(400, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: 'Les champs filename et content sont requis.' }));
-        return;
-      }
-      try {
-        const artifact = artifactManager.createArtifact({ conversationId: convId, filename, content, title, mimeType });
-        res.writeHead(201, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ artifact: { ...artifact, content } }));
-      } catch (err: any) {
-        res.writeHead(400, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: err.message }));
-      }
-      return;
-    }
-
+    // --- Artéfacts (Mission M4) : les routes /api/conversations/:id/artifacts sont définies plus haut ---
     if (pathname.startsWith('/api/artifacts/') && pathname.includes('/download') && req.method === 'GET') {
       const parts = pathname.split('/');
       const id = parts[3];
@@ -3203,12 +3194,16 @@ wss.on('connection', (ws: WebSocket) => {
           }
 
           try {
-            runtimeDatabase.addMessage({
-              id: crypto.randomUUID(),
-              conversationId: activeConvId,
-              role: 'user',
-              content: message.prompt
-            });
+            const lastStored = convData?.messages?.[convData.messages.length - 1];
+            const isRetryOfLast = message.retry === true && lastStored?.role === 'user' && lastStored.content === message.prompt;
+            if (!isRetryOfLast) {
+              runtimeDatabase.addMessage({
+                id: crypto.randomUUID(),
+                conversationId: activeConvId,
+                role: 'user',
+                content: message.prompt
+              });
+            }
 
             // Titre automatique de la conversation dès le premier échange si générique (§22)
             if (convData && (convData.conversation.title === 'Nouvelle discussion' || !convData.conversation.title)) {

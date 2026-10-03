@@ -18,7 +18,7 @@ export function ClaudeSidebar({ onOpenPersonalize }: ClaudeSidebarProps) {
   const {
     activeView, setActiveView, projects, activeProjectId, setActiveProjectId,
     resetChat, isSidebarCollapsed, setIsSidebarCollapsed, setIsMobileSidebarOpen,
-    setIsSettingsOpen, history, setHistory, loadConversation
+    setIsSettingsOpen, history, setHistory, loadConversation, activeConversationId
   } = useApp();
   const { scheduleUndoableDeletion } = useUndoDeletion();
 
@@ -28,7 +28,7 @@ export function ClaudeSidebar({ onOpenPersonalize }: ClaudeSidebarProps) {
     handleDeleteConversation, handleToggleSelectionMode, handleToggleSelect,
     handleSelectAll, handleBatchDelete, handleTogglePin, handleMovePin
   } = useSidebarConversations({
-    history, setHistory, activeView, loadConversation, resetChat, scheduleUndoableDeletion, setIsMobileSidebarOpen
+    history, setHistory, activeView, loadConversation, resetChat, scheduleUndoableDeletion, setIsMobileSidebarOpen, activeConversationId
   });
 
   const sidebarRef = useRef<HTMLElement>(null);
@@ -67,7 +67,7 @@ export function ClaudeSidebar({ onOpenPersonalize }: ClaudeSidebarProps) {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // Tâches actives en arrière-plan (Mission M8.3 P6, Optimisation Réseau Lot 6 Fiche 22) [À VALIDER]
+  // Tâches actives en arrière-plan (Mission M8.3 P6, Optimisation Réseau Lot 6 Fiche 22)
   const [activeTaskConvIds, setActiveTaskConvIds] = useState<string[]>([]);
   useEffect(() => {
     let isMounted = true;
@@ -217,7 +217,7 @@ export function ClaudeSidebar({ onOpenPersonalize }: ClaudeSidebarProps) {
                 <SidebarDiscussionItem
                   key={`pinned-${item.id}`}
                   item={item}
-                  isActive={history[0]?.id === item.id && activeView === 'chat'}
+                  isActive={activeConversationId === item.id && activeView === 'chat'}
                   isRunning={activeTaskConvIds.includes(item.id)}
                   isEditing={editingConvId === item.id}
                   editingTitle={editingTitle}
@@ -322,7 +322,7 @@ export function ClaudeSidebar({ onOpenPersonalize }: ClaudeSidebarProps) {
                 <SidebarDiscussionItem
                   key={item.id}
                   item={item}
-                  isActive={history[0]?.id === item.id && activeView === 'chat'}
+                  isActive={activeConversationId === item.id && activeView === 'chat'}
                   isRunning={activeTaskConvIds.includes(item.id)}
                   isEditing={editingConvId === item.id}
                   editingTitle={editingTitle}

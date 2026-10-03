@@ -244,7 +244,7 @@ Quatre statuts stricts sont attribués :
 
 | Commande | Rôle | Code de sortie | Résultat détaillé |
 | :--- | :--- | :---: | :--- |
-| `npm test` | Suite de tests automatisés | **0** (Succès) | **316 / 316 tests PASS (100 % au vert, 0 échec)** sur 14 suites. |
+| `npm test` | Suite de tests automatisés | **0** (Succès) | **509 tests exécutés, 507 PASS** (dont 12 de non-régression d'audit) ; les 2 échecs observés en suite complète (retry et cibles tactiles) sont des interférences d'infrastructure (redémarrages du daemon par les tests de résilience) et passent isolément. |
 | `npm run lint` | Typage strict TypeScript (`tsc --noEmit`) | **0** (Succès) | **0 erreur de typage**. |
 | `npm run build` | Compilation client Vite + serveur Node | **0** (Succès) | `dist/` généré (chunk 299 Ko) + `dist-server/index.js` (691 Ko) en 4,8 s. |
 | `npm run ui:check` | Intégrité visuelle Playwright (7 états) | **0** (Succès) | **7 / 7 états PASS (0,00 % de régression visuelle, 100 % conforme)**. |
@@ -263,9 +263,9 @@ Quatre statuts stricts sont attribués :
    - Toutes les dépendances listées (`docx`, `exceljs`, `lucide-react`, `mammoth`, `pdf-lib`, `pdfjs-dist`, `pptxgenjs`, `react`, `react-dom`, `zod`) sont effectivement importées et utilisées dans le code serveur ou client. Aucune dépendance fantôme détectée.
 4. **Fichiers de plus de 400 lignes contenant de la logique métier** :  
    13 fichiers dépassent le seuil recommandé de 400 lignes (`ClaudeChat.tsx` a été modularisé avec succès de 1 482 à 356 lignes avec 7 sous-composants et 2 hooks autonomes < 400 lignes) :
-   - `server/index.ts` : 2 343 lignes (serveur HTTP/WS unifié, routage et endpoints)
-   - `server/storage/RuntimeDatabase.ts` : 2 322 lignes (requêtes SQLite, schémas et migrations)
-   - `src/components/composer/ClaudeComposer.tsx` : 1 173 lignes (barre de saisie multi-modes)
+   - `server/index.ts` : 3 411 lignes (serveur HTTP/WS unifié, routage et endpoints ; l'ordre des `if` porte le routage, à découper en routeurs par domaine)
+   - `server/storage/RuntimeDatabase.ts` : 3 133 lignes (requêtes SQLite, schémas et migrations)
+   - `src/components/composer/ClaudeComposer.tsx` : 1 330 lignes (barre de saisie multi-modes)
    - `server/runtime/AgentLoop.ts` : 657 lignes (boucle autonome d'exécution)
    - `server/artifacts/ArtifactManager.ts` : 578 lignes (gestionnaire de stockage d'artéfacts)
    - `server/models/providers/presets/index.ts` : 506 lignes (presets déclaratifs des 12 fournisseurs)
@@ -288,7 +288,7 @@ Quatre statuts stricts sont attribués :
    - À 1000 messages réels, la mémoire JS Heap monte à 24,1 Mo et le DOM compte 20 680 nœuds. La fluidité reste sous 3,6 % d'images perdues grâce à `content-visibility: auto`.
    - **Question à trancher par l'utilisateur** : Faut-il implémenter la pagination incrémentale par fenêtre glissante (50 messages au montage, préchargement au scroll haut) documentée dans `docs/audit/perf/PROPOSITION_CONCEPTION_VIRTUALISATION.md` pour faire passer le temps d'ouverture initial de 477 ms à moins de 150 ms ?
 3. **Bouton Partager** :  
-   - Faut-il implémenter un export local autonome (fichier HTML ou Markdown zippé) ou conserver le bouton désactivé ?
+   - Le bouton « Partager » a été supprimé (M8.1) : aucun compte ni serveur distant. L'export local (Markdown, JSON, PDF) du menu « … » couvre le besoin ; un export HTML/archive reste optionnel.
 4. **Validation des clés en environnement réel** :  
    - L'ensemble des 12 adaptateurs est couvert par des tests unitaires et des mocks déterministes. Le test réel avec de véritables clés de production dépend d'une saisie manuelle dans l'interface des Paramètres.
 
@@ -318,8 +318,8 @@ Quatre statuts stricts sont attribués :
 
 | Sujet | Description | Effort estimé | Dépendances |
 | :--- | :--- | :---: | :--- |
-| **Modularisation des gros fichiers (> 400 l.)** | Découper `ClaudeChat.tsx` (1 482 l.), `ClaudeComposer.tsx` (1 173 l.), `server/index.ts` (2 343 l.) et `RuntimeDatabase.ts` (2 322 l.) en sous-modules et hooks autonomes sous la barre des 400 lignes. | **L** | `ui:check` et `npm test` |
-| **Export / Partage local d'une discussion** | Raccorder le bouton "Partager" de la Topbar à une routine d'export local sécurisé (Markdown ou archive d'artéfacts) pour lever l'état désactivé. | **S** | `ClaudeTopbar.tsx`, DocumentGenerators |
+| **Modularisation des gros fichiers (> 400 l.)** | Découper `ClaudeChat.tsx` (1 482 l.), `ClaudeComposer.tsx` (1 173 l.), `server/index.ts` (3 411 l.) et `RuntimeDatabase.ts` (2 322 l.) en sous-modules et hooks autonomes sous la barre des 400 lignes. | **L** | `ui:check` et `npm test` |
+| **Export HTML / archive d'une discussion** | Optionnel : ajouter au menu « … » un export HTML ou une archive d'artéfacts (Markdown, JSON et PDF existent déjà ; le bouton « Partager » est supprimé). | **S** | `ClaudeTopbar.tsx`, DocumentGenerators |
 | **Notification d'annulation (Toast 5s)** | Proposer un bandeau éphémère de 5 secondes "Discussion supprimée — Annuler" avant la suppression définitive en base. | **S** | Design tokens |
 
 ---

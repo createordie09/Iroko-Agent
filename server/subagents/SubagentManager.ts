@@ -70,7 +70,7 @@ export class SubagentManager {
     if (p.includes('anthropic')) return { providerId: 'anthropic', model: 'claude-3-7-sonnet-20250219' };
     if (p.includes('openai')) return { providerId: 'openai', model: 'gpt-4o' };
     if (p.includes('gemini')) return { providerId: 'gemini', model: 'gemini-2.5-pro' };
-    if (p.includes('openrouter')) return { providerId: 'openrouter', model: 'anthropic/claude-3.7-sonnet' };
+    if (p.includes('openrouter')) return { providerId: 'openrouter', model: 'anthropic/claude-sonnet-4.5' };
     return { providerId: 'mock', model: 'mock-powerful' };
   }
 

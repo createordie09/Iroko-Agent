@@ -12,6 +12,7 @@ import { useScrollRestoration } from '../../hooks/useScrollRestoration';
 import { useVirtualMessageList } from '../../hooks/chat/useVirtualMessageList';
 import { useChatAgentEvents } from '../../hooks/chat/useChatAgentEvents';
 import { useChatMessageActions } from '../../hooks/chat/useChatMessageActions';
+import { useConnectionRecovery } from '../../hooks/chat/useConnectionRecovery';
 import { FormattedMessage } from './FormattedMessage';
 import { ChatMessageList } from './ChatMessageList';
 import { ChatInspectorPanel, InspectorTabType } from './ChatInspectorPanel';
@@ -21,11 +22,11 @@ import { EditMessageModal } from './modals/EditMessageModal';
 export function ClaudeChat() {
   const {
     messages, setMessages, chatStatus, setChatStatus,
-    conversationFont, activeModel, history,
-    notificationsEnabled, composerMode, animations
+    conversationFont, activeModel, activeConversationId,
+    notificationsEnabled, composerMode, animations, runtimeConnected, loadConversation, chatError, setChatError
   } = useApp();
 
-  const conversationId = history[0]?.id || 'default_conversation';
+  const conversationId = activeConversationId || 'default_conversation';
 
   const {
     streamContent: currentAssistantStream,
@@ -66,6 +67,13 @@ export function ClaudeChat() {
     setMessages, setChatStatus, setInspectorOpen
   });
 
+  useConnectionRecovery({
+    runtimeConnected, chatStatus, setChatStatus, setErrorMessage, setChatError,
+    activeConversationId, loadConversation
+  });
+
+
+
   const {
     copiedIndex, deleteConfirmMessage, setDeleteConfirmMessage,
     isDeletingMessage, editModalData, setEditModalData, isCheckingImpact,
@@ -74,7 +82,11 @@ export function ClaudeChat() {
   } = useChatMessageActions({
     conversationId, activeModel, composerMode, messages, setMessages,
     setChatStatus, resetStreamBuffer, setThinkingLogs, setToolExecutions,
-    setErrorMessage, loadArtifacts, setAttachmentsMap
+    setErrorMessage: (m: any) => {
+      setErrorMessage(m);
+      if (m === null) setChatError(null);
+    },
+    loadArtifacts, setAttachmentsMap
   });
 
   // Onglets disponibles selon le mode et le contenu réel (Mission M8.1)
@@ -279,8 +291,8 @@ export function ClaudeChat() {
 
             {/* Message d'erreur avec réessai */}
             {chatStatus === 'error' && (
-              <div className="p-3 rounded-[8px] bg-[var(--bg-surface)] border border-[var(--border-modal)] text-[13px] text-[var(--text-secondary)] flex items-center justify-between">
-                <span>{errorMessage || 'La communication avec le modèle a échoué. Veuillez vérifier la configuration de votre fournisseur ou cliquer sur Réessayer.'}</span>
+              <div className="p-3 rounded-[var(--radius-button)] bg-[var(--bg-surface)] border border-[var(--border-modal)] text-[13px] text-[var(--text-secondary)] flex items-center justify-between">
+                <span>{errorMessage || chatError || 'La communication avec le modèle a échoué. Veuillez vérifier la configuration de votre fournisseur ou cliquer sur Réessayer.'}</span>
                 <button
                   type="button"
                   onClick={handleRetry}
@@ -313,7 +325,7 @@ export function ClaudeChat() {
             onStop={() => agentClient.cancelTask()}
             isLoading={chatStatus === 'loading'}
             isConversation={true}
-            conversationId={history[0]?.id}
+            conversationId={activeConversationId || undefined}
             contextUsage={contextUsage}
           />
 

@@ -68,6 +68,6 @@ test('MISSION R2d — 5. Respect strict des règles de design et d\'accessibilit
   assert.ok(viewSource.includes('var(--text-primary)'), 'Doit utiliser le token --text-primary');
   assert.ok(viewSource.includes('var(--border-subtle)'), 'Doit utiliser le token --border-subtle');
 
-  // Présence de la mention de contrôle [À VALIDER]
-  assert.ok(viewSource.includes('[À VALIDER]'), 'Le composant doit comporter l\'étiquette de validation visuelle');
+  // Aucune étiquette de validation visible dans l'interface
+  assert.ok(!viewSource.includes('[À VALIDER]'), 'Aucune étiquette de validation ne doit rester visible');
 });

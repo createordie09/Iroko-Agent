@@ -25,7 +25,7 @@ export function ComparisonBar({
   return (
     <div
       data-comparison-bar="true"
-      className="w-full bg-[var(--bg-surface)] border border-[var(--border-subtle)] rounded-[8px] px-3 py-2 mb-2 flex items-center justify-between text-[12px] text-[var(--text-secondary)] select-none animate-in fade-in duration-150"
+      className="w-full bg-[var(--bg-surface)] border border-[var(--border-subtle)] rounded-[var(--radius-button)] px-3 py-2 mb-2 flex items-center justify-between text-[12px] text-[var(--text-secondary)] select-none animate-in fade-in duration-150"
     >
       <div className="flex flex-wrap items-center gap-2 min-w-0">
         <div className="flex items-center gap-1.5 text-[var(--text-primary)]">
