@@ -157,19 +157,29 @@ export function applyEventToParts(parts: MessagePart[], event: AgentEvent, now: 
       const req = event.request;
       if (!req || !req.id || parts.some(p => p.type === 'permission' && p.requestId === req.id)) return parts;
       const target = req.details?.command ?? req.details?.path;
-      return [
-        ...closeThinking(parts, now),
-        {
-          id: newPartId('permission'),
-          type: 'permission',
-          requestId: req.id,
-          tool: req.tool,
-          level: req.level,
-          description: req.description,
-          ...(typeof target === 'string' ? { target: target.slice(0, PART_MAX_STRING) } : {}),
-          status: 'pending'
+      const permissionPart: MessagePart = {
+        id: newPartId('permission'),
+        type: 'permission',
+        requestId: req.id,
+        tool: req.tool,
+        level: req.level,
+        description: req.description,
+        ...(typeof target === 'string' ? { target: target.slice(0, PART_MAX_STRING) } : {}),
+        status: 'pending'
+      };
+      // La demande précède l'exécution : elle se place avant l'étape d'outil en cours qu'elle concerne
+      let toolIndex = -1;
+      for (let i = parts.length - 1; i >= 0; i--) {
+        const candidate = parts[i];
+        if (candidate.type === 'tool' && candidate.status === 'running' && candidate.tool === req.tool) {
+          toolIndex = i;
+          break;
         }
-      ];
+      }
+      if (toolIndex >= 0) {
+        return [...parts.slice(0, toolIndex), permissionPart, ...parts.slice(toolIndex)];
+      }
+      return [...closeThinking(parts, now), permissionPart];
     }
 
     case 'permission_resolved': {

@@ -129,13 +129,14 @@ test('Parts — une demande d\'autorisation devient un bloc qui passe à la déc
     { type: 'tool_call_start', callId: 'c1', tool: 'execute_command', input: {} },
     { type: 'permission_required', request }
   ]);
-  assert.deepEqual(pending.map(p => p.type), ['tool', 'permission']);
-  assert.equal(pending[1].status, 'pending');
-  assert.equal(pending[1].target, 'npm test');
-  assert.ok(!JSON.stringify(pending[1]).includes('secret-interne'));
+  // La demande précède l'exécution : elle est placée avant l'étape d'outil qu'elle concerne
+  assert.deepEqual(pending.map(p => p.type), ['permission', 'tool']);
+  assert.equal(pending[0].status, 'pending');
+  assert.equal(pending[0].target, 'npm test');
+  assert.ok(!JSON.stringify(pending[0]).includes('secret-interne'));
 
   const denied = applyEventToParts(pending, ev({ type: 'permission_resolved', requestId: 'r1', outcome: 'denied' }));
-  assert.equal(denied[1].status, 'denied');
+  assert.equal(denied[0].status, 'denied');
   // Un événement de décision inconnu laisse la liste intacte
   assert.equal(applyEventToParts(denied, ev({ type: 'permission_resolved', requestId: 'inconnu', outcome: 'approved' })), denied);
 });
@@ -168,10 +169,10 @@ test('Parts — une fin anormale ferme les étapes en cours et ajoute un marqueu
     { type: 'permission_required', request: { id: 'r1', tool: 'execute_command', level: 'MEDIUM', description: 'x', timestamp: 1 } }
   ]);
   const closed = appendEndMarker(running, 'cancelled', undefined, 5000);
-  assert.deepEqual(closed.map(p => p.type), ['thinking', 'tool', 'permission', 'marker']);
+  assert.deepEqual(closed.map(p => p.type), ['thinking', 'permission', 'tool', 'marker']);
   assert.equal(closed[0].durationMs, 100);
-  assert.equal(closed[1].status, 'error');
-  assert.equal(closed[2].status, 'denied');
+  assert.equal(closed[2].status, 'error');
+  assert.equal(closed[1].status, 'denied');
   assert.equal(closed[3].kind, 'cancelled');
   assert.equal(appendEndMarker(closed, 'failed'), closed);
 });
