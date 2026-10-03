@@ -2,7 +2,7 @@ import { AgentEvent } from '../types/events';
 import { AgentRuntime } from './AgentRuntime';
 import { runtimeDatabase } from '../storage/RuntimeDatabase';
 import { logger } from '../utils/logger';
-import { applyEventToParts, MessagePart } from '../types/messageParts';
+import { applyEventToParts, appendEndMarker, MessagePart } from '../types/messageParts';
 
 export interface ActiveJob {
   taskId: string;
@@ -194,7 +194,7 @@ export class ActiveJobManager {
       }
       this.finishJob(job, 'completed', (event as any).sources);
     } else if (event.type === 'error' && (event as any).fatal) {
-      this.finishJob(job, 'failed');
+      this.finishJob(job, 'failed', undefined, typeof (event as any).message === 'string' ? (event as any).message : undefined);
     }
 
     // Diffusion aux abonnés connectés
@@ -247,12 +247,15 @@ export class ActiveJobManager {
     }
   }
 
-  public finishJob(job: ActiveJob, status: ActiveJob['status'], sources?: any[]): void {
+  public finishJob(job: ActiveJob, status: ActiveJob['status'], sources?: any[], failureDetail?: string): void {
     if (job.flushTimer) {
       clearTimeout(job.flushTimer);
       job.flushTimer = undefined;
     }
     job.status = status;
+    if (status === 'cancelled' || status === 'interrupted' || status === 'failed') {
+      job.parts = appendEndMarker(job.parts, status, failureDetail);
+    }
 
     try {
       const metadata: Record<string, any> = {

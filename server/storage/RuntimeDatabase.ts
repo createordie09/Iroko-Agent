@@ -7,6 +7,7 @@ import crypto from 'crypto';
 import { InstalledPlugin } from '../plugins/types';
 import { tempWorkspaceManager } from '../workspace/TempWorkspaceManager';
 import { VideoJobRecord } from '../media/videoTypes';
+import { appendEndMarker } from '../types/messageParts';
 
 const require = createRequire(import.meta.url);
 const ZipStream = require('zip-stream');
@@ -2100,6 +2101,9 @@ export class RuntimeDatabase {
           meta.interrupted = true;
           meta.canContinue = true;
           meta.prompt = meta.prompt || task.prompt;
+          if (Array.isArray(meta.parts) && meta.parts.length > 0) {
+            meta.parts = appendEndMarker(meta.parts, 'interrupted');
+          }
 
           this.db.prepare("UPDATE messages SET metadata = ? WHERE id = ?").run(JSON.stringify(meta), lastAssistant.id);
           interruptedMessagesCount++;

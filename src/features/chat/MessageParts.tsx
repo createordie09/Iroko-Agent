@@ -66,6 +66,25 @@ function PermissionPart({ part }: { key?: React.Key; part: Extract<MessagePart, 
   );
 }
 
+const MARKER_LABEL: Record<string, string> = {
+  cancelled: 'Réponse arrêtée par vous',
+  interrupted: 'Réponse interrompue',
+  failed: 'La tâche a échoué'
+};
+
+function EndMarkerPart({ part }: { key?: React.Key; part: Extract<MessagePart, { type: 'marker' }> }) {
+  return (
+    <div className="flex items-center gap-3 select-none" data-end-marker={part.kind} role="separator" aria-label={MARKER_LABEL[part.kind]}>
+      <div className="h-[1px] bg-[var(--border-modal)] flex-1" />
+      <span className="text-[12px] text-[var(--text-secondary)] text-center">
+        {MARKER_LABEL[part.kind]}
+        {part.detail ? <span className="text-[var(--text-tertiary)]"> · {part.detail}</span> : null}
+      </span>
+      <div className="h-[1px] bg-[var(--border-modal)] flex-1" />
+    </div>
+  );
+}
+
 function PlanPart({ steps }: { key?: React.Key; steps: Array<{ id: string; title: string; status: string }> }) {
   const done = steps.filter(step => step.status === 'completed').length;
   return (
@@ -122,6 +141,8 @@ export function MessageParts({
             );
           case 'tool':
             return <ToolStep key={part.id} part={part} />;
+          case 'marker':
+            return <EndMarkerPart key={part.id} part={part} />;
           case 'permission':
             return <PermissionPart key={part.id} part={part} />;
           case 'plan':

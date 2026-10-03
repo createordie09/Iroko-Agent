@@ -7,6 +7,9 @@ import type { AgentEvent, PlanStep } from './events';
  */
 export type ToolPartStatus = 'running' | 'success' | 'error';
 
+/** Fin anormale d'une réponse : arrêtée par l'utilisateur, interrompue (ex. redémarrage) ou en échec */
+export type EndMarkerKind = 'cancelled' | 'interrupted' | 'failed';
+
 export interface ArtifactPartData {
   artifactId: string;
   name: string;
@@ -43,6 +46,7 @@ export type MessagePart =
       target?: string;
       status: 'pending' | 'approved' | 'denied' | 'expired';
     }
+  | { id: string; type: 'marker'; kind: EndMarkerKind; detail?: string }
   | { id: string; type: 'plan'; steps: PlanStep[] }
   | ({ id: string; type: 'artifact' } & ArtifactPartData);
 
@@ -223,6 +227,27 @@ export function applyEventToParts(parts: MessagePart[], event: AgentEvent, now: 
     default:
       return parts;
   }
+}
+
+/**
+ * Ferme la chronologie d'une réponse qui ne s'est pas terminée normalement : les étapes encore en cours
+ * passent en erreur, les autorisations en attente sont refusées, puis un marqueur de fin est ajouté.
+ */
+export function appendEndMarker(parts: MessagePart[], kind: EndMarkerKind, detail?: string, now: number = Date.now()): MessagePart[] {
+  if (parts.some(p => p.type === 'marker')) return parts;
+  const closed = closeThinking(parts, now).map(p => {
+    if (p.type === 'tool' && p.status === 'running') {
+      return { ...p, status: 'error' as ToolPartStatus, error: 'Interrompu avant la fin', durationMs: Math.max(0, now - p.startedAt) };
+    }
+    if (p.type === 'permission' && p.status === 'pending') {
+      return { ...p, status: 'denied' as const };
+    }
+    return p;
+  });
+  return [
+    ...closed,
+    { id: newPartId('marker'), type: 'marker', kind, ...(detail ? { detail: detail.slice(0, PART_MAX_STRING) } : {}) }
+  ];
 }
 
 /** Indique si le message d'assistant enregistré contient une chronologie en blocs exploitable */

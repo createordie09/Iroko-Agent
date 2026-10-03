@@ -4,7 +4,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-const { applyEventToParts, compactForPart, hasMessageParts } = await import('../server/types/messageParts.ts');
+const { applyEventToParts, appendEndMarker, compactForPart, hasMessageParts } = await import('../server/types/messageParts.ts');
 const { ActiveJobManager } = await import('../server/runtime/ActiveJobManager.ts');
 
 const ev = (e) => ({ taskId: 't', sessionId: 's', timestamp: new Date().toISOString(), ...e });
@@ -159,4 +159,50 @@ test('Autorisations — le moteur notifie la réponse de l\'utilisateur et l\'ex
   const expired = engine.requestPermission('execute_command', 'MEDIUM', 'Test B', { command: 'echo b' }, () => {});
   assert.equal(await expired, false);
   assert.equal(decisions[1].outcome, 'expired');
+});
+
+test('Parts — une fin anormale ferme les étapes en cours et ajoute un marqueur unique', () => {
+  const running = replay([
+    { type: 'thinking', content: 'a' },
+    { type: 'tool_call_start', callId: 'c1', tool: 'execute_command', input: {} },
+    { type: 'permission_required', request: { id: 'r1', tool: 'execute_command', level: 'MEDIUM', description: 'x', timestamp: 1 } }
+  ]);
+  const closed = appendEndMarker(running, 'cancelled', undefined, 5000);
+  assert.deepEqual(closed.map(p => p.type), ['thinking', 'tool', 'permission', 'marker']);
+  assert.equal(closed[0].durationMs, 100);
+  assert.equal(closed[1].status, 'error');
+  assert.equal(closed[2].status, 'denied');
+  assert.equal(closed[3].kind, 'cancelled');
+  assert.equal(appendEndMarker(closed, 'failed'), closed);
+});
+
+test('Parts — arrêt d\'une tâche : le marqueur est enregistré avec le message', () => {
+  const saved = [];
+  const manager = new ActiveJobManager({ updateMessageContent: (...a) => saved.push(a), updateTaskStatus() {} });
+  manager.registerJob({ taskId: 't9', conversationId: 'c9', prompt: 'p', mode: 'code', assistantMessageId: 'm9', runtime: { sessionId: 's', cancelTask() {} } });
+  manager.handleEvent('c9', ev({ type: 'tool_call_start', callId: 'x', tool: 'execute_command', input: {} }));
+  manager.cancelJob('c9');
+  const parts = saved[saved.length - 1][3].parts;
+  assert.deepEqual(parts.map(p => p.type), ['tool', 'marker']);
+  assert.equal(parts[0].status, 'error');
+  assert.equal(parts[1].kind, 'cancelled');
+  assert.equal(saved[saved.length - 1][3].status, 'cancelled');
+});
+
+test('Parts — après un arrêt inattendu, la reprise de la base ajoute le marqueur', async () => {
+  const { runtimeDatabase } = await import('../server/storage/RuntimeDatabase.ts');
+  const convId = crypto.randomUUID();
+  runtimeDatabase.saveConversation(convId, 'Reprise');
+  const msgId = crypto.randomUUID();
+  runtimeDatabase.addMessage({
+    id: msgId, conversationId: convId, role: 'assistant', content: 'partiel',
+    metadata: { status: 'generating', parts: [{ id: 't', type: 'tool', callId: 'c', tool: 'read_file', input: {}, status: 'running', startedAt: 1 }] }
+  });
+  const taskId = crypto.randomUUID();
+  runtimeDatabase.recordTask({ id: taskId, sessionId: 's', conversationId: convId, prompt: 'p', status: 'running' });
+  runtimeDatabase.recoverInterruptedGenerations();
+  const stored = runtimeDatabase.getConversation(convId, true);
+  const meta = JSON.parse(stored.messages.find(m => m.id === msgId).metadata);
+  assert.equal(meta.parts[0].status, 'error');
+  assert.equal(meta.parts[meta.parts.length - 1].kind, 'interrupted');
 });
