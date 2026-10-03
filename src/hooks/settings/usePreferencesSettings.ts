@@ -48,7 +48,9 @@ export function usePreferencesSettings() {
       if (typeof data.custom_instructions === 'string') {
         setCustomInstructions(data.custom_instructions);
       }
-    } catch {}
+    } catch {
+      setCustomInstructionsError('Impossible de charger les instructions personnalisées.');
+    }
   };
 
   const handleSaveCustomInstructions = async () => {

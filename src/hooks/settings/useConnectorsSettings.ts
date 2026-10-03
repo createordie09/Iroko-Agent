@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { tokenService } from '../../services/security/TokenService';
+import { feedbackBus } from '../../services/feedback/FeedbackBus';
 
 export function useConnectorsSettings() {
   const [mcpServers, setMcpServers] = useState<any[]>([]);
@@ -28,7 +29,9 @@ export function useConnectorsSettings() {
       } else {
         setProjectMcpConfig(null);
       }
-    } catch {}
+    } catch {
+      feedbackBus.error('Impossible de charger les connecteurs.');
+    }
   };
 
   const handleAddMcpServer = async () => {
@@ -78,37 +81,45 @@ export function useConnectorsSettings() {
 
   const handleToggleMcpServer = async (name: string, currentEnabled: boolean) => {
     try {
-      await tokenService.fetch(`/api/mcp/servers/${encodeURIComponent(name)}/toggle`, {
+      await tokenService.fetchChecked(`/api/mcp/servers/${encodeURIComponent(name)}/toggle`, {
         method: 'PUT',
         body: JSON.stringify({ enabled: !currentEnabled })
-      });
-      fetchMcpData();
-    } catch {}
+      }, 'Impossible de modifier le connecteur.');
+    } catch (err) {
+      feedbackBus.report(err, 'Impossible de modifier le connecteur.');
+    }
+    fetchMcpData();
   };
 
   const handleToggleMcpTool = async (serverName: string, toolName: string, currentEnabled: boolean) => {
     try {
-      await tokenService.fetch(`/api/mcp/servers/${encodeURIComponent(serverName)}/tools/${encodeURIComponent(toolName)}/toggle`, {
+      await tokenService.fetchChecked(`/api/mcp/servers/${encodeURIComponent(serverName)}/tools/${encodeURIComponent(toolName)}/toggle`, {
         method: 'PUT',
         body: JSON.stringify({ enabled: !currentEnabled })
-      });
-      fetchMcpData();
-    } catch {}
+      }, "Impossible de modifier l'outil du connecteur.");
+    } catch (err) {
+      feedbackBus.report(err, "Impossible de modifier l'outil du connecteur.");
+    }
+    fetchMcpData();
   };
 
   const handleDeleteMcpServer = async (name: string) => {
     try {
-      await tokenService.fetch(`/api/mcp/servers/${encodeURIComponent(name)}`, { method: 'DELETE' });
-      fetchMcpData();
-    } catch {}
+      await tokenService.fetchChecked(`/api/mcp/servers/${encodeURIComponent(name)}`, { method: 'DELETE' }, 'Impossible de supprimer le connecteur.');
+    } catch (err) {
+      feedbackBus.report(err, 'Impossible de supprimer le connecteur.');
+    }
+    fetchMcpData();
   };
 
   const handleApproveProjectMcpConfig = async () => {
     try {
-      await tokenService.fetch('/api/mcp/approve-project-config', { method: 'POST' });
+      await tokenService.fetchChecked('/api/mcp/approve-project-config', { method: 'POST' }, "Impossible d'approuver la configuration du projet.");
       setProjectMcpConfig(null);
-      fetchMcpData();
-    } catch {}
+    } catch (err) {
+      feedbackBus.report(err, "Impossible d'approuver la configuration du projet.");
+    }
+    fetchMcpData();
   };
 
   useEffect(() => {

@@ -148,7 +148,7 @@ export function PreferencesPage() {
             </div>
           </div>
           {isLangMenuOpen && (
-            <div className="absolute right-0 top-[calc(100%-4px)] w-48 bg-[var(--bg-modal)] border border-[var(--border-modal)] rounded-[8px] py-1 z-50">
+            <div className="absolute right-0 top-[calc(100%-4px)] w-48 bg-[var(--bg-modal)] border border-[var(--border-modal)] rounded-[var(--radius-button)] py-1 z-50">
               {['Français', 'English', 'Español', 'Deutsch', 'Italiano'].map(lang => (
                 <button
                   key={lang}
@@ -189,7 +189,7 @@ export function PreferencesPage() {
             )}
           </div>
           {isVoiceMenuOpen && (
-            <div className="absolute right-0 top-[calc(100%-4px)] w-64 max-h-48 overflow-y-auto claude-scrollbar bg-[var(--bg-modal)] border border-[var(--border-modal)] rounded-[8px] py-1 z-50">
+            <div className="absolute right-0 top-[calc(100%-4px)] w-64 max-h-48 overflow-y-auto claude-scrollbar bg-[var(--bg-modal)] border border-[var(--border-modal)] rounded-[var(--radius-button)] py-1 z-50">
               <button
                 type="button"
                 onClick={() => {
@@ -239,7 +239,7 @@ export function PreferencesPage() {
             </div>
           </div>
           {isSpeedMenuOpen && (
-            <div className="absolute right-0 top-[calc(100%-4px)] w-48 bg-[var(--bg-modal)] border border-[var(--border-modal)] rounded-[8px] py-1 z-50">
+            <div className="absolute right-0 top-[calc(100%-4px)] w-48 bg-[var(--bg-modal)] border border-[var(--border-modal)] rounded-[var(--radius-button)] py-1 z-50">
               {(['Lente', 'Normale', 'Rapide'] as VoiceSpeed[]).map(speed => (
                 <button
                   key={speed}

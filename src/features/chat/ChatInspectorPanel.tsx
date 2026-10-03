@@ -104,7 +104,7 @@ export function ChatInspectorPanel({
               <div className="text-[13px] text-[var(--text-secondary)] p-4 text-center">Sélectionnez une pièce jointe pour afficher son aperçu.</div>
             ) : (
               <div className="space-y-3">
-                <div className="p-3 bg-[var(--bg-app)] border border-[var(--border-subtle)] rounded-[8px] space-y-2">
+                <div className="p-3 bg-[var(--bg-app)] border border-[var(--border-subtle)] rounded-[var(--radius-button)] space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="font-medium text-[var(--text-primary)] truncate max-w-[180px]" title={previewData.attachment.name}>
                       {previewData.attachment.name}
@@ -132,11 +132,11 @@ export function ChatInspectorPanel({
                 </div>
 
                 {previewData.preview.error ? (
-                  <div className="p-3 bg-[var(--bg-error-subtle)] border border-[var(--border-error-subtle)] rounded-[8px] text-[var(--text-primary)] text-[12px]">
+                  <div className="p-3 bg-[var(--bg-error-subtle)] border border-[var(--border-error-subtle)] rounded-[var(--radius-button)] text-[var(--text-primary)] text-[12px]">
                     {previewData.preview.error}
                   </div>
                 ) : previewData.preview.type === 'image' ? (
-                  <div className="border border-[var(--border-subtle)] rounded-[8px] overflow-hidden bg-[var(--bg-app)] p-2 flex items-center justify-center">
+                  <div className="border border-[var(--border-subtle)] rounded-[var(--radius-button)] overflow-hidden bg-[var(--bg-app)] p-2 flex items-center justify-center">
                     <img
                       src={`/api/attachments/${encodeURIComponent(previewData.attachment.id)}?raw=1`}
                       alt={previewData.attachment.name}
@@ -144,7 +144,7 @@ export function ChatInspectorPanel({
                     />
                   </div>
                 ) : (
-                  <div className="bg-[var(--bg-app)] border border-[var(--border-subtle)] rounded-[8px] p-3 overflow-x-auto">
+                  <div className="bg-[var(--bg-app)] border border-[var(--border-subtle)] rounded-[var(--radius-button)] p-3 overflow-x-auto">
                     <pre className="font-mono text-[12px] text-[var(--text-muted)] whitespace-pre-wrap leading-relaxed select-text">
                       {previewData.preview.content || 'Aucun contenu textuel extractible.'}
                     </pre>

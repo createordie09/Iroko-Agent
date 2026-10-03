@@ -65,7 +65,7 @@ export function ConnectorsPage() {
 
       {/* Détection de configuration projet */}
       {projectMcpConfig?.found && (
-        <div className="p-3 bg-[var(--bg-app)] border border-[var(--border-modal)] rounded-[8px] space-y-2">
+        <div className="p-3 bg-[var(--bg-app)] border border-[var(--border-modal)] rounded-[var(--radius-button)] space-y-2">
           <div className="text-[12px] font-medium text-[var(--text-primary)]">
             Configuration MCP détectée dans le projet
           </div>
@@ -93,7 +93,7 @@ export function ConnectorsPage() {
 
       {/* Formulaire d'ajout de serveur */}
       {showAddMcpForm && (
-        <div className="p-3 bg-[var(--bg-app)] border border-[var(--border-modal)] rounded-[8px] space-y-3">
+        <div className="p-3 bg-[var(--bg-app)] border border-[var(--border-modal)] rounded-[var(--radius-button)] space-y-3">
           <div className="text-[13px] font-medium text-[var(--text-primary)]">Nouveau connecteur MCP</div>
           <div className="space-y-2">
             <div>
@@ -201,7 +201,7 @@ export function ConnectorsPage() {
             return (
               <div
                 key={server.name}
-                className="p-3 bg-[var(--bg-app)] border border-[var(--border-subtle)] rounded-[8px] space-y-2"
+                className="p-3 bg-[var(--bg-app)] border border-[var(--border-subtle)] rounded-[var(--radius-button)] space-y-2"
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">

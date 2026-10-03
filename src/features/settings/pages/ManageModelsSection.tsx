@@ -88,7 +88,7 @@ export function ManageModelsSection({ onBack }: ManageModelsSectionProps) {
           return (
             <div
               key={model.id}
-              className={`p-2.5 bg-[var(--bg-surface)] border border-[var(--border-subtle)] rounded-[8px] flex items-center justify-between transition-colors ${
+              className={`p-2.5 bg-[var(--bg-surface)] border border-[var(--border-subtle)] rounded-[var(--radius-button)] flex items-center justify-between transition-colors ${
                 model.isHidden ? 'opacity-50' : ''
               }`}
             >

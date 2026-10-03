@@ -198,6 +198,8 @@ Définis dans [`src/index.css`](file:///c:/Users/DELL/Documents/Iroko-Agent/src/
 ---
 
 ## 7. Écarts connus (à traiter lors des phases ultérieures)
+- Voiles de calques : `bg-black/75` pour toutes les modales et la palette ; `bg-black/70` réservé au voile du tiroir mobile.
+- Rayons : `rounded-[8px]`, `[12px]` et `[16px]` sont interdits en dur (`lint:tokens`) au profit de `--radius-button`/`--radius-item`, `--radius-card`, `--radius-composer`/`--radius-modal`.
 - Les composants obsolètes `UniversalComposer.tsx`, `ChatWorkspace.tsx` et `CodeWorkspace.tsx` ont été définitivement supprimés dans le cadre de la Mission M1 (Tout se fait dans le Chat).
 
 ---
@@ -266,6 +268,11 @@ Conformément à WCAG 2.1.1, 2.1.2, 2.4.2, 2.4.3 et aux règles d'intégrité UX
    - À la fermeture du calque, le focus lui est automatiquement et immédiatement restitué (avec repli sur le composer si le déclencheur a disparu).
 
 ### 9.2 Intégrations applicatives
+- **Modales de message (`DeleteMessageModal`, `EditMessageModal`)** :
+  - `role="dialog"`, `aria-modal="true"`, `aria-labelledby`, `data-modal="true"`, voile `data-overlay-backdrop="true"` en `bg-black/75`.
+  - Focus initial sur « Annuler » (suppression) ou le champ de saisie (modification), Échap et piège de focus via `useOverlayFocus`.
+- **Bandeau d'erreur des Paramètres** :
+  - Message `role="alert"` ancré en bas de la zone de contenu de `ClaudeSettingsModal` (tokens neutres, sans couleur d'accent), fermable, disparition automatique après 8 s, alimenté par `FeedbackBus`.
 - **`ClaudeSettingsModal`** :
   - Identifié par `role="dialog"`, `aria-modal="true"`, `aria-label="Paramètres"`, `data-modal="true"`.
   - Focus initial orienté vers le champ de recherche de navigation (`searchInputRef`).

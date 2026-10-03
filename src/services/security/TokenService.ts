@@ -43,6 +43,11 @@ class TokenService {
     return this.bootstrapPromise;
   }
 
+  /** Oublie le jeton en mémoire : le prochain appel ré-amorce auprès du daemon */
+  public invalidate(): void {
+    this.token = null;
+  }
+
   public getToken(): string | null {
     return this.token;
   }
@@ -59,15 +64,23 @@ class TokenService {
    * Obtient un ticket WebSocket à usage unique (valable 30s) pour le handshake
    */
   public async getWsTicket(): Promise<string> {
-    const token = await this.bootstrap();
-    const res = await fetch('/api/ws-ticket', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'X-Iroko-Request': '1',
-        'Content-Type': 'application/json'
-      }
-    });
+    const requestTicket = async () => {
+      const token = await this.bootstrap();
+      return fetch('/api/ws-ticket', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'X-Iroko-Request': '1',
+          'Content-Type': 'application/json'
+        }
+      });
+    };
+    let res = await requestTicket();
+    // Jeton périmé (redémarrage du daemon) : ré-amorçage unique puis nouvelle tentative
+    if (res.status === 401) {
+      this.invalidate();
+      res = await requestTicket();
+    }
 
     if (!res.ok) {
       throw new Error(`Impossible d'obtenir un ticket WebSocket (HTTP ${res.status})`);
@@ -104,10 +117,37 @@ class TokenService {
       ...(init?.headers as Record<string, string> || {})
     };
 
-    return fetch(url, {
+    const res = await fetch(url, {
       ...init,
       headers: mergedHeaders
     });
+    // Jeton périmé (redémarrage du daemon par le superviseur) : ré-amorçage unique puis rejeu
+    if (res.status === 401) {
+      this.invalidate();
+      const freshHeaders = await this.getHeaders(isWrite);
+      return fetch(url, {
+        ...init,
+        headers: { ...freshHeaders, ...(init?.headers as Record<string, string> || {}) }
+      });
+    }
+    return res;
+  }
+
+  /**
+   * Requête authentifiée qui échoue explicitement si la réponse n'est pas un succès :
+   * le message d'erreur du serveur (champ `error`) est repris, sinon le libellé de repli.
+   */
+  public async fetchChecked(url: string, init?: RequestInit, fallbackMessage = 'Action refusée par le runtime local.'): Promise<Response> {
+    const res = await this.fetch(url, init);
+    if (!res.ok) {
+      let detail = '';
+      try {
+        const data = await res.clone().json();
+        if (data && typeof data.error === 'string') detail = data.error;
+      } catch {}
+      throw new Error(detail || `${fallbackMessage} (HTTP ${res.status})`);
+    }
+    return res;
   }
 }
 

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { tokenService } from '../../services/security/TokenService';
+import { feedbackBus } from '../../services/feedback/FeedbackBus';
 import { useUndoDeletion } from '../useUndoDeletion';
 
 export interface SkillScanSummary {
@@ -44,17 +45,21 @@ export function useSkillsSettings() {
       if (Array.isArray(data.skills)) {
         setSkillsList(data.skills);
       }
-    } catch {}
+    } catch {
+      feedbackBus.error('Impossible de charger les compétences.');
+    }
   };
 
   const handleToggleSkill = async (name: string, currentEnabled: boolean) => {
     try {
-      await tokenService.fetch(`/api/skills/${encodeURIComponent(name)}/toggle`, {
+      await tokenService.fetchChecked(`/api/skills/${encodeURIComponent(name)}/toggle`, {
         method: 'PUT',
         body: JSON.stringify({ enabled: !currentEnabled })
-      });
-      fetchSkillsData();
-    } catch {}
+      }, 'Impossible de modifier la compétence.');
+    } catch (err) {
+      feedbackBus.report(err, 'Impossible de modifier la compétence.');
+    }
+    fetchSkillsData();
   };
 
   const handleImportSkill = async () => {
@@ -96,13 +101,15 @@ export function useSkillsSettings() {
   const handleSaveSkillEdit = async () => {
     if (!editingSkill) return;
     try {
-      await tokenService.fetch(`/api/skills/${encodeURIComponent(editingSkill.name)}`, {
+      await tokenService.fetchChecked(`/api/skills/${encodeURIComponent(editingSkill.name)}`, {
         method: 'PUT',
         body: JSON.stringify({ instructions: editSkillInstructions })
-      });
+      }, "Impossible d'enregistrer la compétence.");
       setEditingSkill(null);
       fetchSkillsData();
-    } catch {}
+    } catch (err) {
+      feedbackBus.report(err, "Impossible d'enregistrer la compétence.");
+    }
   };
 
   const handleDeleteSkill = (name: string) => {
@@ -146,12 +153,9 @@ export function useSkillsSettings() {
   const handleImportZipFile = async (file: File) => {
     setSkillError(null);
     try {
-      const token = await tokenService.getToken();
-      const res = await fetch('/api/skills/import', {
+      const res = await tokenService.fetch('/api/skills/import', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'X-Iroko-Request': '1',
           'Content-Type': 'application/zip',
           'X-Filename': encodeURIComponent(file.name)
         },

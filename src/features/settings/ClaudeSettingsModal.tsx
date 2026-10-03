@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   X, Search, SlidersHorizontal, ShieldCheck, 
   Cpu, Brain, Sparkles, Terminal, FileText, Share2, Boxes, 
@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useOverlayFocus } from '../../hooks/useOverlayFocus';
+import { feedbackBus } from '../../services/feedback/FeedbackBus';
 import { PreferencesPage } from './pages/PreferencesPage';
 import { ProvidersPage } from './pages/ProvidersPage';
 import { PrivacyPage } from './pages/PrivacyPage';
@@ -26,6 +27,15 @@ export function ClaudeSettingsModal() {
   } = useApp();
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
+
+  // Retour d'erreur des actions de réglages (disparaît seul après 8 s, ou à la fermeture manuelle)
+  useEffect(() => feedbackBus.subscribe(setFeedbackMessage), []);
+  useEffect(() => {
+    if (!feedbackMessage) return;
+    const timer = setTimeout(() => setFeedbackMessage(null), 8000);
+    return () => clearTimeout(timer);
+  }, [feedbackMessage]);
   const modalContainerRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -256,7 +266,7 @@ export function ClaudeSettingsModal() {
                       <button
                         key={item.id}
                         type="button"
-                        onClick={() => setActiveSettingsTab(item.id)}
+                        onClick={() => { setFeedbackMessage(null); setActiveSettingsTab(item.id); }}
                         className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-[6px] text-[13px] text-left transition-colors cursor-pointer ${
                           isSelected
                             ? 'bg-[var(--bg-active)] text-[var(--text-primary)] font-medium'
@@ -287,6 +297,23 @@ export function ClaudeSettingsModal() {
           {activeSettingsTab === 'connectors' && <ConnectorsPage />}
           {activeSettingsTab === 'plugins' && <PluginsPage />}
         </div>
+
+        {feedbackMessage && (
+          <div
+            role="alert"
+            className="absolute bottom-3 left-[203px] sm:left-[211px] right-3 z-20 flex items-center justify-between gap-3 px-3 py-2 rounded-[var(--radius-button)] bg-[var(--bg-surface)] border border-[var(--border-modal)] text-[12px] text-[var(--text-primary)]"
+          >
+            <span>{feedbackMessage}</span>
+            <button
+              type="button"
+              onClick={() => setFeedbackMessage(null)}
+              className="tap-target-24 p-0.5 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
+              aria-label="Fermer le message d'erreur"
+            >
+              <X className="w-3 h-3" />
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

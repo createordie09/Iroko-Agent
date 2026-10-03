@@ -65,7 +65,7 @@ test('MISSION R2e — 3. Zéro capacité simulée : désactivation explicite hor
   assert.ok(sectionSource.includes('{canTray && ('), 'La section tray ne doit être rendue que si le système le supporte proprement');
 });
 
-test('MISSION R2e — 4. Respect du design system, des tokens et de l\'étiquette [À VALIDER]', () => {
+test('MISSION R2e — 4. Respect du design system, des tokens et et absence d\'étiquette de validation visible', () => {
   const sectionSource = fs.readFileSync(path.join(ROOT_DIR, 'src', 'features', 'settings', 'pages', 'DesktopPreferencesSection.tsx'), 'utf8');
 
   // Zéro couleur d'accent vive (Règle permanente 3)
@@ -77,8 +77,8 @@ test('MISSION R2e — 4. Respect du design system, des tokens et de l\'étiquett
   assert.ok(sectionSource.includes('var(--text-primary)'), 'Doit utiliser le token --text-primary');
   assert.ok(sectionSource.includes('var(--border-subtle)'), 'Doit utiliser le token --border-subtle');
 
-  // Balise [À VALIDER]
-  assert.ok(sectionSource.includes('[À VALIDER]'), 'Le bloc doit porter l\'étiquette de validation visuelle');
+  // Aucune étiquette de validation visible dans l'interface
+  assert.ok(!sectionSource.includes('[À VALIDER]'), 'Aucune étiquette de validation ne doit rester visible');
 
   // Accessibilité du switch (WCAG 4.1.2)
   assert.ok(sectionSource.includes('role="switch"'), 'Les contrôles doivent être déclarés role="switch"');

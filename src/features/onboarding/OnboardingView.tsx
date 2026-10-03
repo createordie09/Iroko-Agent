@@ -29,19 +29,23 @@ export function OnboardingView({ onComplete, onSkip }: OnboardingViewProps) {
     }
     setTesting(true);
     try {
+      // Test réel : clé distante auprès de l'API, ou disponibilité du serveur local (Ollama)
+      const testRes = await tokenService.fetch('/api/credentials/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ providerId: selectedProvider.id, key: selectedProvider.requiresKey ? apiKey.trim() : '' })
+      });
+      let testData: any = null;
+      try { testData = await testRes.json(); } catch {}
+      if (!testRes.ok || !testData?.valid) {
+        setTestError(testData?.error || (selectedProvider.requiresKey
+          ? "La clé API est invalide ou n'a pas pu être authentifiée."
+          : `Le serveur local ${selectedProvider.name} est injoignable. Vérifiez qu'il est démarré.`));
+        return;
+      }
+
       if (selectedProvider.requiresKey) {
-        const testRes = await tokenService.fetch('/api/credentials/test', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ providerId: selectedProvider.id, key: apiKey.trim() })
-        });
-        const testData = await testRes.json();
-        if (!testRes.ok || !testData.valid) {
-          setTestError(testData.error || "La clé API est invalide ou n'a pas pu être authentifiée.");
-          setTesting(false);
-          return;
-        }
-        await tokenService.fetch('/api/credentials', {
+        const saveRes = await tokenService.fetch('/api/credentials', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -50,6 +54,18 @@ export function OnboardingView({ onComplete, onSkip }: OnboardingViewProps) {
             key: apiKey.trim(),
             priority: 1
           })
+        });
+        if (!saveRes.ok) {
+          let detail = "La clé est valide mais n'a pas pu être enregistrée.";
+          try { const d = await saveRes.json(); if (d?.error) detail = d.error; } catch {}
+          setTestError(detail);
+          return;
+        }
+      } else {
+        await tokenService.fetch('/api/models/refresh', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ providerId: selectedProvider.id })
         });
       }
       refreshModels();
@@ -73,7 +89,6 @@ export function OnboardingView({ onComplete, onSkip }: OnboardingViewProps) {
         <div className="flex items-center justify-between border-b border-[var(--border-subtle)] pb-4">
           <div className="flex items-center gap-2">
             <span className="text-[12px] font-medium tracking-wide uppercase text-[var(--text-tertiary)]">Premier lancement</span>
-            <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--bg-app)] border border-[var(--border-subtle)] text-[var(--text-tertiary)] font-mono">[À VALIDER]</span>
           </div>
           <span className="text-[12px] font-mono text-[var(--text-secondary)]">Étape {step} sur 4</span>
         </div>
@@ -260,7 +275,7 @@ export function OnboardingView({ onComplete, onSkip }: OnboardingViewProps) {
               </div>
             ) : (
               <div className="p-4 rounded-[var(--radius-card)] bg-[var(--bg-app)] border border-[var(--border-subtle)] text-[13px] text-[var(--text-secondary)]">
-                Ollama ne nécessite aucune clé distante. Iroko testera directement la disponibilité du serveur local sur <code>http://127.0.0.1:11434</code>.
+                Ollama ne nécessite aucune clé distante. Iroko testera la disponibilité du serveur local sur <code>http://127.0.0.1:11434</code> avant de continuer.
               </div>
             )}
 

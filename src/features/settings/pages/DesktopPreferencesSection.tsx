@@ -21,9 +21,6 @@ export function DesktopPreferencesSection() {
         <h3 className="text-[14px] font-semibold text-[var(--text-primary)]">
           Système & Bureau
         </h3>
-        <span className="text-[11px] font-mono text-[var(--text-tertiary)] uppercase">
-          [À VALIDER]
-        </span>
       </div>
 
       <div className="space-y-4">

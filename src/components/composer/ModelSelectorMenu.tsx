@@ -213,7 +213,7 @@ export function ModelSelectorMenu({
     <div
       ref={menuContainerRef}
       onKeyDown={handleKeyDown}
-      className="absolute bottom-[calc(100%+8px)] right-0 w-80 bg-[var(--bg-modal)] border border-[var(--border-modal)] rounded-[12px] py-1.5 z-50 flex flex-col max-h-[380px] select-none"
+      className="absolute bottom-[calc(100%+8px)] right-0 w-80 bg-[var(--bg-modal)] border border-[var(--border-modal)] rounded-[var(--radius-card)] py-1.5 z-50 flex flex-col max-h-[380px] select-none"
       role="menu"
       aria-label="Sélecteur de modèle"
     >

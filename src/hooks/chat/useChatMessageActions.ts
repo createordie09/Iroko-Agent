@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { agentClient } from '../../lib/agent-client';
+import { dispatchPrompt } from '../../lib/dispatchPrompt';
 import { tokenService } from '../../services/security/TokenService';
 import { attachmentService } from '../../services/attachments/AttachmentService';
 import { EditModalData } from '../../features/chat/modals/EditMessageModal';
@@ -43,7 +43,7 @@ export function useChatMessageActions({
 
   const handleSendMessage = (
     text: string, 
-    options?: { mode?: 'chat' | 'code'; tools?: string[]; attachmentIds?: string[]; comparisonModelBId?: string }
+    options?: { mode?: 'chat' | 'code'; tools?: string[]; attachmentIds?: string[]; comparisonModelBId?: string; retry?: boolean }
   ) => {
     const userMsg = { 
       id: crypto.randomUUID(),
@@ -52,7 +52,7 @@ export function useChatMessageActions({
       timestamp: Date.now(),
       metadata: options?.attachmentIds && options.attachmentIds.length > 0 ? { attachmentIds: options.attachmentIds } : undefined
     };
-    setMessages(prev => [...prev, userMsg]);
+    if (!options?.retry) setMessages(prev => [...prev, userMsg]);
     setChatStatus('loading');
     setThinkingLogs([]); // Zéro log inventé : alimenté uniquement par les flux réels du provider
     setToolExecutions([]);
@@ -67,58 +67,34 @@ export function useChatMessageActions({
       }
     }
 
-    if (options?.comparisonModelBId) {
-      tokenService.fetch(`/api/conversations/${encodeURIComponent(conversationId)}/compare`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          prompt: text,
-          modelAId: activeModel,
-          modelBId: options.comparisonModelBId
-        })
-      }).then(async (res) => {
-        if (res.ok) {
-          const data = await res.json();
-          if (data.assistantMessage) {
-            setMessages(prev => {
-              const filtered = prev.filter(m => m.id !== data.assistantMessage.id);
-              return [...filtered, data.assistantMessage];
-            });
-          }
-        }
-        setChatStatus('idle');
-      }).catch((err) => {
-        console.error('Erreur comparaison de modèles', err);
-        setChatStatus('idle');
-      });
-      return;
-    }
-
-    let preferredProviderId: string | undefined = undefined;
-    if (activeModel && activeModel.includes('/')) {
-      preferredProviderId = activeModel.split('/')[0];
-    }
-
-    agentClient.sendPrompt(text, {
+    dispatchPrompt({
+      text,
       conversationId,
-      modelId: activeModel,
-      preferredProviderId,
+      activeModel,
       mode: options?.mode || composerMode,
-      attachmentIds: options?.attachmentIds
+      attachmentIds: options?.attachmentIds,
+      comparisonModelBId: options?.comparisonModelBId,
+      retry: options?.retry,
+      setMessages,
+      setChatStatus,
+      setErrorMessage
     });
   };
 
   const handleRetry = () => {
     const lastUser = [...messages].reverse().find(m => m.role === 'user');
     if (lastUser) {
-      handleSendMessage(lastUser.content);
+      handleSendMessage(lastUser.content, { retry: messages[messages.length - 1]?.role === 'user' });
     }
   };
 
   const handleCopy = (text: string, index: number) => {
-    navigator.clipboard.writeText(text);
-    setCopiedIndex(index);
-    setTimeout(() => setCopiedIndex(null), 2000);
+    navigator.clipboard.writeText(text).then(() => {
+      setCopiedIndex(index);
+      setTimeout(() => setCopiedIndex(null), 2000);
+    }).catch(() => {
+      setErrorMessage('La copie dans le presse-papier a échoué.');
+    });
   };
 
   const handleDeleteMessage = (msg: any, index: number) => {

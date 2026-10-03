@@ -77,7 +77,7 @@ export function renderInline(text: string): React.ReactNode {
             href={m2}
             target="_blank"
             rel="noopener noreferrer"
-            className="underline underline-offset-2 text-[var(--text-primary)] hover:text-white transition-colors"
+            className="underline underline-offset-2 text-[var(--text-primary)] hover:opacity-80 transition-colors"
           >
             {m1}
           </a>

@@ -147,7 +147,7 @@ export function ComparisonMessageView({
         data-comparison-column={colKey}
         data-selected-column={isSelected ? 'true' : undefined}
         data-archived-column={isArchived ? 'true' : undefined}
-        className={`flex flex-col justify-between rounded-[8px] bg-[var(--bg-surface)] p-3 border transition-colors ${
+        className={`flex flex-col justify-between rounded-[var(--radius-button)] bg-[var(--bg-surface)] p-3 border transition-colors ${
           isSelected
             ? 'border-[var(--text-secondary)] ring-1 ring-[var(--text-secondary)]'
             : 'border-[var(--border-subtle)]'

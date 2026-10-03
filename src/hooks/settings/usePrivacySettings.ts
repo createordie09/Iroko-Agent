@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { tokenService } from '../../services/security/TokenService';
+import { feedbackBus } from '../../services/feedback/FeedbackBus';
 import { clearAllDrafts } from '../useDraft';
 
 export function usePrivacySettings() {
@@ -52,17 +53,19 @@ export function usePrivacySettings() {
         const data = await res.json();
         setStorageBreakdown(data);
       }
-    } catch {}
+    } catch {
+      feedbackBus.error('Impossible de charger le détail de l\'espace disque.');
+    }
   };
 
   const handleCleanStorageCategory = async (category: string) => {
     setCleaningCategory(category);
     try {
-      const res = await tokenService.fetch('/api/privacy/storage-clean', {
+      const res = await tokenService.fetchChecked('/api/privacy/storage-clean', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ category })
-      });
+      }, "Impossible de nettoyer l'espace disque.");
       if (res.ok) {
         if (category === 'conversations' || category === 'all') {
           clearAllDrafts();
@@ -80,7 +83,9 @@ export function usePrivacySettings() {
         await fetchStorageBreakdown();
         setConfirmCleanCategory(null);
       }
-    } catch {} finally {
+    } catch (err) {
+      feedbackBus.report(err, "Impossible de nettoyer l'espace disque.");
+    } finally {
       setCleaningCategory(null);
     }
   };
@@ -100,22 +105,27 @@ export function usePrivacySettings() {
         setMaskModelEnabled(data.maskModel !== false);
       }
       fetchStorageBreakdown();
-    } catch {}
+    } catch {
+      feedbackBus.error('Impossible de charger les informations de confidentialité.');
+    }
   };
 
   const handleToggleMaskModel = async (enabled: boolean) => {
     setMaskModelEnabled(enabled);
     try {
-      await tokenService.fetch('/api/privacy/mask_model', {
+      await tokenService.fetchChecked('/api/privacy/mask_model', {
         method: 'PUT',
         body: JSON.stringify({ enabled })
-      });
-    } catch {}
+      }, 'Impossible de modifier le masquage du modèle.');
+    } catch (err) {
+      setMaskModelEnabled(!enabled);
+      feedbackBus.report(err, 'Impossible de modifier le masquage du modèle.');
+    }
   };
 
   const handleExportAllData = async () => {
     try {
-      const res = await tokenService.fetch('/api/privacy/export');
+      const res = await tokenService.fetchChecked('/api/privacy/export', undefined, "Impossible d'exporter les données.");
       const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -125,12 +135,14 @@ export function usePrivacySettings() {
       a.click();
       a.remove();
       window.URL.revokeObjectURL(url);
-    } catch {}
+    } catch (err) {
+      feedbackBus.report(err, "Impossible d'exporter les données.");
+    }
   };
 
   const handleClearAllConversations = async () => {
     try {
-      await tokenService.fetch('/api/privacy/conversations', { method: 'DELETE' });
+      await tokenService.fetchChecked('/api/privacy/conversations', { method: 'DELETE' }, 'Impossible de supprimer les discussions.');
       clearAllDrafts();
       localStorage.removeItem('iroko_history');
       localStorage.setItem('iroko_migration_done', 'true');
@@ -138,27 +150,33 @@ export function usePrivacySettings() {
       setPrivacySuccessMessage('Toutes les discussions ont été supprimées.');
       fetchPrivacyData();
       setTimeout(() => setPrivacySuccessMessage(null), 4000);
-    } catch {}
+    } catch (err) {
+      feedbackBus.report(err, 'Impossible de supprimer les discussions.');
+    }
   };
 
   const handleClearAllMemoryInPrivacy = async () => {
     try {
-      await tokenService.fetch('/api/privacy/memory', { method: 'DELETE' });
+      await tokenService.fetchChecked('/api/privacy/memory', { method: 'DELETE' }, 'Impossible d\'effacer la mémoire.');
       setShowClearMemoryConfirmInPrivacy(false);
       setPrivacySuccessMessage('La mémoire de projet a été entièrement effacée.');
       fetchPrivacyData();
       setTimeout(() => setPrivacySuccessMessage(null), 4000);
-    } catch {}
+    } catch (err) {
+      feedbackBus.report(err, 'Impossible d\'effacer la mémoire.');
+    }
   };
 
   const handleClearAllKeys = async () => {
     try {
-      await tokenService.fetch('/api/privacy/credentials', { method: 'DELETE' });
+      await tokenService.fetchChecked('/api/privacy/credentials', { method: 'DELETE' }, 'Impossible de supprimer les clés.');
       setShowClearKeysConfirm(false);
       setPrivacySuccessMessage('Toutes les clés d\'API ont été supprimées.');
       fetchPrivacyData();
       setTimeout(() => setPrivacySuccessMessage(null), 4000);
-    } catch {}
+    } catch (err) {
+      feedbackBus.report(err, 'Impossible de supprimer les clés.');
+    }
   };
 
   const handleBackup = async () => {
@@ -245,14 +263,17 @@ export function usePrivacySettings() {
       if (data.appVersion) {
         setDiagnosticData(data);
       }
-    } catch {}
+    } catch {
+      feedbackBus.error('Impossible de charger les informations de diagnostic.');
+    }
   };
 
   const handleCopyDiagnostic = () => {
     if (!diagnosticData) return;
-    navigator.clipboard.writeText(JSON.stringify(diagnosticData, null, 2));
-    setDiagnosticCopied(true);
-    setTimeout(() => setDiagnosticCopied(false), 2000);
+    navigator.clipboard.writeText(JSON.stringify(diagnosticData, null, 2)).then(() => {
+      setDiagnosticCopied(true);
+      setTimeout(() => setDiagnosticCopied(false), 2000);
+    }).catch(() => feedbackBus.error('La copie du diagnostic a échoué.'));
   };
 
   useEffect(() => {

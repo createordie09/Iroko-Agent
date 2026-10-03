@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { tokenService } from '../../services/security/TokenService';
+import { feedbackBus } from '../../services/feedback/FeedbackBus';
 
 export function useCodeSettings() {
   const [permissionMode, setPermissionMode] = useState<'ask' | 'auto_edit' | 'read_only'>('ask');
@@ -20,47 +21,63 @@ export function useCodeSettings() {
       if (typeof permRes?.fileTimeout === 'number') setFileTimeout(permRes.fileTimeout);
       if (Array.isArray(permRes?.rules)) setProjectRules(permRes.rules);
       if (Array.isArray(auditRes?.entries)) setAuditEntries(auditRes.entries);
-    } catch {}
+    } catch {
+      feedbackBus.error('Impossible de charger les permissions.');
+    }
   };
 
   const handleUpdatePermissionMode = async (mode: 'ask' | 'auto_edit' | 'read_only') => {
+    const previous = permissionMode;
     setPermissionMode(mode);
     try {
-      await tokenService.fetch('/api/permissions/mode', {
+      await tokenService.fetchChecked('/api/permissions/mode', {
         method: 'PUT',
         body: JSON.stringify({ mode })
-      });
-    } catch {}
+      }, 'Impossible de modifier le mode de permissions.');
+    } catch (err) {
+      setPermissionMode(previous);
+      feedbackBus.report(err, 'Impossible de modifier le mode de permissions.');
+    }
   };
 
   const handleUpdateTerminalTimeout = async (timeout: number) => {
+    const previous = terminalTimeout;
     setTerminalTimeout(timeout);
     try {
-      await tokenService.fetch('/api/permissions/terminal_timeout', {
+      await tokenService.fetchChecked('/api/permissions/terminal_timeout', {
         method: 'PUT',
         body: JSON.stringify({ terminalTimeout: timeout })
-      });
-    } catch {}
+      }, 'Impossible de modifier le délai du terminal.');
+    } catch (err) {
+      setTerminalTimeout(previous);
+      feedbackBus.report(err, 'Impossible de modifier le délai du terminal.');
+    }
   };
 
   const handleUpdateFileTimeout = async (timeout: number) => {
+    const previous = fileTimeout;
     setFileTimeout(timeout);
     try {
-      await tokenService.fetch('/api/permissions/file_timeout', {
+      await tokenService.fetchChecked('/api/permissions/file_timeout', {
         method: 'PUT',
         body: JSON.stringify({ fileTimeout: timeout })
-      });
-    } catch {}
+      }, 'Impossible de modifier le délai des fichiers.');
+    } catch (err) {
+      setFileTimeout(previous);
+      feedbackBus.report(err, 'Impossible de modifier le délai des fichiers.');
+    }
   };
 
   const handleRevokeRule = async (ruleId: string) => {
     setRevokingRuleId(ruleId);
     try {
-      await tokenService.fetch(`/api/permissions/rules/${ruleId}`, {
+      await tokenService.fetchChecked(`/api/permissions/rules/${ruleId}`, {
         method: 'DELETE'
-      });
+      }, 'Impossible de révoquer la règle.');
       setProjectRules(prev => prev.filter(r => r.id !== ruleId));
-    } catch {} finally {
+    } catch (err) {
+      feedbackBus.report(err, 'Impossible de révoquer la règle.');
+    } finally {
       setRevokingRuleId(null);
     }
   };

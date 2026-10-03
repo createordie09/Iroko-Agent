@@ -107,6 +107,7 @@ export class IrokoAgentClient {
       thinkingBudget?: number; 
       conversationId?: string;
       attachmentIds?: string[];
+      retry?: boolean;
     } | string
   ): boolean {
     if (typeof options === 'string') {
@@ -121,7 +122,8 @@ export class IrokoAgentClient {
       thinkingLevel: options?.thinkingLevel,
       thinkingBudget: options?.thinkingBudget,
       conversationId: options?.conversationId,
-      attachmentIds: options?.attachmentIds
+      attachmentIds: options?.attachmentIds,
+      retry: options?.retry
     });
   }
 

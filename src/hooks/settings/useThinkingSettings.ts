@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { tokenService } from '../../services/security/TokenService';
+import { feedbackBus } from '../../services/feedback/FeedbackBus';
 
 export function useThinkingSettings() {
   const [thinkingLevel, setThinkingLevel] = useState<'disabled' | 'low' | 'medium' | 'high'>(() => {
@@ -24,29 +25,35 @@ export function useThinkingSettings() {
           localStorage.setItem('iroko_subagent_auto_routing', String(enabled));
         }
       }
-    } catch {}
+    } catch {
+      feedbackBus.error('Impossible de charger les réglages de réflexion.');
+    }
   };
 
   const handleUpdateThinkingLevel = async (level: 'disabled' | 'low' | 'medium' | 'high') => {
     setThinkingLevel(level);
     localStorage.setItem('iroko_thinking_level', level);
     try {
-      await tokenService.fetch('/api/settings/thinking_level', {
+      await tokenService.fetchChecked('/api/settings/thinking_level', {
         method: 'PUT',
         body: JSON.stringify({ value: level })
-      });
-    } catch {}
+      }, 'Impossible d\'enregistrer le niveau de réflexion.');
+    } catch (err) {
+      feedbackBus.report(err, 'Impossible d\'enregistrer le niveau de réflexion.');
+    }
   };
 
   const handleUpdateSubagentAutoRouting = async (enabled: boolean) => {
     setSubagentAutoRouting(enabled);
     localStorage.setItem('iroko_subagent_auto_routing', String(enabled));
     try {
-      await tokenService.fetch('/api/settings/subagent_auto_routing', {
+      await tokenService.fetchChecked('/api/settings/subagent_auto_routing', {
         method: 'PUT',
         body: JSON.stringify({ value: enabled })
-      });
-    } catch {}
+      }, 'Impossible d\'enregistrer le routage des sous-agents.');
+    } catch (err) {
+      feedbackBus.report(err, 'Impossible d\'enregistrer le routage des sous-agents.');
+    }
   };
 
   useEffect(() => {

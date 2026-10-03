@@ -82,6 +82,12 @@ export interface AppContextType {
   chatStatus: 'idle' | 'loading' | 'success' | 'error';
   setChatStatus: (s: 'idle' | 'loading' | 'success' | 'error') => void;
   resetChat: () => void;
+  /** Erreur de niveau conversation hors flux agent (chargement, envoi depuis l'accueil) */
+  chatError: string | null;
+  setChatError: (message: string | null) => void;
+  /** Identifiant explicite de la discussion affichée (null sur l'accueil) */
+  activeConversationId: string | null;
+  setActiveConversationId: (id: string | null) => void;
 
   // Agent Runtime Stream
   runtimeConnected: boolean;
@@ -115,10 +121,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [activeSettingsTab, setActiveSettingsTab] = useState('preferences');
   const [composerMode, setComposerModeState] = useState<ComposerMode>('chat');
 
+  // Discussion active : identifiant explicite, indépendant de l'ordre de `history`
+  const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
+
   const setComposerMode = (m: ComposerMode) => {
     setComposerModeState(m);
-    if (history.length > 0 && history[0]?.id) {
-      const activeId = history[0].id;
+    if (activeConversationId) {
+      const activeId = activeConversationId;
       setHistory(prev => prev.map(h => h.id === activeId ? { ...h, mode: m } : h));
       tokenService.fetch(`/api/conversations/${activeId}/mode`, {
         method: 'PUT',
@@ -142,7 +151,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   // Current Context
   const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
   const [activeAgent, setActiveAgent] = useState<AgentType>('coder');
-  const [activeModel, setActiveModel] = useState<string>('anthropic/claude-3.5-sonnet');
+  const [activeModel, setActiveModel] = useState<string>('');
   const [activeProvider, setActiveProvider] = useState<string>('openrouter');
 
   // Clé de rafraîchissement des modèles (M10.0) — incrémentée pour forcer un re-fetch du Composer
@@ -185,9 +194,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
   // Chat messages
   const [messages, setMessages] = useState<Message[]>([]);
   const [chatStatus, setChatStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [chatError, setChatError] = useState<string | null>(null);
   const [activeWorkspace, setActiveWorkspace] = useState<ActiveWorkspaceInfo | null>(null);
 
   const resetChat = () => {
+    setActiveConversationId(null);
+    setChatError(null);
     setMessages([]);
     setChatStatus('idle');
     setComposerModeState('chat');
@@ -230,6 +242,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
           });
           setMessages(mapped);
         }
+        setChatError(null);
+        setChatStatus('idle');
         if (data.conversation) {
           const convItem: HistoryItem = {
             id: data.conversation.id,
@@ -247,12 +261,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
             setComposerModeState(data.conversation.mode);
           }
         }
+        setActiveConversationId(id);
         setActiveView('chat');
         if (typeof window !== 'undefined' && window.location.pathname !== `/conversations/${id}`) {
           window.history.pushState(null, '', `/conversations/${id}`);
         }
+      } else {
+        throw new Error('Discussion introuvable');
       }
-    } catch {}
+    } catch {
+      // Échec de chargement : la discussion s'ouvre en état d'erreur explicite plutôt que sans effet
+      setActiveConversationId(id);
+      setMessages([]);
+      setChatError('Impossible de charger cette discussion. Vérifiez que le runtime local est démarré.');
+      setChatStatus('error');
+      setActiveView('chat');
+    }
   };
 
   // Agent Runtime live state
@@ -482,12 +506,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   // Synchronisation dynamique du titre de page (WCAG 2.4.2 — Lot 2)
   useEffect(() => {
-    if (activeView === 'chat' && history.length > 0 && history[0]?.topic?.trim()) {
-      document.title = `${history[0].topic.trim()} — Iroko`;
+    const activeTopic = history.find(h => h.id === activeConversationId)?.topic?.trim();
+    if (activeView === 'chat' && activeTopic) {
+      document.title = `${activeTopic} — Iroko`;
     } else {
       document.title = 'Iroko';
     }
-  }, [activeView, history]);
+  }, [activeView, history, activeConversationId]);
 
   return (
     <AppContext.Provider
@@ -541,6 +566,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         chatStatus,
         setChatStatus,
         resetChat,
+        activeConversationId,
+        setActiveConversationId,
+        chatError,
+        setChatError,
         runtimeConnected,
         runtimeStatus,
         runtimeMessage,
