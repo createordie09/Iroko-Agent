@@ -86,7 +86,7 @@ export function ClaudeTopbar() {
       document.body.appendChild(a);
       a.click();
       a.remove();
-      URL.revokeObjectURL(url);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
       setIsExportMenuOpen(false);
     } catch (err: any) {
       setPdfError(err?.message || "Erreur lors de l'exportation PDF.");
@@ -115,7 +115,7 @@ export function ClaudeTopbar() {
     document.body.appendChild(a);
     a.click();
     a.remove();
-    URL.revokeObjectURL(url);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
     setIsExportMenuOpen(false);
   };
 
@@ -143,7 +143,7 @@ export function ClaudeTopbar() {
     document.body.appendChild(a);
     a.click();
     a.remove();
-    URL.revokeObjectURL(url);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
     setIsExportMenuOpen(false);
   };
 

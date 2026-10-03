@@ -120,7 +120,7 @@ export function useMemorySettings() {
       document.body.appendChild(a);
       a.click();
       a.remove();
-      window.URL.revokeObjectURL(url);
+      setTimeout(() => window.URL.revokeObjectURL(url), 1000);
     } catch (err) {
       feedbackBus.report(err, "Impossible d'exporter la mémoire.");
     }

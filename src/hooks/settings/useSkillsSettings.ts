@@ -142,7 +142,7 @@ export function useSkillsSettings() {
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      URL.revokeObjectURL(blobUrl);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
       return true;
     } catch (err: any) {
       setSkillError(err.message || "Erreur réseau lors de l'exportation.");

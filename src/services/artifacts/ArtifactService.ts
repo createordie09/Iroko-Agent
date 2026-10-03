@@ -101,7 +101,7 @@ export class ArtifactService {
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      URL.revokeObjectURL(blobUrl);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
       return true;
     } catch {
       return false;
@@ -122,7 +122,7 @@ export class ArtifactService {
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      URL.revokeObjectURL(blobUrl);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
       return true;
     } catch {
       return false;
