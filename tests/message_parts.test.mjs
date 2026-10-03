@@ -1,0 +1,98 @@
+// tests/message_parts.test.mjs
+// Phase 2 — Chronologie ordonnée des réponses (réflexion, texte, outils, artéfacts).
+
+import test from 'node:test';
+import assert from 'node:assert/strict';
+
+const { applyEventToParts, compactForPart, hasMessageParts } = await import('../server/types/messageParts.ts');
+const { ActiveJobManager } = await import('../server/runtime/ActiveJobManager.ts');
+
+const ev = (e) => ({ taskId: 't', sessionId: 's', timestamp: new Date().toISOString(), ...e });
+
+function replay(events) {
+  return events.reduce((parts, e, i) => applyEventToParts(parts, ev(e), 1000 + i * 100), []);
+}
+
+test('Parts — l\'ordre réel des blocs est conservé et le texte est regroupé', () => {
+  const parts = replay([
+    { type: 'thinking', content: 'Je ' },
+    { type: 'thinking', content: 'réfléchis' },
+    { type: 'message', role: 'assistant', content: 'Je lis ' },
+    { type: 'message', role: 'assistant', content: 'le fichier.' },
+    { type: 'tool_call_start', callId: 'c1', tool: 'read_file', input: { path: 'a.ts' } },
+    { type: 'tool_call_result', callId: 'c1', tool: 'read_file', success: true, result: { ok: 1 } },
+    { type: 'message', role: 'assistant', content: 'Terminé.' }
+  ]);
+  assert.deepEqual(parts.map(p => p.type), ['thinking', 'text', 'tool', 'text']);
+  assert.equal(parts[0].text, 'Je réfléchis');
+  assert.equal(parts[1].text, 'Je lis le fichier.');
+  assert.equal(parts[2].status, 'success');
+  assert.equal(parts[2].durationMs, 100);
+  assert.equal(parts[3].text, 'Terminé.');
+});
+
+test('Parts — un échec d\'outil est marqué en erreur et un doublon de départ est ignoré', () => {
+  const parts = replay([
+    { type: 'tool_call_start', callId: 'c1', tool: 'execute_command', input: { command: 'x' } },
+    { type: 'tool_call_start', callId: 'c1', tool: 'execute_command', input: { command: 'x' } },
+    { type: 'tool_call_result', callId: 'c1', tool: 'execute_command', success: false, error: 'boom' }
+  ]);
+  assert.equal(parts.length, 1);
+  assert.equal(parts[0].status, 'error');
+  assert.equal(parts[0].error, 'boom');
+});
+
+test('Parts — un artéfact mis à jour garde sa position et passe à la nouvelle version', () => {
+  const art = (version) => ({ id: 'a1', name: 'n.md', mimeType: 'text/markdown', version, size: 3 });
+  const parts = replay([
+    { type: 'artifact_created', artifact: art(1) },
+    { type: 'message', role: 'assistant', content: 'ok' },
+    { type: 'artifact_updated', artifact: art(2) }
+  ]);
+  assert.deepEqual(parts.map(p => p.type), ['artifact', 'text']);
+  assert.equal(parts[0].version, 2);
+});
+
+test('Parts — la liste d\'origine n\'est pas modifiée et les événements sans rapport la laissent intacte', () => {
+  const base = [];
+  const next = applyEventToParts(base, ev({ type: 'message', role: 'assistant', content: 'a' }));
+  assert.equal(base.length, 0);
+  assert.equal(next.length, 1);
+  assert.equal(applyEventToParts(next, ev({ type: 'status', status: 'idle' })), next);
+});
+
+test('Parts — les contenus volumineux sont réduits', () => {
+  const big = compactForPart({ content: 'x'.repeat(10000) });
+  assert.ok(JSON.stringify(big).length < 4200);
+  assert.equal(hasMessageParts({ parts: [] }), false);
+  assert.equal(hasMessageParts({ parts: [{}] }), true);
+});
+
+test('Parts — le gestionnaire de tâches enregistre la chronologie dans le message', async () => {
+  const saved = [];
+  const db = { updateMessageContent: (...args) => saved.push(args), updateTaskStatus() {} };
+  const manager = new ActiveJobManager(db);
+  const job = manager.registerJob({
+    taskId: 't1', conversationId: 'c', prompt: 'p', mode: 'code', assistantMessageId: 'm1',
+    runtime: { sessionId: 's', cancelTask() {} }
+  });
+  manager.handleEvent('c', ev({ type: 'message', role: 'assistant', content: 'Début ' }));
+  manager.handleEvent('c', ev({ type: 'tool_call_start', callId: 'c1', tool: 'read_file', input: {} }));
+  manager.handleEvent('c', ev({ type: 'tool_call_result', callId: 'c1', tool: 'read_file', success: true, result: {} }));
+  manager.handleEvent('c', ev({ type: 'message', role: 'assistant', content: 'Fin' }));
+  manager.handleEvent('c', ev({ type: 'completed', summary: 'Début Fin' }));
+  const last = saved[saved.length - 1];
+  assert.deepEqual(last[3].parts.map(p => p.type), ['text', 'tool', 'text']);
+  assert.equal(job.parts.length, 3);
+
+  // Reprise : un abonné tardif reçoit la chronologie déjà construite
+  const job2 = manager.registerJob({
+    taskId: 't2', conversationId: 'c2', prompt: 'p', mode: 'chat', assistantMessageId: 'm2',
+    runtime: { sessionId: 's', cancelTask() {} }
+  });
+  manager.handleEvent('c2', ev({ type: 'message', role: 'assistant', content: 'Salut' }));
+  let resume;
+  manager.subscribe('c2', e => { if (e.type === 'task_resumed') resume = e; });
+  assert.equal(resume.payload.parts[0].text, 'Salut');
+  assert.ok(job2);
+});

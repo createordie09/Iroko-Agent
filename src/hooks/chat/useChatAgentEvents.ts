@@ -7,6 +7,8 @@ import { mediaService, VideoJobData } from '../../services/media/MediaService';
 import { ChangedFileRecord } from '../../features/agent/DiffViewer';
 import { tokenService } from '../../services/security/TokenService';
 import { extractTurnArtifacts } from './artifactTurnExtractor';
+import { useLiveParts } from './useLiveParts';
+import { mergeArtifactEvent } from './mergeArtifactEvent';
 
 export interface UseChatAgentEventsOptions {
   conversationId: string;
@@ -60,6 +62,7 @@ export function useChatAgentEvents({
     error?: string;
     args?: any;
   }>>([]);
+  const { liveParts, applyEvent: applyPartsEvent, setParts: setLiveParts, reset: resetLiveParts, snapshot: snapshotParts } = useLiveParts();
   const [pendingPermission, setPendingPermission] = useState<PermissionRequest | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -99,6 +102,7 @@ export function useChatAgentEvents({
   useEffect(() => {
     // Réinitialisation stricte des états transitoires de l'ancienne discussion (Mission R5c)
     setToolExecutions([]);
+    resetLiveParts();
     setPlanSteps([]);
     setModeSwitchReason(null);
     setChangedFiles([]);
@@ -128,6 +132,7 @@ export function useChatAgentEvents({
               setThinkingLogs([data.thinkingText]);
             }
             if (Array.isArray(data.toolExecutions)) setToolExecutions(data.toolExecutions);
+            if (Array.isArray(data.parts)) setLiveParts(data.parts);
             if (Array.isArray(data.planSteps)) setPlanSteps(data.planSteps);
           }
         })
@@ -160,6 +165,7 @@ export function useChatAgentEvents({
   }, [currentAssistantStream]);
 
   const commitAssistantMessage = (content: string, turnThinking?: string, turnSources?: any[]) => {
+    const turnParts = snapshotParts(content);
     const turnArtifacts = extractTurnArtifacts(toolExecutionsRef.current);
     setMessages(prev => [
       ...prev,
@@ -182,7 +188,8 @@ export function useChatAgentEvents({
             }))
           } : {}),
           ...(turnSources && turnSources.length > 0 ? { sources: turnSources } : {}),
-          ...(turnThinking ? { thinking: turnThinking } : {})
+          ...(turnThinking ? { thinking: turnThinking } : {}),
+          ...(turnParts.length > 0 ? { parts: turnParts } : {})
         }
       }
     ]);
@@ -191,6 +198,7 @@ export function useChatAgentEvents({
       setAriaLiveSentence(remaining);
     }
     resetStreamBuffer();
+    resetLiveParts();
     currentThinkingRef.current = '';
     setCurrentThinking('');
     setThinkingLogs([]);
@@ -198,6 +206,7 @@ export function useChatAgentEvents({
 
   useEffect(() => {
     const unsubEvents = agentClient.onEvent((event: AgentEvent) => {
+      applyPartsEvent(event);
       switch (event.type) {
         case 'thinking':
           currentThinkingRef.current += event.content;
@@ -240,6 +249,7 @@ export function useChatAgentEvents({
             if (Array.isArray(payload.toolExecutions)) {
               setToolExecutions(payload.toolExecutions);
             }
+            if (Array.isArray(payload.parts)) setLiveParts(payload.parts);
             if (Array.isArray(payload.planSteps)) {
               setPlanSteps(payload.planSteps);
             }
@@ -261,44 +271,7 @@ export function useChatAgentEvents({
           break;
         case 'artifact_created':
         case 'artifact_updated':
-          setArtifacts(prev => {
-            const existingIdx = prev.findIndex(a => a.id === event.artifact.id);
-            if (existingIdx >= 0) {
-              const copy = [...prev];
-              copy[existingIdx] = {
-                ...copy[existingIdx],
-                name: event.artifact.name,
-                title: event.artifact.title || copy[existingIdx].title,
-                mimeType: event.artifact.mimeType,
-                currentVersion: event.artifact.version,
-                size: event.artifact.size,
-                updatedAt: new Date().toISOString()
-              };
-              return copy;
-            }
-            const newArt: ArtifactPublicInfo = {
-              id: event.artifact.id,
-              name: event.artifact.name,
-              title: event.artifact.title || event.artifact.name,
-              mimeType: event.artifact.mimeType,
-              currentVersion: event.artifact.version,
-              size: event.artifact.size,
-              conversationId: conversationId || '',
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-              versions: [
-                {
-                  id: 'ver_' + event.artifact.version,
-                  artifactId: event.artifact.id,
-                  version: event.artifact.version,
-                  size: event.artifact.size,
-                  filePath: '',
-                  createdAt: new Date().toISOString()
-                }
-              ]
-            };
-            return [newArt, ...prev];
-          });
+          setArtifacts(prev => mergeArtifactEvent(prev, event.artifact, conversationId));
           break;
         case 'video_job_updated': {
           const job = event.job as VideoJobData;
@@ -382,6 +355,8 @@ export function useChatAgentEvents({
     contextUsage,
     toolExecutions,
     setToolExecutions,
+    liveParts,
+    resetLiveParts,
     artifacts,
     loadArtifacts,
     activeVideoJobs,

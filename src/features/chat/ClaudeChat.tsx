@@ -14,6 +14,7 @@ import { useChatAgentEvents } from '../../hooks/chat/useChatAgentEvents';
 import { useChatMessageActions } from '../../hooks/chat/useChatMessageActions';
 import { useConnectionRecovery } from '../../hooks/chat/useConnectionRecovery';
 import { FormattedMessage } from './FormattedMessage';
+import { MessageParts } from './MessageParts';
 import { ModeSwitchSuggestion } from './ModeSwitchSuggestion';
 import { ChatMessageList } from './ChatMessageList';
 import { ChatInspectorPanel, InspectorTabType } from './ChatInspectorPanel';
@@ -58,7 +59,7 @@ export function ClaudeChat() {
   const {
     currentThinking,
     thinkingLogs, setThinkingLogs, isThinkingOpen, setIsThinkingOpen,
-    planSteps, contextUsage, toolExecutions, setToolExecutions,
+    planSteps, contextUsage, toolExecutions, setToolExecutions, liveParts, resetLiveParts,
     artifacts, loadArtifacts, activeVideoJobs, handleCancelVideoJob,
     pendingPermission, setPendingPermission, changedFiles,
     errorMessage, setErrorMessage, modeSwitchReason, setModeSwitchReason, ariaLiveSentence
@@ -82,7 +83,7 @@ export function ClaudeChat() {
     handleStartEdit, handleConfirmEdit, handleRegenerateFrom, handleContinue
   } = useChatMessageActions({
     conversationId, activeModel, composerMode, messages, setMessages,
-    setChatStatus, resetStreamBuffer, setThinkingLogs, setToolExecutions,
+    setChatStatus, resetStreamBuffer, setThinkingLogs, setToolExecutions, resetLiveParts,
     setErrorMessage: (m: any) => {
       setErrorMessage(m);
       if (m === null) { setChatError(null); setModeSwitchReason(null); }
@@ -230,61 +231,30 @@ export function ClaudeChat() {
                 handleSendMessage(`Régénère l'image suivante\u00A0: ${prompt}`);
               }}
               attachmentsMap={attachmentsMap}
-              toolExecutions={toolExecutions}
               activeVideoJobs={activeVideoJobs}
               handleCancelVideoJob={handleCancelVideoJob}
               pendingPermission={pendingPermission}
               handlePermissionResponse={handlePermissionResponse}
             />
 
-            {/* Réponse streaming en direct */}
+            {/* Réponse en direct : même chronologie que le message enregistré */}
             {chatStatus === 'loading' && (
               <article aria-labelledby="assistant-stream-heading" className="space-y-3">
                 <h3 id="assistant-stream-heading" className="sr-only">Iroko a dit{'\u00A0'}:</h3>
-                {currentThinking ? (
-                  <div className="mb-2">
-                    <button
-                      type="button"
-                      onClick={() => setIsThinkingOpen(!isThinkingOpen)}
-                      className="flex items-center gap-1.5 text-[13px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors select-none cursor-pointer"
-                      aria-expanded={isThinkingOpen}
-                    >
-                      <span className={!currentAssistantStream ? "animate-pulse" : ""}>
-                        {!currentAssistantStream ? "Réflexion en cours…" : "Réflexion"}
-                      </span>
-                      {isThinkingOpen ? (
-                        <ChevronDown className="w-3.5 h-3.5 text-[var(--text-secondary)]" />
-                      ) : (
-                        <ChevronRight className="w-3.5 h-3.5 text-[var(--text-secondary)]" />
-                      )}
-                    </button>
-
-                    {isThinkingOpen && (
-                      <div
-                        className="mt-2 pl-3 border-l border-[var(--border-subtle)] text-[13px] text-[var(--text-secondary)] leading-relaxed font-sans whitespace-pre-wrap max-h-60 overflow-y-auto claude-scrollbar animate-in fade-in duration-150"
-                      >
-                        {currentThinking}
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  !currentAssistantStream && (
-                    <div className="flex items-center gap-2 text-[13px] text-[var(--text-secondary)] animate-pulse">
-                      <span>Réflexion en cours…</span>
-                    </div>
-                  )
-                )}
-                {currentAssistantStream && (
-                  <div
-                    className={`text-[15px] sm:text-[15.5px] text-[var(--text-primary)] leading-[1.5] ${
-                      conversationFont === 'serif' ? 'font-serif' : 'font-sans'
-                    }`}
-                    style={{
-                      fontFamily: conversationFont === 'serif' ? 'var(--font-serif)' : 'var(--font-sans)',
-                      letterSpacing: '-0.005em'
+                {liveParts.length > 0 ? (
+                  <MessageParts
+                    parts={liveParts}
+                    conversationFont={conversationFont}
+                    isStreaming={true}
+                    onOpenArtifact={(artId) => {
+                      setSelectedArtifactId(artId);
+                      setInspectorTab('artifacts');
+                      setInspectorOpen(true);
                     }}
-                  >
-                    <FormattedMessage content={currentAssistantStream} isStreaming={true} />
+                  />
+                ) : (
+                  <div className="flex items-center gap-2 text-[13px] text-[var(--text-secondary)] animate-pulse">
+                    <span>Réflexion en cours…</span>
                   </div>
                 )}
               </article>

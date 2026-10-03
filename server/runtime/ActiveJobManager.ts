@@ -2,6 +2,7 @@ import { AgentEvent } from '../types/events';
 import { AgentRuntime } from './AgentRuntime';
 import { runtimeDatabase } from '../storage/RuntimeDatabase';
 import { logger } from '../utils/logger';
+import { applyEventToParts, MessagePart } from '../types/messageParts';
 
 export interface ActiveJob {
   taskId: string;
@@ -20,6 +21,8 @@ export interface ActiveJob {
     error?: string;
   }>;
   planSteps: any[];
+  /** Chronologie ordonnée de la réponse (réflexion, texte, outils, artéfacts) */
+  parts: MessagePart[];
   assistantMessageId: string;
   runtime: AgentRuntime;
   createdAt: string;
@@ -92,6 +95,7 @@ export class ActiveJobManager {
       thinkingText: '',
       toolExecutions: [],
       planSteps: [],
+      parts: [],
       assistantMessageId: params.assistantMessageId,
       runtime: params.runtime,
       createdAt: new Date().toISOString(),
@@ -127,6 +131,7 @@ export class ActiveJobManager {
         thinking: job.thinkingText,
         toolExecutions: job.toolExecutions,
         planSteps: job.planSteps,
+        parts: job.parts,
         prompt: job.prompt,
         mode: job.mode,
         status: job.status
@@ -157,6 +162,7 @@ export class ActiveJobManager {
     if (!job) return;
 
     // Accumulation continue du flux en mémoire
+    job.parts = applyEventToParts(job.parts, event);
     if (event.type === 'message' && event.role === 'assistant' && typeof event.content === 'string') {
       job.streamedText += event.content;
       this.scheduleDbFlush(job);
@@ -183,6 +189,9 @@ export class ActiveJobManager {
     } else if (event.type === 'completed') {
       const finalContent = (event as any).summary || job.streamedText;
       job.streamedText = finalContent;
+      if (finalContent && !job.parts.some(p => p.type === 'text')) {
+        job.parts = applyEventToParts(job.parts, { type: 'message', role: 'assistant', content: finalContent } as any);
+      }
       this.finishJob(job, 'completed', (event as any).sources);
     } else if (event.type === 'error' && (event as any).fatal) {
       this.finishJob(job, 'failed');
@@ -229,7 +238,8 @@ export class ActiveJobManager {
           interrupted: job.status !== 'completed',
           canContinue: job.status !== 'completed',
           mode: job.mode,
-          prompt: job.prompt
+          prompt: job.prompt,
+          parts: job.parts
         }
       );
     } catch (err) {
@@ -251,7 +261,8 @@ export class ActiveJobManager {
         interrupted: status !== 'completed',
         canContinue: status !== 'completed',
         mode: job.mode,
-        prompt: job.prompt
+        prompt: job.prompt,
+        parts: job.parts
       };
       if (sources && sources.length > 0) {
         metadata.sources = sources;

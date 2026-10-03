@@ -179,13 +179,13 @@ la documentation Node.js sur https://nodejs.org/docs/latest/api/ pour plus de d�
     assert.ok(code.includes('tap-target-24'), 'Classe tap-target-24 pour extension tactile sur mobile');
   });
 
-  await t.test('7. Outil en direct : LiveToolExecutions affiche "Recherche : <requête>"', () => {
-    const liveToolsPath = path.resolve(process.cwd(), 'src/features/chat/LiveToolExecutions.tsx');
-    const code = fs.readFileSync(liveToolsPath, 'utf8');
+  await t.test('7. Étape d\'outil : ToolStep affiche la recherche et sa requête', () => {
+    const stepPath = path.resolve(process.cwd(), 'src/features/chat/ToolStep.tsx');
+    const code = fs.readFileSync(stepPath, 'utf8');
 
-    assert.ok(code.includes("te.tool === 'web_search'"), 'Détection spécifique de l\'outil web_search');
-    assert.ok(code.includes('Recherche'), 'Libellé Recherche dans l\'étape live');
-    assert.ok(code.includes('te.input?.query'), 'Affiche la requête recherchée');
+    assert.ok(code.includes('web_search'), 'Détection spécifique de l\'outil web_search');
+    assert.ok(code.includes('Recherche'), 'Libellé Recherche dans l\'étape');
+    assert.ok(code.includes('input.query'), 'Affiche la requête recherchée');
   });
 
   await t.test('8. ChatMessageItem : Intègre MessageSources sous les artéfacts sans bloc vide', () => {

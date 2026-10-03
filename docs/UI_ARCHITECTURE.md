@@ -68,7 +68,8 @@ Tiroir mobile (≤768px) : Drawer latéral animé (slide-in) avec overlay sombre
 | **FormattedMessage** | `src/features/chat/FormattedMessage.tsx` | Rendu Markdown mémoïsé de premier niveau (`MemoizedBlock`, `renderInline` sécurisé anti-XSS et anti-exfiltration) | `ChatMessageItem.tsx`, `ClaudeChat.tsx` |
 | **ChatInspectorPanel** | `src/features/chat/ChatInspectorPanel.tsx` | Tiroir d'inspection latéral droit (6 onglets : modifications, plan, terminal, tests, aperçu, artéfacts) | `ClaudeChat.tsx` |
 | **ActiveVideoJobCard** | `src/features/chat/ActiveVideoJobCard.tsx` | Carte de suivi in-chat des tâches vidéo en cours (durée, bouton d'arrêt sobre) | `ClaudeChat.tsx` |
-| **LiveToolExecutions** | `src/features/chat/LiveToolExecutions.tsx` | Affichage sobre en direct des étapes d'outils en cours d'exécution | `ClaudeChat.tsx` |
+| **MessageParts** | `src/features/chat/MessageParts.tsx` | Chronologie ordonnée d'une réponse (réflexion, texte, étapes d'outils, cartes d'artéfacts), identique en direct et après rechargement | `ClaudeChat.tsx`, `ChatMessageItem.tsx` |
+| **ToolStep** | `src/features/chat/ToolStep.tsx` | Étape d'outil sobre : verbe français, sujet, durée, détail (entrée / résultat / erreur) dépliable | `MessageParts.tsx` |
 | **DeleteMessageModal** | `src/features/chat/modals/DeleteMessageModal.tsx` | Boîte de dialogue accessible de confirmation de suppression de message | `ClaudeChat.tsx` |
 | **EditMessageModal** | `src/features/chat/modals/EditMessageModal.tsx` | Boîte de dialogue accessible de modification et renvoi avec analyse d'impact | `ClaudeChat.tsx` |
 | **ClaudeSettingsModal** | `src/features/settings/ClaudeSettingsModal.tsx` | Fenêtre modale des réglages découpée en 10 pages modulaires (`src/features/settings/pages/`) et 10 hooks spécialisés (`src/hooks/settings/`), toutes sous le plafond strict de 400 lignes. Section `StorageBreakdownSection` isolée pour l'audit et compactage VACUUM. | `ZyriconAppShell.tsx` |

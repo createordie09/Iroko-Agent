@@ -575,7 +575,8 @@ const server = http.createServer(async (req, res) => {
           streamedText: job.streamedText,
           thinkingText: job.thinkingText,
           toolExecutions: job.toolExecutions,
-          planSteps: job.planSteps
+          planSteps: job.planSteps,
+          parts: job.parts
         }));
       } else {
         res.writeHead(200, { 'Content-Type': 'application/json' });

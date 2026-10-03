@@ -7,6 +7,8 @@ import { AttachmentPublicInfo } from '../../services/attachments/AttachmentServi
 import { FormattedMessage } from './FormattedMessage';
 import { ArtifactCard } from './ArtifactCard';
 import { MessageSources } from './MessageSources';
+import { MessageParts } from './MessageParts';
+import { hasMessageParts } from '../../../server/types/messageParts';
 import { ComparisonMessageView } from '../../components/chat/ComparisonMessageView';
 
 export interface ChatMessageItemProps {
@@ -71,6 +73,9 @@ export function ChatMessageItem({
   }
 
   const isUser = msg.role === 'user';
+  const timelineParts = !isUser && hasMessageParts(msg.metadata) ? msg.metadata.parts : null;
+  const artifactIdsInTimeline = new Set((timelineParts || []).filter(p => p.type === 'artifact').map((p: any) => p.artifactId));
+  const trailingArtifacts = (msg.metadata?.artifacts || []).filter((a: any) => !artifactIdsInTimeline.has(a.id));
   const headingId = `msg-heading-${msg.id || index}`;
 
   return (
@@ -168,6 +173,14 @@ export function ChatMessageItem({
               msg={msg}
               conversationFont={conversationFont}
             />
+          ) : timelineParts ? (
+            <MessageParts
+              parts={timelineParts}
+              conversationFont={conversationFont}
+              onOpenArtifact={onOpenArtifact}
+              onRegenerateImage={onRegenerateImage}
+              onReuseArtifactAsAttachment={onReuseArtifactAsAttachment}
+            />
           ) : (
             <>
               {/* ── Bloc de réflexion dépliable propre par message ── */}
@@ -213,9 +226,9 @@ export function ChatMessageItem({
           )}
 
           {/* Artéfacts générés dans cette réponse */}
-          {msg.metadata?.artifacts && msg.metadata.artifacts.length > 0 && (
+          {trailingArtifacts.length > 0 && (
             <div className="flex flex-col gap-2 pt-2">
-              {msg.metadata.artifacts.map((art: any) => (
+              {trailingArtifacts.map((art: any) => (
                 <ArtifactCard
                   key={art.id}
                   artifact={art}

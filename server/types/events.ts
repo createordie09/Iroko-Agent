@@ -65,7 +65,7 @@ export type AgentEvent = BaseEvent & (
   | { type: 'agent_status_changed'; activeConversationIds: string[]; runningCount: number; timestamp?: string; conversationId?: string; status?: string }
   | { type: 'skill_invoked'; skillName: string; format?: string; timestamp?: string }
   | { type: 'skill_fallback'; skillName: string; format?: string; warning?: string; timestamp?: string }
-  | { type: 'task_resumed'; taskId: string; payload: { taskId: string; conversationId: string; content: string; thinking: string; toolExecutions: any[]; planSteps: any[]; prompt: string; mode: string; status: string } }
+  | { type: 'task_resumed'; taskId: string; payload: { taskId: string; conversationId: string; content: string; thinking: string; toolExecutions: any[]; planSteps: any[]; parts?: any[]; prompt: string; mode: string; status: string } }
 );
 
 export type ClientMessage =
