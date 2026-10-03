@@ -18,7 +18,7 @@ export interface ArtifactPartData {
 }
 
 export type MessagePart =
-  | { id: string; type: 'thinking'; text: string }
+  | { id: string; type: 'thinking'; text: string; startedAt: number; durationMs?: number }
   | { id: string; type: 'text'; text: string }
   | {
       id: string;
@@ -64,6 +64,15 @@ export function compactForPart(value: unknown, depth = 0): unknown {
   return out;
 }
 
+/** Ferme la réflexion en cours (si le dernier bloc en est une) en enregistrant sa durée réelle */
+function closeThinking(parts: MessagePart[], now: number): MessagePart[] {
+  const last = parts[parts.length - 1];
+  if (last && last.type === 'thinking' && last.durationMs === undefined) {
+    return [...parts.slice(0, -1), { ...last, durationMs: Math.max(0, now - last.startedAt) }];
+  }
+  return parts;
+}
+
 let partCounter = 0;
 function newPartId(prefix: string): string {
   partCounter += 1;
@@ -82,7 +91,7 @@ export function applyEventToParts(parts: MessagePart[], event: AgentEvent, now: 
       if (last && last.type === 'thinking') {
         return [...parts.slice(0, -1), { ...last, text: last.text + event.content }];
       }
-      return [...parts, { id: newPartId('thinking'), type: 'thinking', text: event.content }];
+      return [...parts, { id: newPartId('thinking'), type: 'thinking', text: event.content, startedAt: now }];
     }
 
     case 'message': {
@@ -91,13 +100,13 @@ export function applyEventToParts(parts: MessagePart[], event: AgentEvent, now: 
       if (last && last.type === 'text') {
         return [...parts.slice(0, -1), { ...last, text: last.text + event.content }];
       }
-      return [...parts, { id: newPartId('text'), type: 'text', text: event.content }];
+      return [...closeThinking(parts, now), { id: newPartId('text'), type: 'text', text: event.content }];
     }
 
     case 'tool_call_start': {
       if (parts.some(p => p.type === 'tool' && p.callId === event.callId)) return parts;
       return [
-        ...parts,
+        ...closeThinking(parts, now),
         {
           id: newPartId('tool'),
           type: 'tool',
@@ -147,7 +156,7 @@ export function applyEventToParts(parts: MessagePart[], event: AgentEvent, now: 
         next[existingIndex] = { ...(parts[existingIndex] as any), ...data };
         return next;
       }
-      return [...parts, { id: newPartId('artifact'), type: 'artifact', ...data }];
+      return [...closeThinking(parts, now), { id: newPartId('artifact'), type: 'artifact', ...data }];
     }
 
     default:

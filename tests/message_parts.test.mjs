@@ -96,3 +96,16 @@ test('Parts — le gestionnaire de tâches enregistre la chronologie dans le mes
   assert.equal(resume.payload.parts[0].text, 'Salut');
   assert.ok(job2);
 });
+
+test('Parts — la durée de réflexion est celle mesurée entre le premier fragment et le bloc suivant', () => {
+  const parts = replay([
+    { type: 'thinking', content: 'a' },
+    { type: 'thinking', content: 'b' },
+    { type: 'message', role: 'assistant', content: 'Réponse' }
+  ]);
+  assert.equal(parts[0].text, 'ab');
+  assert.equal(parts[0].startedAt, 1000);
+  assert.equal(parts[0].durationMs, 200);
+  const encours = replay([{ type: 'thinking', content: 'a' }]);
+  assert.equal(encours[0].durationMs, undefined);
+});

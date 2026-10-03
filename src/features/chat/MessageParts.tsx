@@ -15,7 +15,13 @@ export interface MessagePartsProps {
   onReuseArtifactAsAttachment?: (artifact: any) => void;
 }
 
-function ThinkingPart({ text, active }: { key?: React.Key; text: string; active: boolean }) {
+function formatThinkingDuration(ms?: number): string {
+  if (ms === undefined) return '';
+  const seconds = Math.max(1, Math.round(ms / 1000));
+  return seconds < 60 ? `${seconds} s` : `${Math.floor(seconds / 60)} min ${seconds % 60} s`;
+}
+
+function ThinkingPart({ text, active, durationMs }: { key?: React.Key; text: string; active: boolean; durationMs?: number }) {
   const [open, setOpen] = useState(false);
   return (
     <div>
@@ -25,7 +31,7 @@ function ThinkingPart({ text, active }: { key?: React.Key; text: string; active:
         aria-expanded={open}
         className="flex items-center gap-1.5 text-[13px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors select-none cursor-pointer"
       >
-        <span className={active ? 'animate-pulse' : ''}>{active ? 'Réflexion en cours…' : 'Réflexion'}</span>
+        <span className={active ? 'animate-pulse' : ''}>{active ? 'Réflexion en cours…' : durationMs !== undefined ? `Réflexion · ${formatThinkingDuration(durationMs)}` : 'Réflexion'}</span>
         {open ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
       </button>
       {open && (
@@ -48,7 +54,7 @@ export function MessageParts({
         const isLast = i === lastIndex;
         switch (part.type) {
           case 'thinking':
-            return <ThinkingPart key={part.id} text={part.text} active={Boolean(isStreaming) && isLast} />;
+            return <ThinkingPart key={part.id} text={part.text} active={Boolean(isStreaming) && isLast && part.durationMs === undefined} durationMs={part.durationMs} />;
           case 'text':
             return (
               <div
