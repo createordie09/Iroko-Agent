@@ -3201,7 +3201,11 @@ wss.on('connection', (ws: WebSocket) => {
                 id: crypto.randomUUID(),
                 conversationId: activeConvId,
                 role: 'user',
-                content: message.prompt
+                content: message.prompt,
+                metadata: {
+                  mode: convMode,
+                  ...(message.attachmentIds && message.attachmentIds.length > 0 ? { attachmentIds: message.attachmentIds } : {})
+                }
               });
             }
 
@@ -3242,6 +3246,7 @@ wss.on('connection', (ws: WebSocket) => {
               metadata: {
                 taskId: activeTaskId,
                 status: 'generating',
+                mode: convMode,
                 interrupted: true,
                 canContinue: true,
                 prompt: message.prompt

@@ -1,3 +1,4 @@
+import { buildConversationHistory, buildContinuityNote } from './ConversationHistory';
 import path from 'path';
 import fs from 'fs';
 import { AgentEvent } from '../types/events';
@@ -173,6 +174,15 @@ export class AgentLoop {
     const maskBeforeModel = runtimeDatabase.getSetting('mask_secrets_before_model') !== 'false';
     const effectivePrompt = maskBeforeModel ? PrivacyFilter.maskSecretsForModel(userPrompt) : userPrompt;
 
+    // Mémoire de la discussion : les échanges précédents sont rechargés depuis la base et fournis au modèle
+    const history = buildConversationHistory({
+      conversationId: options.conversationId,
+      currentPrompt: userPrompt,
+      contextWindow: getModelContextWindow(options.modelId),
+      maskSecrets: maskBeforeModel
+    });
+    systemMsg.content += buildContinuityNote(history, context.conversationMode);
+
     // Traitement et injection des pièces jointes (§26)
     const effectiveModelId = options.modelId || '';
     const capabilities = getModelCapabilities(effectiveModelId);
@@ -261,9 +271,11 @@ export class AgentLoop {
       userMessageContent = contentParts;
     }
 
+    const currentUserMsg: ModelMessage = { role: 'user', content: userMessageContent };
     let messages: ModelMessage[] = [
       systemMsg,
-      { role: 'user', content: userMessageContent }
+      ...history.messages,
+      currentUserMsg
     ];
 
     let iteration = 0;
@@ -389,7 +401,7 @@ export class AgentLoop {
 
         // Résumé automatique vers 80% (Mission M8.3 P7)
         if (ratio >= 0.80 || messages.length > MAX_MESSAGES) {
-          messages = this.summarizeContext(messages, filesChanged, planner);
+          messages = this.summarizeContext(messages, filesChanged, planner, currentUserMsg);
           console.log(`[AgentLoop] Contexte résumé automatiquement (ratio: ${Math.round(ratio * 100)}%).`);
           context.emitEvent({
             type: 'context_summarized',
@@ -750,10 +762,14 @@ export class AgentLoop {
   private summarizeContext(
     messages: ModelMessage[],
     filesChanged: Set<string>,
-    planner: Planner
+    planner: Planner,
+    anchorUserMsg?: ModelMessage
   ): ModelMessage[] {
     const systemMsg = messages.find(m => m.role === 'system');
-    const initialUserMsg = messages.find(m => m.role === 'user');
+    // Le message de ancrage est le prompt du tour en cours (et non le plus ancien de l'historique rechargé)
+    const initialUserMsg = anchorUserMsg && messages.includes(anchorUserMsg)
+      ? anchorUserMsg
+      : messages.find(m => m.role === 'user');
     const nonSystem = messages.filter(m => m.role !== 'system');
     const recentMessages = nonSystem.slice(-14);
 

@@ -228,6 +228,7 @@ export class ActiveJobManager {
           status: job.status === 'running' ? 'generating' : job.status,
           interrupted: job.status !== 'completed',
           canContinue: job.status !== 'completed',
+          mode: job.mode,
           prompt: job.prompt
         }
       );
@@ -249,6 +250,7 @@ export class ActiveJobManager {
         status,
         interrupted: status !== 'completed',
         canContinue: status !== 'completed',
+        mode: job.mode,
         prompt: job.prompt
       };
       if (sources && sources.length > 0) {
