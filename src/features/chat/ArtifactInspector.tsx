@@ -4,7 +4,8 @@ import {
 } from 'lucide-react';
 import { ArtifactPublicInfo, artifactService } from '../../services/artifacts/ArtifactService';
 import { CodeBlock } from './CodeBlock';
-import { parseMarkdownBlocks } from './markdownParser';
+import { FormattedMessage } from './FormattedMessage';
+import { ArtifactViewToggle, ArtifactViewMode } from './ArtifactViewToggle';
 
 export interface ArtifactInspectorProps {
   artifacts: ArtifactPublicInfo[];
@@ -39,9 +40,15 @@ export function ArtifactInspector({
   const [previewData, setPreviewData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [viewMode, setViewMode] = useState<ArtifactViewMode>('preview');
   const [isRestoring, setIsRestoring] = useState(false);
   const [isDownloadingAll, setIsDownloadingAll] = useState(false);
   const copyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Chaque artéfact s'ouvre sur son aperçu
+  useEffect(() => {
+    setViewMode('preview');
+  }, [activeArtifact?.id]);
 
   // Synchroniser la version sélectionnée avec l'artéfact actif
   useEffect(() => {
@@ -309,9 +316,15 @@ export function ArtifactInspector({
       <div className="flex-1 min-h-0 overflow-y-auto claude-scrollbar p-3">
         {isLoading ? (
           <div className="p-4 text-center text-[var(--text-secondary)] text-[13px] animate-pulse">Chargement du contenu…</div>
+        ) : viewMode === 'code' && (isHtml || isSvg || isMarkdown) ? (
+          <>
+            <ArtifactViewToggle mode={viewMode} onChange={setViewMode} />
+            <CodeBlock code={content || previewData?.text || ''} language={isHtml ? 'html' : isSvg ? 'xml' : 'markdown'} />
+          </>
         ) : isHtml ? (
           /* APERÇU HTML SÉCURISÉ : Iframe sandboxée SANS allow-same-origin, avec CSP sans réseau */
           <div className="space-y-2">
+            <ArtifactViewToggle mode={viewMode} onChange={setViewMode} />
             <div className="text-[11px] text-[var(--text-secondary)] flex items-center justify-between">
               <span>Aperçu HTML isolé (sans accès réseau ni jeton)</span>
               <button type="button" onClick={handleDownload} className="text-[var(--text-primary)] hover:underline flex items-center gap-1">
@@ -328,6 +341,7 @@ export function ArtifactInspector({
         ) : isSvg ? (
           /* APERÇU SVG SÉCURISÉ : Balise <img> obligatoire, JAMAIS inline */
           <div className="space-y-2">
+            <ArtifactViewToggle mode={viewMode} onChange={setViewMode} />
             <div className="text-[11px] text-[var(--text-secondary)] flex items-center justify-between">
               <span>Aperçu vectoriel SVG (rendu en image inerte)</span>
               <button type="button" onClick={handleDownload} className="text-[var(--text-primary)] hover:underline flex items-center gap-1">
@@ -511,18 +525,12 @@ export function ArtifactInspector({
         ) : isJson ? (
           <CodeBlock code={formattedJson || content} language="json" />
         ) : isMarkdown ? (
-          <div className="space-y-2 bg-[var(--bg-app)] border border-[var(--border-subtle)] rounded-[var(--radius-button)] p-3 text-[13px] leading-relaxed">
-            {parseMarkdownBlocks(content).map((b, idx) => {
-              if (b.type === 'code') {
-                return <CodeBlock key={idx} code={b.code} language={b.language} title={b.title} />;
-              }
-              return (
-                <div key={idx} className="space-y-1.5 whitespace-pre-wrap">
-                  {b.content}
-                </div>
-              );
-            })}
-          </div>
+          <>
+            <ArtifactViewToggle mode={viewMode} onChange={setViewMode} />
+            <div className="bg-[var(--bg-app)] border border-[var(--border-subtle)] rounded-[var(--radius-button)] p-3 text-[13px] leading-relaxed">
+              <FormattedMessage content={content} documentMode />
+            </div>
+          </>
         ) : (
           <CodeBlock code={content} language={activeArtifact.name.split('.').pop()} />
         )}
