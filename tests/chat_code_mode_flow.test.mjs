@@ -103,3 +103,56 @@ test('Interface — bouton « Passer en mode Code et continuer » branché sur l
   assert.ok(chat.includes("setComposerMode('code')"));
   assert.ok(chat.includes("{ mode: 'code' }"));
 });
+
+test('Filet de sécurité — détection d\'un modèle qui annonce le mode Code sans appeler l\'outil', async () => {
+  const { impliesCodeModeNeed } = await import('../server/runtime/ModeSwitch.ts');
+  assert.equal(impliesCodeModeNeed('Pour lister les fichiers, je dois passer en mode Code. Je vous propose de basculer.'), true);
+  assert.equal(impliesCodeModeNeed('Je vous propose de passer en mode Code pour lister les fichiers.'), true);
+  assert.equal(impliesCodeModeNeed('Le mode Code est nécessaire pour modifier le projet.'), true);
+  assert.equal(impliesCodeModeNeed('Il faut le mode Code pour exécuter les tests.'), true);
+  assert.equal(impliesCodeModeNeed('Voici le fichier demandé, créé comme artéfact.'), false);
+  assert.equal(impliesCodeModeNeed('Bonjour ! Comment puis-je vous aider ?'), false);
+  assert.equal(impliesCodeModeNeed(''), false);
+  assert.equal(impliesCodeModeNeed(undefined), false);
+});
+
+test('Filet de sécurité — AgentLoop émet la proposition quand le modèle l\'annonce sans appeler l\'outil', async () => {
+  const id = crypto.randomUUID();
+  runtimeDatabase.saveConversation(id, 'Filet');
+  const provider = modelRouter.getProvider('mock');
+  const original = provider.generateStream;
+  provider.generateStream = async function* () {
+    yield { type: 'text_delta', text: 'Pour lister ces fichiers, je dois passer en mode Code. Je vous le propose.' };
+  };
+  const events = [];
+  try {
+    await new AgentLoop().run('Liste les fichiers de src', context('chat', events), new Planner(() => {}), {
+      preferredProviderId: 'mock', modelId: 'mock/test', conversationId: id, conversationMode: 'chat'
+    });
+  } finally {
+    provider.generateStream = original;
+  }
+  assert.equal(events.filter(e => e.type === 'mode_switch_suggested').length, 1);
+  assert.ok(events.some(e => e.type === 'completed'));
+});
+
+test('Filet de sécurité — pas de doublon en mode Code ni quand une réponse normale est donnée', async () => {
+  const provider = modelRouter.getProvider('mock');
+  const original = provider.generateStream;
+  const run = async (mode, text) => {
+    const id = crypto.randomUUID();
+    runtimeDatabase.saveConversation(id, 'Sans doublon');
+    provider.generateStream = async function* () { yield { type: 'text_delta', text }; };
+    const events = [];
+    await new AgentLoop().run('Test', context(mode, events), new Planner(() => {}), {
+      preferredProviderId: 'mock', modelId: 'mock/test', conversationId: id, conversationMode: mode
+    });
+    return events.filter(e => e.type === 'mode_switch_suggested').length;
+  };
+  try {
+    assert.equal(await run('chat', 'Voici ma réponse, sans besoin particulier.'), 0);
+    assert.equal(await run('code', 'Il faut passer en mode Code.'), 0);
+  } finally {
+    provider.generateStream = original;
+  }
+});

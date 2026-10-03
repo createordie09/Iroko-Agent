@@ -1,4 +1,5 @@
 import { buildConversationHistory, buildContinuityNote } from './ConversationHistory';
+import { impliesCodeModeNeed } from './ModeSwitch';
 import path from 'path';
 import fs from 'fs';
 import { AgentEvent } from '../types/events';
@@ -127,9 +128,15 @@ export class AgentLoop {
 
     // Écouter les événements de fichiers modifiés
     const originalEmit = context.emitEvent;
+    let modeSwitchSuggested = false;
+    let toolCallsStarted = 0;
     context.emitEvent = (event: AgentEvent) => {
       if (event.type === 'file_changed') {
         filesChanged.add(event.path);
+      } else if (event.type === 'mode_switch_suggested') {
+        modeSwitchSuggested = true;
+      } else if (event.type === 'tool_call_start') {
+        toolCallsStarted++;
       }
       originalEmit(event);
     };
@@ -727,6 +734,11 @@ export class AgentLoop {
         message: loopError.message || 'La tâche a échoué en raison d\'une erreur du modèle.'
       });
       throw loopError;
+    }
+
+    // Filet de sécurité : le modèle annonce qu'il faut le mode Code sans avoir appelé request_code_mode
+    if (context.conversationMode === 'chat' && !modeSwitchSuggested && toolCallsStarted === 0 && impliesCodeModeNeed(finalAssistantText)) {
+      context.emitEvent({ type: 'mode_switch_suggested', reason: 'la demande exige les outils du mode Code' });
     }
 
     const finalSummary = (finalAssistantText || 'Tâche terminée.') + verificationNote;
