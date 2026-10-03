@@ -567,10 +567,10 @@ export class RuntimeDatabase {
       const hasWorkspaceId = tableInfo.some(c => c.name === 'workspace_id');
 
       if (!hasMode) {
-        this.db.exec("ALTER TABLE conversations ADD COLUMN mode TEXT NOT NULL DEFAULT 'chat';");
+        this.addColumnSafely("ALTER TABLE conversations ADD COLUMN mode TEXT NOT NULL DEFAULT 'chat';");
       }
       if (!hasWorkspaceId) {
-        this.db.exec("ALTER TABLE conversations ADD COLUMN workspace_id TEXT;");
+        this.addColumnSafely("ALTER TABLE conversations ADD COLUMN workspace_id TEXT;");
       }
 
       // Migration des anciennes tâches et sessions de l'ancienne section Code
@@ -671,7 +671,7 @@ export class RuntimeDatabase {
       const tableInfo = this.db.prepare("PRAGMA table_info(artifacts)").all() as Array<{ name: string }>;
       const hasMetadata = tableInfo.some(c => c.name === 'metadata');
       if (!hasMetadata) {
-        this.db.exec("ALTER TABLE artifacts ADD COLUMN metadata TEXT;");
+        this.addColumnSafely("ALTER TABLE artifacts ADD COLUMN metadata TEXT;");
       }
       this.db.exec(`INSERT OR IGNORE INTO schema_migrations (version, applied_at) VALUES (10, '${new Date().toISOString()}');`);
     }
@@ -818,10 +818,10 @@ export class RuntimeDatabase {
       const hasIsSystem = skillsTableInfo.some(c => c.name === 'is_system');
       const hasMetadata = skillsTableInfo.some(c => c.name === 'metadata_json');
       if (!hasIsSystem) {
-        this.db.exec("ALTER TABLE skills ADD COLUMN is_system INTEGER NOT NULL DEFAULT 0;");
+        this.addColumnSafely("ALTER TABLE skills ADD COLUMN is_system INTEGER NOT NULL DEFAULT 0;");
       }
       if (!hasMetadata) {
-        this.db.exec("ALTER TABLE skills ADD COLUMN metadata_json TEXT;");
+        this.addColumnSafely("ALTER TABLE skills ADD COLUMN metadata_json TEXT;");
       }
 
       this.db.exec(`INSERT OR IGNORE INTO schema_migrations (version, applied_at) VALUES (14, '${new Date().toISOString()}');`);
@@ -851,16 +851,28 @@ export class RuntimeDatabase {
       const hasPinnedAt = convTableInfo.some(c => c.name === 'pinned_at');
       const hasPinnedOrder = convTableInfo.some(c => c.name === 'pinned_order');
       if (!hasIsPinned) {
-        this.db.exec("ALTER TABLE conversations ADD COLUMN is_pinned INTEGER NOT NULL DEFAULT 0;");
+        this.addColumnSafely("ALTER TABLE conversations ADD COLUMN is_pinned INTEGER NOT NULL DEFAULT 0;");
       }
       if (!hasPinnedAt) {
-        this.db.exec("ALTER TABLE conversations ADD COLUMN pinned_at TEXT;");
+        this.addColumnSafely("ALTER TABLE conversations ADD COLUMN pinned_at TEXT;");
       }
       if (!hasPinnedOrder) {
-        this.db.exec("ALTER TABLE conversations ADD COLUMN pinned_order INTEGER NOT NULL DEFAULT 0;");
+        this.addColumnSafely("ALTER TABLE conversations ADD COLUMN pinned_order INTEGER NOT NULL DEFAULT 0;");
       }
 
       this.db.exec(`INSERT OR IGNORE INTO schema_migrations (version, applied_at) VALUES (16, '${new Date().toISOString()}');`);
+    }
+  }
+
+  /**
+   * Ajoute une colonne sans échouer si un autre processus partageant la même base l'a déjà ajoutée
+   * entre la vérification et l'exécution (migrations concurrentes).
+   */
+  private addColumnSafely(sql: string): void {
+    try {
+      this.db.exec(sql);
+    } catch (err: any) {
+      if (!/duplicate column name/i.test(String(err?.message))) throw err;
     }
   }
 
